@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Hersteller {
+  id    Int     @id @default(autoincrement())
+  name  String  @unique
+
+  druckermodelle Druckermodell[]
+}
+
+model Druckermodell {
+  id              Int     @id @default(autoincrement())
+  herstellerId    Int
+  hersteller      Hersteller @relation(fields: [herstellerId], references: [id])
+
+  name            String
+  artikelnummer   String?
+  basispreisCents Int
+  waehrung        String @default("CHF")
+
+  zubehoer        DruckermodellZubehoer[]
+}
+
+model Zubehoer {
+  id              Int     @id @default(autoincrement())
+  name            String
+  artikelnummer   String?
+  herstellernummer String?
+  preisCents      Int
+  kategorie       String
+
+  druckermodelle  DruckermodellZubehoer[]
+}
+
+model DruckermodellZubehoer {
+  druckermodellId Int
+  zubehoerId      Int
+
+  druckermodell Druckermodell @relation(fields: [druckermodellId], references: [id])
+  zubehoer      Zubehoer      @relation(fields: [zubehoerId], references: [id])
+
+  @@id([druckermodellId, zubehoerId])
+}
+
+model Offerte {
+  id           Int      @id @default(autoincrement())
+  offertennummer String @unique
+  totalCents   Int
+  erstelltAm   DateTime @default(now())
+
+  positionen   OffertePosition[]
+}
+
+model OffertePosition {
+  id           Int     @id @default(autoincrement())
+  offerteId    Int
+  offerte      Offerte @relation(fields: [offerteId], references: [id])
+
+  titel        String
+  menge        Int
+  einzelpreisCents Int
+  zeilentotalCents Int
+}
