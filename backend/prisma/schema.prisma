@@ -4,37 +4,103 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+  url      = "file:./kalkulation.db"
 }
 
+/////////////////////////
+// BENUTZER & KUNDEN //
+/////////////////////////
+
+model Benutzer {
+  id        Int     @id @default(autoincrement())
+  vorname   String
+  nachname  String
+  email     String  @unique
+  rolle     String
+  aktiv     Boolean @default(true)
+
+  offerten  Offerte[]
+}
+
+model Kunde {
+  id          Int     @id @default(autoincrement())
+  firmenname  String
+  kontaktname String?
+  email       String?
+  telefon     String?
+  ort         String?
+
+  offerten    Offerte[]
+}
+
+/////////////////////////
+// OFFERTE //
+/////////////////////////
+
+model Offerte {
+  id             Int     @id @default(autoincrement())
+  offertennummer String  @unique
+  waehrung       String  @default("CHF")
+  total          Int
+
+  kundeId        Int
+  benutzerId     Int
+
+  kunde          Kunde    @relation(fields: [kundeId], references: [id])
+  benutzer       Benutzer @relation(fields: [benutzerId], references: [id])
+
+  positionen     OffertePosition[]
+}
+
+model OffertePosition {
+  id           Int    @id @default(autoincrement())
+  titel        String
+  menge        Int
+  einzelpreis Int
+  zeilentotal Int
+
+  offerteId   Int
+  offerte     Offerte @relation(fields: [offerteId], references: [id])
+}
+
+/////////////////////////
+// PRODUKTSTRUKTUR //
+/////////////////////////
+
 model Hersteller {
-  id    Int     @id @default(autoincrement())
-  name  String  @unique
+  id   Int    @id @default(autoincrement())
+  name String @unique
 
   druckermodelle Druckermodell[]
 }
 
 model Druckermodell {
-  id              Int     @id @default(autoincrement())
-  herstellerId    Int
-  hersteller      Hersteller @relation(fields: [herstellerId], references: [id])
+  id            Int    @id @default(autoincrement())
+  name          String
+  artikelnummer String?
 
-  name            String
-  artikelnummer   String?
-  basispreisCents Int
-  waehrung        String @default("CHF")
+  herstellerId  Int
+  hersteller    Hersteller @relation(fields: [herstellerId], references: [id])
 
-  zubehoer        DruckermodellZubehoer[]
+  zubehoer      DruckermodellZubehoer[]
+}
+
+model ZubehoerKategorie {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  zubehoer Zubehoer[]
 }
 
 model Zubehoer {
-  id              Int     @id @default(autoincrement())
-  name            String
-  artikelnummer   String?
-  herstellernummer String?
-  preisCents      Int
-  kategorie       String
+  id          Int    @id @default(autoincrement())
+  name        String
+  preis       Int
 
-  druckermodelle  DruckermodellZubehoer[]
+  kategorieId Int
+  kategorie   ZubehoerKategorie @relation(fields: [kategorieId], references: [id])
+
+  druckermodelle DruckermodellZubehoer[]
 }
 
 model DruckermodellZubehoer {
@@ -45,24 +111,4 @@ model DruckermodellZubehoer {
   zubehoer      Zubehoer      @relation(fields: [zubehoerId], references: [id])
 
   @@id([druckermodellId, zubehoerId])
-}
-
-model Offerte {
-  id           Int      @id @default(autoincrement())
-  offertennummer String @unique
-  totalCents   Int
-  erstelltAm   DateTime @default(now())
-
-  positionen   OffertePosition[]
-}
-
-model OffertePosition {
-  id           Int     @id @default(autoincrement())
-  offerteId    Int
-  offerte      Offerte @relation(fields: [offerteId], references: [id])
-
-  titel        String
-  menge        Int
-  einzelpreisCents Int
-  zeilentotalCents Int
 }
