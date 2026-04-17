@@ -4,22 +4,45 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./kalkulation.db"
+  url      = env("DATABASE_URL")
 }
 
-/////////////////////////
-// BENUTZER & KUNDEN //
-/////////////////////////
+enum BenutzerRolle {
+  ADMIN
+  VERKAUF
+}
+
+enum PositionTyp {
+  GERAET
+  ZUBEHOER
+  SERVICE
+  KONDITION
+  RABATT
+  GEBUEHR
+  SONSTIGES
+}
+
+enum PreisEinheit {
+  PAUSCHAL
+  PRO_MONAT
+  PRO_GERAET
+  STUNDE
+  PRO_STUECK
+  TEXT
+}
 
 model Benutzer {
-  id        Int     @id @default(autoincrement())
-  vorname   String
-  nachname  String
-  email     String  @unique
-  rolle     String
-  aktiv     Boolean @default(true)
+  id       Int           @id @default(autoincrement())
+  vorname  String
+  nachname String
+  email    String        @unique
+  rolle    BenutzerRolle @default(VERKAUF)
+  aktiv    Boolean       @default(true)
 
-  offerten  Offerte[]
+  offerten Offerte[] @relation("OfferteBenutzer")
+
+  erstelltAm     DateTime @default(now())
+  aktualisiertAm DateTime @updatedAt
 }
 
 model Kunde {
@@ -30,59 +53,58 @@ model Kunde {
   telefon     String?
   ort         String?
 
-  offerten    Offerte[]
+  offerten Offerte[] @relation("OfferteKunde")
+
+  erstelltAm     DateTime @default(now())
+  aktualisiertAm DateTime @updatedAt
 }
-
-/////////////////////////
-// OFFERTE //
-/////////////////////////
-
-model Offerte {
-  id             Int     @id @default(autoincrement())
-  offertennummer String  @unique
-  waehrung       String  @default("CHF")
-  total          Int
-
-  kundeId        Int
-  benutzerId     Int
-
-  kunde          Kunde    @relation(fields: [kundeId], references: [id])
-  benutzer       Benutzer @relation(fields: [benutzerId], references: [id])
-
-  positionen     OffertePosition[]
-}
-
-model OffertePosition {
-  id           Int    @id @default(autoincrement())
-  titel        String
-  menge        Int
-  einzelpreis Int
-  zeilentotal Int
-
-  offerteId   Int
-  offerte     Offerte @relation(fields: [offerteId], references: [id])
-}
-
-/////////////////////////
-// PRODUKTSTRUKTUR //
-/////////////////////////
 
 model Hersteller {
   id   Int    @id @default(autoincrement())
   name String @unique
 
   druckermodelle Druckermodell[]
+
+  erstelltAm     DateTime @default(now())
+  aktualisiertAm DateTime @updatedAt
 }
 
 model Druckermodell {
-  id            Int    @id @default(autoincrement())
+  id            Int     @id @default(autoincrement())
   name          String
   artikelnummer String?
 
-  herstellerId  Int
-  hersteller    Hersteller @relation(fields: [herstellerId], references: [id])
+  herstellerId Int
+  hersteller   Hersteller @relation(fields: [herstellerId], references: [id])
 
-  zubehoer      DruckermodellZubehoer[]
+  varianten DruckerVariante[]
+  zubehoer  DruckermodellZubehoer[]
+
+  offerten Offerte[] @relation("OfferteDruckermodell")
+
+  erstelltAm     DateTime @default(now())
+  aktualisiertAm DateTime @updatedAt
+
+  @@unique([herstellerId, name])
+}
+
+model DruckerVariante {
+  id              Int           @id @default(autoincrement())
+  druckermodellId Int
+  druckermodell   Druckermodell @relation(fields: [druckermodellId], references: [id])
+
+  bezeichnung     String
+  geschwindigkeit Int
+
+  verkaufsPreis Int
+  einkaufsPreis Int?
+
+  offerten Offerte[] @relation("OfferteDruckerVariante")
+
+  erstelltAm     DateTime @default(now())
+  aktualisiertAm DateTime @updatedAt
+
+  @@unique([druckermodellId, bezeichnung])
 }
 
 model ZubehoerKategorie {
@@ -93,14 +115,23 @@ model ZubehoerKategorie {
 }
 
 model Zubehoer {
-  id          Int    @id @default(autoincrement())
-  name        String
-  preis       Int
+  id            Int     @id @default(autoincrement())
+  name          String
+  artikelnummer String?
+
+  verkaufsPreis Int
+  einkaufsPreis Int?
 
   kategorieId Int
   kategorie   ZubehoerKategorie @relation(fields: [kategorieId], references: [id])
 
-  druckermodelle DruckermodellZubehoer[]
+  druckermodelle    DruckermodellZubehoer[]
+  offertePositionen OffertePosition[]       @relation("OffertePositionZubehoer")
+
+  erstelltAm     DateTime @default(now())
+  aktualisiertAm DateTime @updatedAt
+
+  @@unique([kategorieId, name])
 }
 
 model DruckermodellZubehoer {
@@ -111,4 +142,153 @@ model DruckermodellZubehoer {
   zubehoer      Zubehoer      @relation(fields: [zubehoerId], references: [id])
 
   @@id([druckermodellId, zubehoerId])
+}
+
+model MietLaufzeit {
+  id     Int @id @default(autoincrement())
+  monate Int @unique
+
+  mietansatz Int
+
+  erstelltAm DateTime @default(now())
+}
+
+model EpFaktorKategorie {
+  id            Int            @id @default(autoincrement())
+  name          String         @unique
+  epFaktorWerts EpFaktorWert[]
+}
+
+model EpFaktorGruppe {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  werte EpFaktorWert[]
+}
+
+model EpFaktorWert {
+  id          Int @id @default(autoincrement())
+  gruppeId    Int
+  kategorieId Int
+
+  faktorBasisPunkte Int
+
+  gruppe    EpFaktorGruppe    @relation(fields: [gruppeId], references: [id])
+  kategorie EpFaktorKategorie @relation(fields: [kategorieId], references: [id])
+
+  @@unique([gruppeId, kategorieId])
+}
+
+model VrgTarif {
+  id Int @id @default(autoincrement())
+
+  vonBetrag Int
+  bisBetrag Int
+  gebuehr   Int
+
+  @@unique([vonBetrag, bisBetrag])
+}
+
+model KonditionDefinition {
+  id      Int          @id @default(autoincrement())
+  name    String       @unique
+  einheit PreisEinheit
+
+  preise KonditionPreis[]
+}
+
+model KonditionGruppe {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  preise KonditionPreis[]
+}
+
+model KonditionPreis {
+  id           Int @id @default(autoincrement())
+  gruppeId     Int
+  definitionId Int
+
+  betrag Int?
+  text   String?
+
+  gruppe     KonditionGruppe     @relation(fields: [gruppeId], references: [id])
+  definition KonditionDefinition @relation(fields: [definitionId], references: [id])
+
+  @@unique([gruppeId, definitionId])
+}
+
+model Offerte {
+  id             Int       @id @default(autoincrement())
+  offertennummer String    @unique
+  titel          String
+  termin         DateTime?
+  waehrung       String    @default("CHF")
+
+  kundeId Int
+  kunde   Kunde @relation("OfferteKunde", fields: [kundeId], references: [id])
+
+  benutzerId Int
+  benutzer   Benutzer @relation("OfferteBenutzer", fields: [benutzerId], references: [id])
+
+  druckermodellId Int?
+  druckermodell   Druckermodell? @relation("OfferteDruckermodell", fields: [druckermodellId], references: [id])
+
+  druckerVarianteId Int?
+  druckerVariante   DruckerVariante? @relation("OfferteDruckerVariante", fields: [druckerVarianteId], references: [id])
+
+  kundenkontakt String?
+  versand       String?
+  bemerkung     String?
+
+  eintauschrabattProzent Int @default(0)
+
+  lieferungKosten Int @default(0)
+
+  restwertMonate Int @default(0)
+  restwertBetrag Int @default(0)
+
+  mieteMonate Int?
+  mieteMonat  Int?
+
+  servicePauschaleMonat Int?
+  inklusiveKopienSW     Int?
+  preisZusatzPrintSW    Int?
+
+  scanpauschaleText String?
+  flatrateText      String?
+
+  totalVerkauf Int @default(0)
+  totalEinkauf Int @default(0)
+  nettopreis   Int @default(0)
+
+  positionen OffertePosition[] @relation("OffertePositionen")
+
+  erstelltAm     DateTime @default(now())
+  aktualisiertAm DateTime @updatedAt
+}
+
+model OffertePosition {
+  id Int @id @default(autoincrement())
+
+  offerteId Int
+  offerte   Offerte @relation("OffertePositionen", fields: [offerteId], references: [id])
+
+  typ       PositionTyp
+  kategorie String?
+  titel     String
+  menge     Int         @default(1)
+
+  verkaufsPreis Int  @default(0)
+  einkaufsPreis Int?
+
+  zeilenTotalVerkauf Int @default(0)
+  zeilenTotalEinkauf Int @default(0)
+
+  sortierung Int @default(0)
+
+  zubehoerId Int?
+  zubehoer   Zubehoer? @relation("OffertePositionZubehoer", fields: [zubehoerId], references: [id])
+
+  erstelltAm DateTime @default(now())
 }
