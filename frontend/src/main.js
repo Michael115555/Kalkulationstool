@@ -1,15 +1,14 @@
 import { createApp } from 'vue'
 import App from './App.vue'
-import PrimeVue from 'primevue/config'
 import router from './router'
+import 'bootstrap/dist/css/bootstrap.min.css'
 import 'primeicons/primeicons.css'
-import './assets/base.css'
+import './scss/styles.scss'
+import * as bootstrap from 'bootstrap'
 
 const app = createApp(App)
 
-app.use(PrimeVue, {
-  unstyled: true
-})
 app.use(router)
-
 app.mount('#app')
+
+window.bootstrap = bootstrap

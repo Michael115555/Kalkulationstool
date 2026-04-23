@@ -1,0 +1,49 @@
+:root {
+  --kt-font-sans: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --kt-font-size-sm: 0.94rem;
+  --kt-font-size-md: 0.98rem;
+  --kt-font-size-lg: 1.12rem;
+  --kt-line-height-tight: 1.2;
+  --kt-line-height-base: 1.45;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--kt-font-sans);
+  font-size: var(--kt-font-size-md);
+  line-height: var(--kt-line-height-base);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.btn,
+.form-control,
+.form-select,
+.table,
+.nav-link,
+.navbar-brand {
+  font-family: inherit;
+}
+
+.btn,
+.form-control,
+.form-select {
+  font-size: var(--kt-font-size-md);
+}
+
+.form-label,
+.col-form-label {
+  font-size: var(--kt-font-size-sm);
+  line-height: var(--kt-line-height-tight);
+  font-weight: 500;
+}
+
+.table thead th {
+  font-size: var(--kt-font-size-sm);
+  line-height: var(--kt-line-height-tight);
+}
