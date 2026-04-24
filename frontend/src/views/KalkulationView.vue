@@ -12,123 +12,197 @@ const zubehoerKategorien = [
   'Kassetten & Unterschränke',
   'Finishing / Locher / Fax'
 ]
-const eintauschRabattProzent = ref('10.00')
+const eintauschRabattProzent = ref('0.00')
+const lieferungOption = ref('exkl')
 const lieferungBetrag = ref('0.00')
 const restwertMonate = ref(0)
 const restwertBetrag = ref('0.00')
 const formatDecimal = (value) => Number(value).toFixed(2)
 
+const lieferungOptionen = [
+  {
+    value: 'exkl',
+    label: 'Lieferung exkl.',
+    betrag: 0
+  },
+  {
+    value: 'inkl',
+    label: 'Lieferung inkl.',
+    betrag: 790
+  }
+]
+
+const mietansaetze = {
+  48: 42,
+  60: 50
+}
+
+const epFaktoren = {
+  'Canon alt': {
+    body: 0.4054
+  },
+  'Konica Minolta': {
+    body: 0.7308
+  },
+  Kyocera: {
+    body: 0.45,
+    optionen: 0.65,
+    software: 0.8
+  },
+  OKI: {
+    body: 0.4682,
+    optionen: 0.7837,
+    tonerCx3133: 0.05156
+  },
+  'Canon Mono': {
+    body: 0.67,
+    optionen: 0.665,
+    software: 0.335,
+    production: 0.6295,
+    tonerCx3133: 0.53,
+    dsPpToner: 0.505
+  },
+  'Old Canon Gold': {
+    body: 0.685,
+    optionen: 0.655,
+    software: 0.3,
+    production: 0.595,
+    tonerCx3133: 0.501
+  }
+}
+
+const druckermodellFaktorGruppe = {
+  'Konica Minolta bizhub C251i': 'Konica Minolta'
+}
+
+const epKategorieByZubehoer = {
+  Drucker: 'body',
+  Deckel: 'optionen',
+  'Kassetten & Unterschränke': 'optionen',
+  'Finishing / Locher / Fax': 'optionen',
+  Software: 'software',
+  'Production Printing': 'production',
+  'Toner CX 31-33': 'tonerCx3133',
+  'DS PP Toner': 'dsPpToner'
+}
+
+const normalizeNumber = (value) => {
+  const parsedValue = Number(String(value ?? '').replace(/['\s]/g, '').replace(',', '.'))
+  return Number.isFinite(parsedValue) ? parsedValue : 0
+}
+
+const getEpFaktorGruppe = () =>
+  druckermodellFaktorGruppe[druckermodell.value] ?? 'Konica Minolta'
+
+const getEpKategorie = (position) =>
+  position.epKategorie ?? epKategorieByZubehoer[position.zubehoer] ?? 'optionen'
+
+const getEpFaktor = (position) => {
+  const faktoren = epFaktoren[getEpFaktorGruppe()]
+  const kategorie = getEpKategorie(position)
+
+  return faktoren?.[kategorie] ?? faktoren?.body ?? 0
+}
+
+const getKalkulationsEpFaktor = () =>
+  epFaktoren[getEpFaktorGruppe()]?.body ?? 0
+
+const getEinkaufspreis = (position) =>
+  normalizeNumber(position.vp) * getEpFaktor(position)
+
 const produktkatalog = [
   {
     zubehoer: 'Deckel',
     bezeichnung: 'OC-511 Originalabdeckung',
-    vp: 89,
-    ep: 65.04
+    vp: 89
   },
   {
     zubehoer: 'Deckel',
     bezeichnung: 'DF-632 Originaleinzug zu 1-Serie',
-    vp: 625,
-    ep: 456.75
+    vp: 625
   },
   {
     zubehoer: 'Deckel',
     bezeichnung: 'DF-714 Dual Scan Originaleinzug zu 1i-Serie',
-    vp: 1155,
-    ep: 844.07
+    vp: 1155
   },
   {
     zubehoer: 'Kassetten & Unterschränke',
     bezeichnung: 'PC-116 Universalkassette (1 x 500 Seiten; A5-A3; 80 g/m2)',
-    vp: 675,
-    ep: 493.29
+    vp: 675
   },
   {
     zubehoer: 'Kassetten & Unterschränke',
     bezeichnung: 'PC-216 Universalkassette (2 x 500 Seiten; A5-A3; 80 g/m2)',
-    vp: 975,
-    ep: 712.53
+    vp: 975
   },
   {
     zubehoer: 'Kassetten & Unterschränke',
     bezeichnung: "PC-416 Grossraumkassette (2'500 Seiten; A4, 80 g/m2)",
-    vp: 975,
-    ep: 712.53
+    vp: 975
   },
   {
     zubehoer: 'Kassetten & Unterschränke',
     bezeichnung:
       "PC-417 Grossraumkassette mit 2 parallelen Fächern (1'000 + 1'500 Seiten; A5-A4; 80 g/m2)",
-    vp: 1315,
-    ep: 961
+    vp: 1315
   },
   {
     zubehoer: 'Kassetten & Unterschränke',
     bezeichnung: "LU-302 Seitliche Grossraumkassette (3'000 Seiten, A4, 80 g/m2)",
-    vp: 1730,
-    ep: 1264.28
+    vp: 1730
   },
   {
     zubehoer: 'Kassetten & Unterschränke',
     bezeichnung: 'DK-516x Unterschrank',
-    vp: 145,
-    ep: 105.97
+    vp: 145
   },
   {
     zubehoer: 'Finishing / Locher / Fax',
     bezeichnung: 'FS-539 Heftfinisher (50 Seiten)',
-    vp: 1260,
-    ep: 920.81
+    vp: 1260
   },
   {
     zubehoer: 'Finishing / Locher / Fax',
     bezeichnung:
       'FS-539SD Finisher mit Broschüreneinheit (Heften 50 Seiten/Booklet 20 Seiten)',
-    vp: 2230,
-    ep: 1629.68
+    vp: 2230
   },
   {
     zubehoer: 'Finishing / Locher / Fax',
     bezeichnung:
       'RU-513 Verbindungseinheit für FS-534/SD, FS-536/SD, FS-537/SD, FS-539(SD), FS-540(SD)',
-    vp: 165,
-    ep: 120.58
+    vp: 165
   },
   {
     zubehoer: 'Finishing / Locher / Fax',
     bezeichnung: 'PK-524 Locheinheit für FS-539/SD',
-    vp: 400,
-    ep: 292.32
+    vp: 400
   },
   {
     zubehoer: 'Finishing / Locher / Fax',
     bezeichnung: 'FS-533 Integrierter Finisher V2 (50 Seiten)',
-    vp: 840,
-    ep: 613.87
+    vp: 840
   },
   {
     zubehoer: 'Finishing / Locher / Fax',
     bezeichnung: 'EH-T592 Externer Hefter (50 Seiten)',
-    vp: 270,
-    ep: 197.32
+    vp: 270
   },
   {
     zubehoer: 'Finishing / Locher / Fax',
     bezeichnung: 'PK-519 Locheinheit 2/4-fach-Lochung zu FS-533',
-    vp: 355,
-    ep: 259.43
+    vp: 355
   },
   {
     zubehoer: 'Finishing / Locher / Fax',
     bezeichnung: 'JS-506 Integrierte Job-Trenneinheit',
-    vp: 370,
-    ep: 270.4
+    vp: 370
   },
   {
     zubehoer: 'Finishing / Locher / Fax',
     bezeichnung: 'FK-514 Fax Karte v2',
-    vp: 1025,
-    ep: 749.07
+    vp: 1025
   }
 ]
 
@@ -140,7 +214,7 @@ const positions = ref([
     bezeichnung: 'Konica Minolta bizhub C251i',
     menge: 1,
     vp: formatDecimal(4401.5),
-    ep: formatDecimal(3216.62)
+    epKategorie: 'body'
   },
   ...produktkatalog.map((produkt, index) => ({
     id: index + 2,
@@ -148,7 +222,7 @@ const positions = ref([
     bezeichnung: produkt.bezeichnung,
     menge: 1,
     vp: formatDecimal(produkt.vp),
-    ep: formatDecimal(produkt.ep)
+    epKategorie: epKategorieByZubehoer[produkt.zubehoer] ?? 'optionen'
   }))
 ])
 
@@ -163,11 +237,6 @@ const formatAmount = (value) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(value)
-
-const normalizeNumber = (value) => {
-  const parsedValue = Number(String(value ?? '').replace(/['\s]/g, ''))
-  return Number.isFinite(parsedValue) ? parsedValue : 0
-}
 
 const getGesamtpreis = (position) =>
   normalizeNumber(position.menge) * normalizeNumber(position.vp)
@@ -185,7 +254,7 @@ const getProdukt = (zubehoer, bezeichnung) =>
 const updatePositionZubehoer = (position) => {
   position.bezeichnung = ''
   position.vp = '0.00'
-  position.ep = '0.00'
+  position.epKategorie = epKategorieByZubehoer[position.zubehoer] ?? 'optionen'
 }
 
 const updatePositionProdukt = (position) => {
@@ -193,12 +262,12 @@ const updatePositionProdukt = (position) => {
 
   if (!produkt) {
     position.vp = '0.00'
-    position.ep = '0.00'
+    position.epKategorie = epKategorieByZubehoer[position.zubehoer] ?? 'optionen'
     return
   }
 
   position.vp = formatDecimal(produkt.vp)
-  position.ep = formatDecimal(produkt.ep)
+  position.epKategorie = produkt.epKategorie ?? epKategorieByZubehoer[produkt.zubehoer] ?? 'optionen'
 }
 
 const normalizeQuantity = (position) => {
@@ -215,8 +284,12 @@ const normalizePercent = () => {
   eintauschRabattProzent.value = formatDecimal(Math.max(0, Math.min(100, rabatt)))
 }
 
-const normalizeLieferungBetrag = () => {
-  lieferungBetrag.value = formatDecimal(Math.max(0, normalizeNumber(lieferungBetrag.value)))
+const updateLieferungOption = () => {
+  const option = lieferungOptionen.find(
+    (eintrag) => eintrag.value === lieferungOption.value
+  )
+
+  lieferungBetrag.value = formatDecimal(option?.betrag ?? 0)
 }
 
 const normalizeRestwertBetrag = () => {
@@ -232,7 +305,7 @@ const isEmptyPosition = (position) =>
   !position.zubehoer &&
   !position.bezeichnung &&
   normalizeNumber(position.vp) === 0 &&
-  normalizeNumber(position.ep) === 0
+  getEinkaufspreis(position) === 0
 
 const verkaufspreis = computed(() =>
   positions.value.reduce(
@@ -245,18 +318,33 @@ const eintauschRabattBetrag = computed(() =>
   verkaufspreis.value * (normalizeNumber(eintauschRabattProzent.value) / 100)
 )
 
+const restwertGesamt = computed(() =>
+  normalizeNumber(restwertMonate.value) * normalizeNumber(restwertBetrag.value)
+)
+
 const nettopreis = computed(() =>
   Math.max(
     0,
     verkaufspreis.value -
       eintauschRabattBetrag.value +
-      normalizeNumber(lieferungBetrag.value) -
-      normalizeNumber(restwertBetrag.value)
+      normalizeNumber(lieferungBetrag.value) +
+      restwertGesamt.value
   )
 )
 
-const getMietbetrag = (monate) =>
-  monate > 0 ? nettopreis.value / monate : 0
+const einkaufspreis = computed(() =>
+  nettopreis.value * getKalkulationsEpFaktor()
+)
+
+const mietbasis = computed(() =>
+  Math.max(0, einkaufspreis.value)
+)
+
+const getMietbetrag = (monate) => {
+  const mietansatz = mietansaetze[monate]
+
+  return mietansatz > 0 ? mietbasis.value / mietansatz : 0
+}
 
 const addPosition = () => {
   positions.value.push({
@@ -265,7 +353,7 @@ const addPosition = () => {
     bezeichnung: '',
     menge: 1,
     vp: '0.00',
-    ep: '0.00'
+    epKategorie: 'optionen'
   })
   naechsteId.value += 1
 }
@@ -336,12 +424,12 @@ const removePosition = (id) => {
             <table class="table align-middle mb-0 table-bordered">
               <thead>
                 <tr>
-                  <th scope="col">Zubehör</th>
+                  <th scope="col">Kategorie</th>
                   <th scope="col">Bezeichnung</th>
                   <th scope="col" class="text-end">Menge</th>
-                  <th scope="col" class="text-end">VP</th>
-                  <th scope="col" class="text-end">EP</th>
-                  <th scope="col" class="text-end">Gesamtpreis</th>
+                  <th scope="col" class="text-end price-header">VP (CHF)</th>
+                  <th scope="col" class="text-end price-header">EP (CHF)</th>
+                  <th scope="col" class="text-end total-header">Gesamtpreis (CHF)</th>
                   <th scope="col" class="text-center">Aktion</th>
                 </tr>
               </thead>
@@ -427,7 +515,7 @@ const removePosition = (id) => {
                   </td>
                   <td>
                     <input
-                      :value="position.ep"
+                      :value="formatAmount(getEinkaufspreis(position))"
                       type="text"
                       class="form-control control-field text-end readonly-price"
                       readonly
@@ -436,7 +524,7 @@ const removePosition = (id) => {
                     />
                   </td>
                   <td class="text-end fw-semibold">
-                    {{ formatCurrency(getGesamtpreis(position)) }}
+                    {{ formatAmount(getGesamtpreis(position)) }}
                   </td>
                   <td class="text-center align-middle">
                     <i
@@ -477,13 +565,16 @@ const removePosition = (id) => {
                   <div class="calculation-form-row">
                     <div class="calculation-form-label">Verkaufspreis</div>
                     <div class="calculation-empty-cell"></div>
-                    <input
-                      :value="`CHF ${formatAmount(verkaufspreis)}`"
-                      type="text"
-                      class="form-control amount-input readonly-price calculated-price-input"
-                      readonly
-                      tabindex="-1"
-                    />
+                    <div class="input-group currency-group">
+                      <span class="input-group-text">CHF</span>
+                      <input
+                        :value="formatAmount(verkaufspreis)"
+                        type="text"
+                        class="form-control amount-input readonly-price calculated-price-input"
+                        readonly
+                        tabindex="-1"
+                      />
+                    </div>
                   </div>
 
                   <div class="calculation-form-row">
@@ -498,26 +589,41 @@ const removePosition = (id) => {
                       />
                       <span class="input-group-text">%</span>
                     </div>
-                    <input
-                      :value="`CHF ${formatAmount(eintauschRabattBetrag)}`"
-                      type="text"
-                      class="form-control amount-input readonly-price"
-                      readonly
-                      tabindex="-1"
-                    />
+                    <div class="input-group currency-group">
+                      <span class="input-group-text">CHF</span>
+                      <input
+                        :value="formatAmount(eintauschRabattBetrag)"
+                        type="text"
+                        class="form-control amount-input readonly-price"
+                        readonly
+                        tabindex="-1"
+                      />
+                    </div>
                   </div>
 
                   <div class="calculation-form-row">
                     <div class="calculation-form-label">Lieferung gemäss Konditionen</div>
-                    <div class="calculation-empty-cell"></div>
+                    <select
+                      v-model="lieferungOption"
+                      class="form-select control-field"
+                      @change="updateLieferungOption"
+                    >
+                      <option
+                        v-for="option in lieferungOptionen"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
                     <div class="input-group currency-group">
                       <span class="input-group-text">CHF</span>
                       <input
-                        v-model="lieferungBetrag"
+                        :value="formatAmount(lieferungBetrag)"
                         type="text"
-                        inputmode="decimal"
-                        class="form-control amount-input"
-                        @blur="normalizeLieferungBetrag"
+                        class="form-control amount-input readonly-price"
+                        readonly
+                        tabindex="-1"
                       />
                     </div>
                   </div>
@@ -574,9 +680,9 @@ const removePosition = (id) => {
                     <span class="rent-label">Miete 48 Monate</span>
                     <span class="rent-value">
                       <span class="rent-amount">CHF {{ formatAmount(getMietbetrag(48)) }}</span>
-                      <span class="rent-period">/ Monat</span>
+                      <span class="rent-period">&nbsp;/ Monat</span>
                     </span>
-                    <span class="rent-basis">Basis: CHF {{ formatAmount(nettopreis) }}</span>
+                    <span class="rent-basis">Basis: CHF {{ formatAmount(mietbasis) }}</span>
                   </div>
 
                   <div class="rent-option">
@@ -586,9 +692,9 @@ const removePosition = (id) => {
                     <span class="rent-label">Miete 60 Monate</span>
                     <span class="rent-value">
                       <span class="rent-amount">CHF {{ formatAmount(getMietbetrag(60)) }}</span>
-                      <span class="rent-period">/ Monat</span>
+                      <span class="rent-period">&nbsp;/ Monat</span>
                     </span>
-                    <span class="rent-basis">Basis: CHF {{ formatAmount(nettopreis) }}</span>
+                    <span class="rent-basis">Basis: CHF {{ formatAmount(mietbasis) }}</span>
                   </div>
                 </div>
               </div>
@@ -751,6 +857,15 @@ const removePosition = (id) => {
   vertical-align: middle;
   font-size: var(--kt-font-size-sm);
   line-height: var(--kt-line-height-tight);
+  white-space: nowrap;
+}
+
+.table thead th.price-header {
+  min-width: 7rem;
+}
+
+.table thead th.total-header {
+  min-width: 10rem;
 }
 
 .table tbody td {
@@ -892,6 +1007,10 @@ const removePosition = (id) => {
 .currency-group .form-control {
   min-height: 2.35rem;
   font-size: var(--kt-font-size-md);
+}
+
+.currency-group .readonly-price {
+  color: #101828;
 }
 
 .percent-group .input-group-text,
