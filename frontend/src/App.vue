@@ -2,10 +2,10 @@
 import { RouterLink, RouterView } from 'vue-router'
 
 const navigationItems = [
-  { to: '/', label: 'Kalkulation', icon: 'pi pi-calculator' },
-  { to: '/projekte', label: 'Seite 2', icon: 'pi pi-folder' },
-  { to: '/stammdaten', label: 'Seite 3', icon: 'pi pi-folder' },
-  { to: '/auswertungen', label: 'Seite 4', icon: 'pi pi-folder' }
+  { to: '/', label: 'Kalkulation', icon: 'pi pi-calculator' }
+  //{ to: '/projekte', label: 'Seite 2', icon: 'pi pi-folder' },
+  //{ to: '/stammdaten', label: 'Seite 3', icon: 'pi pi-folder' },
+  //{ to: '/auswertungen', label: 'Seite 4', icon: 'pi pi-folder' }
 ]
 </script>
 

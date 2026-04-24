@@ -1050,8 +1050,6 @@ const removePosition = (id) => {
 }
 
 .calculated-price-input {
-  background-color: #eef2f7;
-  border-color: #d8dee8;
   font-weight: 600;
 }
 
