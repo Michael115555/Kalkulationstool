@@ -1,19 +1,155 @@
 <script setup>
 import { computed, ref } from 'vue'
 
-const naechsteId = ref(4)
-const druckermodell = ref('Canon 6155')
-const variante = ref('45 Seiten/Min.')
+const naechsteId = ref(20)
+const druckermodell = ref('Konica Minolta bizhub C251i')
+const variante = ref('Standard')
 
-const druckermodelle = ['Canon 6155', 'Canon 6160', 'Canon 7170']
-const varianten = ['45 Seiten/Min.', '55 Seiten/Min.', '65 Seiten/Min.']
-const rabattProzent = ref(0)
-const margeProzent = ref(23.2)
+const druckermodelle = ['Konica Minolta bizhub C251i']
+const varianten = ['Standard']
+const zubehoerKategorien = [
+  'Deckel',
+  'Kassetten & Unterschränke',
+  'Finishing / Locher / Fax'
+]
+const eintauschRabattProzent = ref('10.00')
+const lieferungBetrag = ref('0.00')
+const restwertMonate = ref(0)
+const restwertBetrag = ref('0.00')
+const formatDecimal = (value) => Number(value).toFixed(2)
+
+const produktkatalog = [
+  {
+    zubehoer: 'Deckel',
+    bezeichnung: 'OC-511 Originalabdeckung',
+    vp: 89,
+    ep: 65.04
+  },
+  {
+    zubehoer: 'Deckel',
+    bezeichnung: 'DF-632 Originaleinzug zu 1-Serie',
+    vp: 625,
+    ep: 456.75
+  },
+  {
+    zubehoer: 'Deckel',
+    bezeichnung: 'DF-714 Dual Scan Originaleinzug zu 1i-Serie',
+    vp: 1155,
+    ep: 844.07
+  },
+  {
+    zubehoer: 'Kassetten & Unterschränke',
+    bezeichnung: 'PC-116 Universalkassette (1 x 500 Seiten; A5-A3; 80 g/m2)',
+    vp: 675,
+    ep: 493.29
+  },
+  {
+    zubehoer: 'Kassetten & Unterschränke',
+    bezeichnung: 'PC-216 Universalkassette (2 x 500 Seiten; A5-A3; 80 g/m2)',
+    vp: 975,
+    ep: 712.53
+  },
+  {
+    zubehoer: 'Kassetten & Unterschränke',
+    bezeichnung: "PC-416 Grossraumkassette (2'500 Seiten; A4, 80 g/m2)",
+    vp: 975,
+    ep: 712.53
+  },
+  {
+    zubehoer: 'Kassetten & Unterschränke',
+    bezeichnung:
+      "PC-417 Grossraumkassette mit 2 parallelen Fächern (1'000 + 1'500 Seiten; A5-A4; 80 g/m2)",
+    vp: 1315,
+    ep: 961
+  },
+  {
+    zubehoer: 'Kassetten & Unterschränke',
+    bezeichnung: "LU-302 Seitliche Grossraumkassette (3'000 Seiten, A4, 80 g/m2)",
+    vp: 1730,
+    ep: 1264.28
+  },
+  {
+    zubehoer: 'Kassetten & Unterschränke',
+    bezeichnung: 'DK-516x Unterschrank',
+    vp: 145,
+    ep: 105.97
+  },
+  {
+    zubehoer: 'Finishing / Locher / Fax',
+    bezeichnung: 'FS-539 Heftfinisher (50 Seiten)',
+    vp: 1260,
+    ep: 920.81
+  },
+  {
+    zubehoer: 'Finishing / Locher / Fax',
+    bezeichnung:
+      'FS-539SD Finisher mit Broschüreneinheit (Heften 50 Seiten/Booklet 20 Seiten)',
+    vp: 2230,
+    ep: 1629.68
+  },
+  {
+    zubehoer: 'Finishing / Locher / Fax',
+    bezeichnung:
+      'RU-513 Verbindungseinheit für FS-534/SD, FS-536/SD, FS-537/SD, FS-539(SD), FS-540(SD)',
+    vp: 165,
+    ep: 120.58
+  },
+  {
+    zubehoer: 'Finishing / Locher / Fax',
+    bezeichnung: 'PK-524 Locheinheit für FS-539/SD',
+    vp: 400,
+    ep: 292.32
+  },
+  {
+    zubehoer: 'Finishing / Locher / Fax',
+    bezeichnung: 'FS-533 Integrierter Finisher V2 (50 Seiten)',
+    vp: 840,
+    ep: 613.87
+  },
+  {
+    zubehoer: 'Finishing / Locher / Fax',
+    bezeichnung: 'EH-T592 Externer Hefter (50 Seiten)',
+    vp: 270,
+    ep: 197.32
+  },
+  {
+    zubehoer: 'Finishing / Locher / Fax',
+    bezeichnung: 'PK-519 Locheinheit 2/4-fach-Lochung zu FS-533',
+    vp: 355,
+    ep: 259.43
+  },
+  {
+    zubehoer: 'Finishing / Locher / Fax',
+    bezeichnung: 'JS-506 Integrierte Job-Trenneinheit',
+    vp: 370,
+    ep: 270.4
+  },
+  {
+    zubehoer: 'Finishing / Locher / Fax',
+    bezeichnung: 'FK-514 Fax Karte v2',
+    vp: 1025,
+    ep: 749.07
+  }
+]
 
 const positions = ref([
-  { id: 1, bezeichnung: 'Planung', menge: 8, einheit: 'Std.', einzelpreis: 95 },
-  { id: 2, bezeichnung: 'Entwicklung', menge: 24, einheit: 'Std.', einzelpreis: 110 },
-  { id: 3, bezeichnung: 'Abnahme', menge: 4, einheit: 'Std.', einzelpreis: 90 }
+  {
+    id: 1,
+    istDrucker: true,
+    zubehoer: 'Drucker',
+    bezeichnung: 'Konica Minolta bizhub C251i',
+    menge: 1,
+    vp: formatDecimal(4401.5),
+    ep: formatDecimal(3216.62)
+  },
+  ...produktkatalog.map((produkt, index) => ({
+    id: index + 2,
+    zubehoer: produkt.zubehoer,
+    bezeichnung: produkt.bezeichnung,
+    menge: 1,
+    vp: formatDecimal(produkt.vp),
+    ep: formatDecimal(produkt.ep)
+  }))
 ])
 
 const formatCurrency = (value) =>
@@ -22,44 +158,114 @@ const formatCurrency = (value) =>
     currency: 'CHF'
   }).format(value)
 
+const formatAmount = (value) =>
+  new Intl.NumberFormat('de-CH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value)
+
 const normalizeNumber = (value) => {
-  const parsedValue = Number(value)
+  const parsedValue = Number(String(value ?? '').replace(/['\s]/g, ''))
   return Number.isFinite(parsedValue) ? parsedValue : 0
 }
 
 const getGesamtpreis = (position) =>
-  normalizeNumber(position.menge) * normalizeNumber(position.einzelpreis)
+  normalizeNumber(position.menge) * normalizeNumber(position.vp)
+
+const getProdukteByZubehoer = (zubehoer) =>
+  produktkatalog.filter((produkt) => produkt.zubehoer === zubehoer)
+
+const getProdukt = (zubehoer, bezeichnung) =>
+  produktkatalog.find(
+    (produkt) =>
+      produkt.zubehoer === zubehoer &&
+      produkt.bezeichnung === bezeichnung
+  )
+
+const updatePositionZubehoer = (position) => {
+  position.bezeichnung = ''
+  position.vp = '0.00'
+  position.ep = '0.00'
+}
+
+const updatePositionProdukt = (position) => {
+  const produkt = getProdukt(position.zubehoer, position.bezeichnung)
+
+  if (!produkt) {
+    position.vp = '0.00'
+    position.ep = '0.00'
+    return
+  }
+
+  position.vp = formatDecimal(produkt.vp)
+  position.ep = formatDecimal(produkt.ep)
+}
+
+const normalizeQuantity = (position) => {
+  const menge = Math.trunc(normalizeNumber(position.menge))
+  position.menge = Math.max(1, menge)
+}
+
+const normalizePrice = (position) => {
+  position.vp = formatDecimal(normalizeNumber(position.vp))
+}
+
+const normalizePercent = () => {
+  const rabatt = normalizeNumber(eintauschRabattProzent.value)
+  eintauschRabattProzent.value = formatDecimal(Math.max(0, Math.min(100, rabatt)))
+}
+
+const normalizeLieferungBetrag = () => {
+  lieferungBetrag.value = formatDecimal(Math.max(0, normalizeNumber(lieferungBetrag.value)))
+}
+
+const normalizeRestwertBetrag = () => {
+  restwertBetrag.value = formatDecimal(Math.max(0, normalizeNumber(restwertBetrag.value)))
+}
+
+const normalizeRestwertMonate = () => {
+  const monate = Math.trunc(normalizeNumber(restwertMonate.value))
+  restwertMonate.value = Math.max(0, monate)
+}
 
 const isEmptyPosition = (position) =>
+  !position.zubehoer &&
   !position.bezeichnung &&
-  !position.einheit &&
-  normalizeNumber(position.menge) === 0 &&
-  normalizeNumber(position.einzelpreis) === 0
+  normalizeNumber(position.vp) === 0 &&
+  normalizeNumber(position.ep) === 0
 
-const gesamtsumme = computed(() =>
+const verkaufspreis = computed(() =>
   positions.value.reduce(
     (summe, position) => summe + getGesamtpreis(position),
     0
   )
 )
 
-const rabattBetrag = computed(() =>
-  gesamtsumme.value * (normalizeNumber(rabattProzent.value) / 100)
+const eintauschRabattBetrag = computed(() =>
+  verkaufspreis.value * (normalizeNumber(eintauschRabattProzent.value) / 100)
 )
 
-const gesamtpreis = computed(() => gesamtsumme.value - rabattBetrag.value)
-
-const margeBetrag = computed(() =>
-  gesamtpreis.value * (normalizeNumber(margeProzent.value) / 100)
+const nettopreis = computed(() =>
+  Math.max(
+    0,
+    verkaufspreis.value -
+      eintauschRabattBetrag.value +
+      normalizeNumber(lieferungBetrag.value) -
+      normalizeNumber(restwertBetrag.value)
+  )
 )
+
+const getMietbetrag = (monate) =>
+  monate > 0 ? nettopreis.value / monate : 0
 
 const addPosition = () => {
   positions.value.push({
     id: naechsteId.value,
+    zubehoer: '',
     bezeichnung: '',
-    menge: 0,
-    einheit: '',
-    einzelpreis: 0
+    menge: 1,
+    vp: '0.00',
+    ep: '0.00'
   })
   naechsteId.value += 1
 }
@@ -133,10 +339,11 @@ const removePosition = (id) => {
             <table class="table align-middle mb-0 table-bordered">
               <thead>
                 <tr>
+                  <th scope="col">Zubehör</th>
                   <th scope="col">Bezeichnung</th>
                   <th scope="col" class="text-end">Menge</th>
-                  <th scope="col">Einheit</th>
-                  <th scope="col" class="text-end">Einzelpreis</th>
+                  <th scope="col" class="text-end">VP</th>
+                  <th scope="col" class="text-end">EP</th>
                   <th scope="col" class="text-end">Gesamtpreis</th>
                   <th scope="col" class="text-center">Aktion</th>
                 </tr>
@@ -149,38 +356,86 @@ const removePosition = (id) => {
                 >
                   <td>
                     <input
-                      v-model="position.bezeichnung"
+                      v-if="position.istDrucker"
+                      :value="position.zubehoer"
                       type="text"
-                      class="form-control control-field"
-                      placeholder="Bezeichnung"
+                      class="form-control control-field readonly-price"
+                      readonly
+                      tabindex="-1"
                     />
+                    <select
+                      v-else
+                      v-model="position.zubehoer"
+                      class="form-select control-field"
+                      @change="updatePositionZubehoer(position)"
+                    >
+                      <option value="" disabled>Zubehör wählen</option>
+                      <option
+                        v-for="zubehoer in zubehoerKategorien"
+                        :key="zubehoer"
+                        :value="zubehoer"
+                      >
+                        {{ zubehoer }}
+                      </option>
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      v-if="position.istDrucker"
+                      :value="position.bezeichnung"
+                      type="text"
+                      class="form-control control-field readonly-price"
+                      readonly
+                      tabindex="-1"
+                    />
+                    <select
+                      v-else
+                      v-model="position.bezeichnung"
+                      class="form-select control-field"
+                      :disabled="!position.zubehoer"
+                      @change="updatePositionProdukt(position)"
+                    >
+                      <option value="" disabled>Bezeichnung wählen</option>
+                      <option
+                        v-for="produkt in getProdukteByZubehoer(position.zubehoer)"
+                        :key="produkt.bezeichnung"
+                        :value="produkt.bezeichnung"
+                      >
+                        {{ produkt.bezeichnung }}
+                      </option>
+                    </select>
                   </td>
                   <td>
                     <input
                       v-model.number="position.menge"
                       type="number"
-                      min="0"
-                      step="0.01"
+                      min="1"
+                      step="1"
+                      inputmode="numeric"
                       class="form-control control-field text-end"
-                      placeholder="0"
+                      placeholder="1"
+                      @change="normalizeQuantity(position)"
+                      @blur="normalizeQuantity(position)"
                     />
                   </td>
                   <td>
                     <input
-                      v-model="position.einheit"
+                      v-model="position.vp"
                       type="text"
-                      class="form-control control-field"
-                      placeholder="Einheit"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      v-model.number="position.einzelpreis"
-                      type="number"
-                      min="0"
-                      step="0.01"
+                      inputmode="decimal"
                       class="form-control control-field text-end"
                       placeholder="0.00"
+                      @blur="normalizePrice(position)"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      :value="position.ep"
+                      type="text"
+                      class="form-control control-field text-end readonly-price"
+                      readonly
+                      tabindex="-1"
+                      aria-label="Einkaufspreis"
                     />
                   </td>
                   <td class="text-end fw-semibold">
@@ -188,6 +443,7 @@ const removePosition = (id) => {
                   </td>
                   <td class="text-center align-middle">
                     <i
+                      v-if="!position.istDrucker"
                       class="pi pi-trash delete-icon"
                       role="button"
                       tabindex="0"
@@ -200,50 +456,129 @@ const removePosition = (id) => {
             </table>
           </div>
 
-          <div class="summary-strip" aria-label="Kalkulationsuebersicht">
-            <div class="summary-item">
-              <div class="summary-icon summary-icon-blue">
-                <i class="pi pi-calculator" aria-hidden="true"></i>
-              </div>
-              <div>
-                <div class="summary-label">Zwischensumme</div>
-                <div class="summary-value">{{ formatCurrency(gesamtsumme) }}</div>
-                <div class="summary-note">(exkl. MWST)</div>
-              </div>
-            </div>
+          <div class="calculation-panel">
+            <div class="calculation-layout">
+              <div class="calculation-card calculation-card-main">
+                <h4 class="positions-heading calculation-card-heading">Kalkulation</h4>
 
-            <div class="summary-item">
-              <div class="summary-icon summary-icon-green">
-                <i class="pi pi-percentage" aria-hidden="true"></i>
-              </div>
-              <div>
-                <div class="summary-label">Rabatt</div>
-                <div class="summary-value">{{ rabattProzent.toFixed(2) }} %</div>
-                <div class="summary-note">{{ formatCurrency(rabattBetrag) }}</div>
-              </div>
-            </div>
+                <div class="calculation-form">
+                  <div class="calculation-form-row">
+                    <div class="calculation-form-label">Verkaufspreis</div>
+                    <div class="calculation-empty-cell"></div>
+                    <input
+                      :value="`CHF ${formatAmount(verkaufspreis)}`"
+                      type="text"
+                      class="form-control amount-input readonly-price calculated-price-input"
+                      readonly
+                      tabindex="-1"
+                    />
+                  </div>
 
-            <div class="summary-item summary-item-primary">
-              <div class="summary-icon summary-icon-primary">
-                <i class="pi pi-tag" aria-hidden="true"></i>
-              </div>
-              <div>
-                <div class="summary-label">Gesamtpreis</div>
-                <div class="summary-value summary-value-primary">
-                  {{ formatCurrency(gesamtpreis) }}
+                  <div class="calculation-form-row">
+                    <div class="calculation-form-label">Eintauschrabatt</div>
+                    <div class="input-group percent-group">
+                      <input
+                        v-model="eintauschRabattProzent"
+                        type="text"
+                        inputmode="decimal"
+                        class="form-control text-end"
+                        @blur="normalizePercent"
+                      />
+                      <span class="input-group-text">%</span>
+                    </div>
+                    <input
+                      :value="`CHF ${formatAmount(eintauschRabattBetrag)}`"
+                      type="text"
+                      class="form-control amount-input readonly-price"
+                      readonly
+                      tabindex="-1"
+                    />
+                  </div>
+
+                  <div class="calculation-form-row">
+                    <div class="calculation-form-label">Lieferung gemäss Konditionen</div>
+                    <div class="calculation-empty-cell"></div>
+                    <div class="input-group currency-group">
+                      <span class="input-group-text">CHF</span>
+                      <input
+                        v-model="lieferungBetrag"
+                        type="text"
+                        inputmode="decimal"
+                        class="form-control amount-input"
+                        @blur="normalizeLieferungBetrag"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="calculation-form-row">
+                    <div class="calculation-form-label">Restwert</div>
+                    <div class="input-group month-group">
+                      <input
+                        v-model.number="restwertMonate"
+                        type="number"
+                        min="0"
+                        step="1"
+                        inputmode="numeric"
+                        class="form-control text-end"
+                        @change="normalizeRestwertMonate"
+                        @blur="normalizeRestwertMonate"
+                      />
+                      <span class="input-group-text">Mt.</span>
+                    </div>
+                    <div class="input-group currency-group">
+                      <span class="input-group-text">CHF</span>
+                      <input
+                        v-model="restwertBetrag"
+                        type="text"
+                        inputmode="decimal"
+                        class="form-control amount-input"
+                        @blur="normalizeRestwertBetrag"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="calculation-form-row net-row">
+                    <div class="calculation-form-label">Nettopreis</div>
+                    <div class="calculation-empty-cell"></div>
+                    <input
+                      :value="`CHF ${formatAmount(nettopreis)}`"
+                      type="text"
+                      class="form-control amount-input readonly-price net-price-input"
+                      readonly
+                      tabindex="-1"
+                    />
+                  </div>
                 </div>
-                <div class="summary-note summary-note-primary">(exkl. MWST)</div>
               </div>
-            </div>
 
-            <div class="summary-item">
-              <div class="summary-icon summary-icon-purple">
-                <i class="pi pi-chart-line" aria-hidden="true"></i>
-              </div>
-              <div>
-                <div class="summary-label">Marge</div>
-                <div class="summary-value">{{ margeProzent.toFixed(1) }} %</div>
-                <div class="summary-note">{{ formatCurrency(margeBetrag) }}</div>
+              <div class="calculation-card rent-section">
+                <h4 class="positions-heading calculation-card-heading">Mietoptionen</h4>
+
+                <div class="rent-options">
+                  <div class="rent-option">
+                    <span class="rent-icon">
+                      <i class="pi pi-calendar" aria-hidden="true"></i>
+                    </span>
+                    <span class="rent-label">Miete 48 Monate</span>
+                    <span class="rent-value">
+                      <span class="rent-amount">CHF {{ formatAmount(getMietbetrag(48)) }}</span>
+                      <span class="rent-period">/ Monat</span>
+                    </span>
+                    <span class="rent-basis">Basis: CHF {{ formatAmount(nettopreis) }}</span>
+                  </div>
+
+                  <div class="rent-option">
+                    <span class="rent-icon">
+                      <i class="pi pi-calendar" aria-hidden="true"></i>
+                    </span>
+                    <span class="rent-label">Miete 60 Monate</span>
+                    <span class="rent-value">
+                      <span class="rent-amount">CHF {{ formatAmount(getMietbetrag(60)) }}</span>
+                      <span class="rent-period">/ Monat</span>
+                    </span>
+                    <span class="rent-basis">Basis: CHF {{ formatAmount(nettopreis) }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -374,6 +709,13 @@ const removePosition = (id) => {
   padding-bottom: 0.36rem;
 }
 
+.readonly-price {
+  background-color: #f8fafc;
+  color: #667085;
+  cursor: default;
+  opacity: 1;
+}
+
 .table thead th {
   background-color: #fdfefe;
   color: #667085;
@@ -409,7 +751,8 @@ const removePosition = (id) => {
   background-color: #fbfcff;
 }
 
-.empty-position-row .form-control {
+.empty-position-row .form-control,
+.empty-position-row .form-select {
   border-color: #e4e7ec;
   color: #667085;
 }
@@ -418,99 +761,197 @@ const removePosition = (id) => {
   color: #a7b0bf;
 }
 
-.summary-strip {
+.calculation-panel {
+  margin-top: 1.65rem;
+  padding-top: 1.45rem;
+  border-top: 1px solid #d9dee8;
+}
+
+.calculation-layout {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 1rem;
-  overflow: hidden;
-  border: 1px solid #e1e6ef;
-  border-radius: 0.45rem;
+  grid-template-columns: minmax(0, 70fr) minmax(18rem, 30fr);
+  align-items: start;
+  gap: 1rem;
+}
+
+.calculation-card {
+  min-width: 0;
+  padding: 1.15rem;
+  border: 1px solid #e4e7ec;
+  border-radius: 0.42rem;
   background: #ffffff;
 }
 
-.summary-item {
+.calculation-card-heading {
+  min-height: 2.2rem;
+  margin-bottom: 0.65rem;
+}
+
+.calculation-form {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.calculation-form-row {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1.2fr) minmax(10rem, 0.8fr) minmax(16rem, 1fr);
+  align-items: center;
+  column-gap: 1rem;
+}
+
+.calculation-form-row {
+  min-height: 3.55rem;
+  padding: 0.42rem 0.25rem;
+  border-bottom: 1px solid #f0f3f8;
+}
+
+.calculation-form-row:last-child {
+  border-bottom: 0;
+}
+
+.calculation-form-label {
+  color: #344054;
+  font-size: var(--kt-font-size-md);
+  font-weight: 500;
+  line-height: var(--kt-line-height-tight);
+}
+
+.amount-input {
+  min-height: 2.35rem;
+  border-radius: 0.42rem;
+  text-align: right;
+  font-size: var(--kt-font-size-md);
+}
+
+.currency-group .input-group-text {
+  min-width: 4.25rem;
+  justify-content: center;
+  color: #475467;
+  font-size: var(--kt-font-size-md);
+  background: #f8fafc;
+}
+
+.percent-group,
+.month-group,
+.currency-group {
+  width: 100%;
+}
+
+.percent-group .form-control,
+.month-group .form-control,
+.currency-group .form-control {
+  min-height: 2.35rem;
+  font-size: var(--kt-font-size-md);
+}
+
+.percent-group .input-group-text,
+.month-group .input-group-text {
+  min-width: 4.5rem;
+  justify-content: center;
+  color: #475467;
+  font-size: var(--kt-font-size-md);
+  background: #f8fafc;
+}
+
+.net-row {
+  min-height: 4.6rem;
+  margin-top: 0.55rem;
+  padding: 0.85rem 0.8rem;
+  background-color: #eef4ff;
+  border: 1px solid #e4ebff;
+  border-radius: 0.42rem;
+}
+
+.net-row .calculation-form-label,
+.net-row .amount-input {
+  color: #155eef;
+  font-weight: 700;
+}
+
+.net-row .calculation-form-label {
+  font-size: 1.08rem;
+}
+
+.net-price-input {
+  min-height: 2.75rem;
+  background-color: #eef4ff;
+  font-size: 1.28rem;
+}
+
+.calculated-price-input {
+  background-color: #eef2f7;
+  border-color: #d8dee8;
+  color: #475467;
+  font-weight: 600;
+}
+
+.rent-section {
+  align-self: stretch;
+  padding-bottom: 0.9rem;
+}
+
+.rent-options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+}
+
+.rent-option {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 0.85rem;
-  min-height: 5.75rem;
-  padding: 1rem 1.25rem;
+  gap: 0.38rem 0.9rem;
+  min-height: 4.35rem;
+  padding: 0.72rem 0.9rem;
+  border: 1px solid #e4e7ec;
+  border-radius: 0.42rem;
+  background: #ffffff;
 }
 
-.summary-item + .summary-item {
-  border-left: 1px solid #e7ebf0;
-}
-
-.summary-item-primary {
-  background: #f5f8ff;
-}
-
-.summary-item-primary + .summary-item {
-  border-left: 1px solid #e7ebf0;
-}
-
-.summary-icon {
+.rent-icon {
   display: inline-flex;
+  grid-row: span 3;
   align-items: center;
   justify-content: center;
-  width: 2.15rem;
-  height: 2.15rem;
-  border-radius: 0.36rem;
-  font-size: 0.88rem;
-}
-
-.summary-icon-blue {
-  background: #f4f7ff;
-  color: #5f8cf2;
-}
-
-.summary-icon-green {
-  background: #f1faf4;
-  color: #57a86b;
-}
-
-.summary-icon-primary {
-  background: #e8f0ff;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid #e4e7ec;
+  border-radius: 0.42rem;
+  background: #f8fafc;
   color: #2563eb;
+  font-size: 0.9rem;
 }
 
-.summary-icon-purple {
-  background: #f8f1ff;
-  color: #a78bfa;
-}
-
-.summary-label {
-  margin-bottom: 0.3rem;
-  color: #111827;
-  font-size: 0.96rem;
+.rent-label,
+.rent-value,
+.rent-basis {
+  color: #101828;
+  font-size: 1rem;
   font-weight: 500;
   line-height: var(--kt-line-height-tight);
 }
 
-.summary-value {
-  color: #111827;
-  font-size: 1.14rem;
+.rent-value {
+  min-width: 0;
+  color: #101828;
+  text-align: left;
   font-weight: 600;
-  line-height: var(--kt-line-height-tight);
 }
 
-.summary-note {
-  margin-top: 0.3rem;
+.rent-amount {
+  color: #101828;
+  font-weight: 600;
+}
+
+.rent-period {
+  color: #667085;
+  font-weight: 500;
+}
+
+.rent-basis {
   color: #667085;
   font-size: 0.9rem;
   font-weight: 500;
-  line-height: var(--kt-line-height-tight);
-}
-
-.summary-item-primary .summary-label,
-.summary-value-primary,
-.summary-note-primary {
-  color: #155eef;
-}
-
-.summary-value-primary {
-  font-size: 1.24rem;
-  font-weight: 700;
 }
 
 @media (max-width: 1199.98px) {
@@ -529,17 +970,12 @@ const removePosition = (id) => {
     max-width: none;
   }
 
-  .summary-strip {
+  .calculation-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .rent-options {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .summary-item:nth-child(3) {
-    border-left: 0;
-    border-top: 1px solid #e7ebf0;
-  }
-
-  .summary-item:nth-child(4) {
-    border-top: 1px solid #e7ebf0;
   }
 }
 
@@ -564,19 +1000,18 @@ const removePosition = (id) => {
     min-width: 0;
   }
 
-  .summary-strip {
+  .calculation-form-row {
+    grid-template-columns: 1fr;
+    row-gap: 0.55rem;
+  }
+
+  .calculation-empty-cell {
+    display: none;
+  }
+
+  .rent-options {
     grid-template-columns: 1fr;
   }
 
-  .summary-item,
-  .summary-item:nth-child(3),
-  .summary-item:nth-child(4) {
-    border-left: 0;
-    border-top: 1px solid #e7ebf0;
-  }
-
-  .summary-item:first-child {
-    border-top: 0;
-  }
 }
 </style>

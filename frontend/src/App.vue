@@ -3,9 +3,9 @@ import { RouterLink, RouterView } from 'vue-router'
 
 const navigationItems = [
   { to: '/', label: 'Kalkulation', icon: 'pi pi-calculator' },
-  { to: '/projekte', label: 'Projekte', icon: 'pi pi-folder' },
-  { to: '/stammdaten', label: 'Stammdaten', icon: 'pi pi-users' },
-  { to: '/auswertungen', label: 'Auswertungen', icon: 'pi pi-chart-bar' }
+  { to: '/projekte', label: 'Seite 2', icon: 'pi pi-folder' },
+  { to: '/stammdaten', label: 'Seite 3', icon: 'pi pi-folder' },
+  { to: '/auswertungen', label: 'Seite 4', icon: 'pi pi-folder' }
 ]
 </script>
 
@@ -55,7 +55,7 @@ const navigationItems = [
               type="button"
               aria-label="Profilmenü öffnen"
             >
-              <span class="profile-avatar">PR</span>
+              <span class="profile-avatar">RS</span>
               <i class="pi pi-angle-down profile-chevron" aria-hidden="true"></i>
             </button>
           </div>
