@@ -330,9 +330,6 @@ const removePosition = (id) => {
 
           <div class="position-toolbar">
             <h4 class="positions-heading mb-0">Positionen</h4>
-            <button type="button" class="btn btn-primary action-button" @click="addPosition">
-              Position hinzufügen
-            </button>
           </div>
 
           <div class="table-responsive">
@@ -450,6 +447,21 @@ const removePosition = (id) => {
                       aria-label="Position loeschen"
                       @click="removePosition(position.id)"
                     ></i>
+                  </td>
+                </tr>
+                <tr class="position-add-table-row">
+                  <td colspan="7">
+                    <div class="position-add-content">
+                      <button
+                        type="button"
+                        class="position-add-button"
+                        aria-label="Position hinzufügen"
+                        @click="addPosition"
+                      >
+                        <i class="pi pi-plus" aria-hidden="true"></i>
+                        <span>Position hinzufügen</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -613,7 +625,7 @@ const removePosition = (id) => {
 .toolbar-label {
   flex: 0 0 auto;
   margin: 0;
-  color: #667085;
+  color: #101828;
   font-size: var(--kt-font-size-md);
   font-weight: 500;
   line-height: var(--kt-line-height-tight);
@@ -659,10 +671,6 @@ const removePosition = (id) => {
 }
 
 .position-toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 1rem;
   min-height: 2.5rem;
   margin: 0 0 0.65rem;
 }
@@ -691,16 +699,35 @@ const removePosition = (id) => {
   min-height: 2.55rem;
 }
 
-.action-button {
+.position-add-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  align-self: center;
-  height: 2.35rem;
-  padding: 0.38rem 0.8rem;
-  border-radius: 0.42rem;
-  line-height: 1.2;
-  margin: 0;
+  gap: 0.55rem;
+  min-height: 2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  font-size: var(--kt-font-size-md);
+  font-weight: 500;
+  line-height: var(--kt-line-height-tight);
+  white-space: nowrap;
+}
+
+.position-add-button .pi {
+  font-size: 1rem;
+}
+
+.position-add-button:hover,
+.position-add-button:focus-visible {
+  color: #1d4ed8;
+}
+
+.position-add-button:focus-visible {
+  outline: 2px solid #bfdbfe;
+  outline-offset: 0.2rem;
+  border-radius: 0.2rem;
 }
 
 .table .control-field {
@@ -718,7 +745,7 @@ const removePosition = (id) => {
 
 .table thead th {
   background-color: #fdfefe;
-  color: #667085;
+  color: #101828;
   font-weight: 500;
   border-bottom: 1px solid #e7ebf0;
   vertical-align: middle;
@@ -728,6 +755,25 @@ const removePosition = (id) => {
 
 .table tbody td {
   background-color: #ffffff;
+}
+
+.position-add-table-row td {
+  padding: 0.78rem 1.45rem;
+  border-top: 0;
+}
+
+.position-add-content {
+  display: flex;
+  align-items: center;
+  gap: 1.35rem;
+  width: 100%;
+}
+
+.position-add-content::before,
+.position-add-content::after {
+  content: '';
+  flex: 1 1 0;
+  border-top: 1px dashed #a9bef8;
 }
 
 .delete-icon {
@@ -762,8 +808,8 @@ const removePosition = (id) => {
 }
 
 .calculation-panel {
-  margin-top: 1.65rem;
-  padding-top: 1.45rem;
+  margin-top: 1.85rem;
+  padding-top: 1.6rem;
   border-top: 1px solid #d9dee8;
 }
 
@@ -810,7 +856,7 @@ const removePosition = (id) => {
 }
 
 .calculation-form-label {
-  color: #344054;
+  color: #101828;
   font-size: var(--kt-font-size-md);
   font-weight: 500;
   line-height: var(--kt-line-height-tight);
@@ -821,6 +867,10 @@ const removePosition = (id) => {
   border-radius: 0.42rem;
   text-align: right;
   font-size: var(--kt-font-size-md);
+}
+
+.calculation-form-row > .readonly-price {
+  color: #101828;
 }
 
 .currency-group .input-group-text {
@@ -883,7 +933,6 @@ const removePosition = (id) => {
 .calculated-price-input {
   background-color: #eef2f7;
   border-color: #d8dee8;
-  color: #475467;
   font-weight: 600;
 }
 
@@ -895,7 +944,7 @@ const removePosition = (id) => {
 .rent-options {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.65rem;
+  gap: 0.55rem;
 }
 
 .rent-option {
@@ -904,9 +953,9 @@ const removePosition = (id) => {
   grid-template-rows: repeat(3, min-content);
   align-items: center;
   align-content: center;
-  gap: 0.38rem 0.9rem;
-  min-height: 4.35rem;
-  padding: 0.72rem 0.9rem;
+  gap: 0.3rem 0.85rem;
+  min-height: 4.05rem;
+  padding: 0.6rem 0.85rem;
   border: 1px solid #e4e7ec;
   border-radius: 0.42rem;
   background: #ffffff;
@@ -944,7 +993,7 @@ const removePosition = (id) => {
 }
 
 .rent-amount {
-  color: #101828;
+  color: #155eef;
   font-weight: 600;
 }
 
@@ -985,15 +1034,6 @@ const removePosition = (id) => {
 }
 
 @media (max-width: 575.98px) {
-  .position-toolbar {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-  }
-
-  .action-button {
-    width: 100%;
-  }
-
   .toolbar-field {
     align-items: stretch;
     flex-direction: column;
