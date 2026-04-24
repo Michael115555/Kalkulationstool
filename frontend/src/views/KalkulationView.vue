@@ -854,9 +854,9 @@ const removePosition = (id) => {
 }
 
 .net-row {
-  min-height: 4.6rem;
+  min-height: 2.75rem;
   margin-top: 0.55rem;
-  padding: 0.85rem 0.8rem;
+  padding: 0;
   background-color: #eef4ff;
   border: 1px solid #e4ebff;
   border-radius: 0.42rem;
@@ -869,13 +869,15 @@ const removePosition = (id) => {
 }
 
 .net-row .calculation-form-label {
+  padding-left: 0.75rem;
   font-size: 1.08rem;
 }
 
 .net-price-input {
   min-height: 2.75rem;
   background-color: #eef4ff;
-  font-size: 1.28rem;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .calculated-price-input {
@@ -899,7 +901,9 @@ const removePosition = (id) => {
 .rent-option {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: repeat(3, min-content);
   align-items: center;
+  align-content: center;
   gap: 0.38rem 0.9rem;
   min-height: 4.35rem;
   padding: 0.72rem 0.9rem;
@@ -911,6 +915,7 @@ const removePosition = (id) => {
 .rent-icon {
   display: inline-flex;
   grid-row: span 3;
+  align-self: center;
   align-items: center;
   justify-content: center;
   width: 2.25rem;
