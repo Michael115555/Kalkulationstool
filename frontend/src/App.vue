@@ -1,12 +1,18 @@
 <script setup>
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
+
+const route = useRoute()
 
 const navigationItems = [
-  { to: '/', label: 'Kalkulation', icon: 'pi pi-calculator' }
+  { to: '/', label: 'Kalkulation', icon: 'pi pi-calculator' },
+  { to: '/stammdaten', label: 'Kunden', icon: 'pi pi-users' }
   //{ to: '/projekte', label: 'Seite 2', icon: 'pi pi-folder' },
-  //{ to: '/stammdaten', label: 'Seite 3', icon: 'pi pi-folder' },
   //{ to: '/auswertungen', label: 'Seite 4', icon: 'pi pi-folder' }
 ]
+
+const openKalkulationOfferten = () => {
+  window.dispatchEvent(new CustomEvent('open-kalkulation-offerten'))
+}
 </script>
 
 <template>
@@ -51,27 +57,29 @@ const navigationItems = [
 
           <div class="d-flex topbar-actions justify-content-lg-end">
             <button
-              class="profile-chip btn border-0 shadow-none text-decoration-none d-inline-flex align-items-center ms-lg-3"
+              v-if="route.name === 'kalkulation'"
+              class="topbar-offerten-button btn shadow-none text-decoration-none d-inline-flex align-items-center ms-lg-3"
               type="button"
-              aria-label="Profilmenü öffnen"
+              aria-label="Offerten öffnen"
+              @click="openKalkulationOfferten"
             >
-              <span class="profile-avatar">RS</span>
-              <i class="pi pi-angle-down profile-chevron" aria-hidden="true"></i>
+              <i class="pi pi-list" aria-hidden="true"></i>
+              <span>Offerten</span>
             </button>
           </div>
         </div>
       </div>
     </nav>
 
-    <div class="container-fluid py-3">
+    <div class="container-fluid app-content">
       <RouterView />
     </div>
   </div>
 </template>
 
 <style scoped>
-.app-shell {
-  background: #f6f7fb;
+.app-content {
+  padding: 1rem 0 0;
 }
 
 .topbar {
@@ -81,7 +89,8 @@ const navigationItems = [
 }
 
 .topbar-container {
-  min-height: 4.35rem;
+  align-items: center;
+  min-height: 4rem;
   padding-top: 0;
   padding-bottom: 0;
 }
@@ -120,14 +129,15 @@ const navigationItems = [
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
+  gap: 0.5rem;
   height: 100%;
-  min-height: 4.35rem;
+  min-height: 4rem;
   padding: 0 1rem;
   color: #344054;
   font-size: var(--kt-font-size-md);
   font-weight: 500;
-  line-height: var(--kt-line-height-tight);
+  line-height: 1;
   transition: color 0.2s ease;
 }
 
@@ -152,6 +162,7 @@ const navigationItems = [
 
 .nav-icon {
   font-size: 1rem;
+  line-height: 1;
   color: #667085;
 }
 
@@ -159,28 +170,30 @@ const navigationItems = [
   color: #2457ff;
 }
 
-.profile-chip {
-  padding: 0;
-  color: #344054;
+.topbar-offerten-button {
+  gap: 0.55rem;
+  min-height: 2.45rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #8bb5ff;
+  border-radius: 0.42rem;
+  background: #ffffff;
+  color: #2563eb;
   align-self: center;
-}
-
-.profile-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.9rem;
-  height: 2.9rem;
-  border-radius: 50%;
-  background: #eef4ff;
-  color: #2d5bda;
-  font-size: var(--kt-font-size-sm);
+  font-size: var(--kt-font-size-md);
   font-weight: 500;
+  line-height: var(--kt-line-height-tight);
 }
 
-.profile-chevron {
-  margin-left: 0.7rem;
-  font-size: var(--kt-font-size-sm);
+.topbar-offerten-button:hover,
+.topbar-offerten-button:focus-visible {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.topbar-offerten-button .pi {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 @media (max-width: 991.98px) {
@@ -218,25 +231,9 @@ const navigationItems = [
     display: none;
   }
 
-  .profile-avatar {
-    width: 2.25rem;
-    height: 2.25rem;
-    font-size: 0.82rem;
-  }
-
   .topbar-actions {
     margin-top: 0.75rem;
     justify-content: flex-start !important;
-  }
-
-  .profile-chevron {
-    margin-left: 0.55rem;
-  }
-}
-
-@media (min-width: 992px) {
-  .profile-chip {
-    min-height: 100%;
   }
 }
 </style>

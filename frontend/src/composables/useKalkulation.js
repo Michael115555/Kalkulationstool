@@ -1,0 +1,1226 @@
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { createKalkulationApi } from '../services/kalkulationApi'
+import { formatAmount, formatDecimal, normalizeNumber } from '../utils/numberFormat'
+import { getRememberedSelectedCustomerId } from '../utils/selectedCustomer'
+import { usePageScrollLock } from './usePageScrollLock'
+
+export const useKalkulation = () => {
+  const api = createKalkulationApi()
+  const { setPageScrollLock } = usePageScrollLock('configuration-offcanvas-open')
+
+  const naechsteId = ref(3)
+  const druckermodell = ref('')
+  const variante = ref('')
+  const isCatalogLoading = ref(true)
+  const catalogError = ref('')
+  const kunden = ref([])
+  const kundeId = ref(null)
+  const projectName = ref('')
+  const neuerKundenname = ref('')
+  const isCreatingKunde = ref(false)
+  const katalog = ref({
+    druckermodelle: [],
+    zubehoerKategorien: [],
+    lieferungOptionen: [],
+    mietansaetze: {},
+    epFaktoren: {}
+  })
+  const isConfigurationOffcanvasOpen = ref(false)
+  const activeConfigurationVariantId = ref(null)
+  const isNewConfigurationDraft = ref(false)
+  const configurationVariants = ref([])
+  const isRenameConfigurationPanelVisible = ref(false)
+  const editingConfigurationVariantName = ref('')
+  const isDeleteConfigurationConfirmationVisible = ref(false)
+  let isLoadingConfigurationVariant = false
+  let isInitialDataLoaded = false
+  let saveTimer = null
+  let saveSequence = 0
+  let isCreatingConfigurationVariant = false
+
+  const eintauschRabattProzent = ref('0.00')
+  const lieferungOption = ref('')
+  const lieferungBetrag = ref(formatAmount(0))
+  const restwertMonate = ref(0)
+  const restwertBetrag = ref(formatAmount(0))
+  const positions = ref([])
+
+  const selectedKunde = computed(() =>
+    kunden.value.find((kunde) => kunde.id === Number(kundeId.value))
+  )
+
+  const currentConfigurationKundeId = computed(() =>
+    kundeId.value ? Number(kundeId.value) : null
+  )
+
+  const druckermodelle = computed(() =>
+    katalog.value.druckermodelle.map((modell) => modell.name)
+  )
+
+  const selectedDruckermodell = computed(() =>
+    katalog.value.druckermodelle.find((modell) => modell.name === druckermodell.value)
+  )
+
+  const selectedVariante = computed(() =>
+    selectedDruckermodell.value?.varianten.find(
+      (eintrag) => eintrag.bezeichnung === variante.value
+    )
+  )
+
+  const hasCompleteMachineSelection = computed(() =>
+    Boolean(
+      !isCatalogLoading.value &&
+        selectedDruckermodell.value?.id &&
+        selectedVariante.value?.id
+    )
+  )
+
+  const canOpenConfigurationOffcanvas = computed(() => !isCatalogLoading.value)
+
+  const hasActiveConfigurationVariant = computed(
+    () => activeConfigurationVariantId.value !== null && activeConfigurationVariantId.value !== undefined
+  )
+
+  const canEditConfigurationSelection = computed(() => !isCatalogLoading.value)
+
+  const canEditPositions = computed(
+    () => hasCompleteMachineSelection.value && hasActiveConfigurationVariant.value
+  )
+
+  const varianten = computed(() =>
+    selectedDruckermodell.value?.varianten.map((eintrag) => eintrag.bezeichnung) ?? []
+  )
+
+  const verfuegbaresZubehoer = computed(() =>
+    canEditPositions.value ? selectedDruckermodell.value?.zubehoer ?? [] : []
+  )
+
+  const zubehoerKategorien = computed(() => {
+    const verfuegbareKategorien = new Set(
+      verfuegbaresZubehoer.value.map((produkt) => produkt.zubehoer)
+    )
+
+    return katalog.value.zubehoerKategorien
+      .map((kategorie) => kategorie.name)
+      .filter((name) => verfuegbareKategorien.has(name))
+  })
+
+  const lieferungOptionen = computed(() => katalog.value.lieferungOptionen)
+  const mietansaetze = computed(() => katalog.value.mietansaetze)
+  const mietoptionen = computed(() =>
+    Object.keys(mietansaetze.value)
+      .map(Number)
+      .sort((a, b) => a - b)
+  )
+
+  const getDruckermodellByName = (name) =>
+    katalog.value.druckermodelle.find((modell) => modell.name === name)
+
+  const getDruckermodellById = (id) =>
+    katalog.value.druckermodelle.find((modell) => modell.id === Number(id))
+
+  const getVarianteByName = (modellName, variantenName) =>
+    getDruckermodellByName(modellName)?.varianten.find(
+      (eintrag) => eintrag.bezeichnung === variantenName
+    )
+
+  const getDefaultVarianteName = (modellName) =>
+    getDruckermodellByName(modellName)?.varianten[0]?.bezeichnung ?? ''
+
+  const getDefaultLieferungOption = () => lieferungOptionen.value[0]?.value ?? ''
+
+  const getLieferungBetrag = (optionValue) =>
+    lieferungOptionen.value.find((option) => option.value === optionValue)?.betrag ?? 0
+
+  const getEpFaktorGruppe = () => selectedDruckermodell.value?.epFaktorGruppe ?? null
+  const getEpKategorie = (position) => position.epKategorie ?? 'optionen'
+
+  const getEpFaktor = (position) => {
+    const faktorGruppe = getEpFaktorGruppe()
+    const faktoren = faktorGruppe ? katalog.value.epFaktoren[faktorGruppe] : null
+    const kategorie = getEpKategorie(position)
+
+    return faktoren?.[kategorie] ?? faktoren?.body ?? 0
+  }
+
+  const isConfigurationForCurrentContext = (configurationVariant) =>
+    (configurationVariant.kundeId ?? null) === currentConfigurationKundeId.value
+
+  const isConfigurationComplete = (configurationVariant) =>
+    Boolean(
+      configurationVariant?.druckermodellId &&
+        configurationVariant?.druckerVarianteId &&
+        configurationVariant?.calculation?.druckermodell &&
+        configurationVariant?.calculation?.variante
+    )
+
+  const getKalkulationsEpFaktor = () => {
+    const faktorGruppe = getEpFaktorGruppe()
+
+    return faktorGruppe ? katalog.value.epFaktoren[faktorGruppe]?.body ?? 0 : 0
+  }
+
+  const getEinkaufspreis = (position) =>
+    normalizeNumber(position.vp) * getEpFaktor(position)
+
+  const getDruckerVarianteId = (modellName, variantenName) =>
+    getVarianteByName(modellName, variantenName)?.id ?? null
+
+  const createDruckerPosition = (
+    modell = druckermodell.value,
+    variantenName = variante.value
+  ) => {
+    const druckerVariante = getVarianteByName(modell, variantenName)
+
+    return {
+      id: 1,
+      istDrucker: true,
+      druckermodellId: getDruckermodellByName(modell)?.id ?? null,
+      druckerVarianteId: druckerVariante?.id ?? null,
+      zubehoer: 'Drucker',
+      bezeichnung: modell,
+      menge: 1,
+      vp: formatAmount(druckerVariante?.verkaufsPreis ?? 0),
+      epKategorie: 'body'
+    }
+  }
+
+  const createEmptyPosition = (id = 1) => ({
+    id,
+    zubehoerId: null,
+    zubehoer: '',
+    bezeichnung: '',
+    menge: 1,
+    vp: formatAmount(0),
+    epKategorie: 'optionen'
+  })
+
+  const createDefaultPositions = (
+    modell = druckermodell.value,
+    variantenName = variante.value
+  ) => [createDruckerPosition(modell, variantenName), createEmptyPosition(2)]
+
+  const clonePositions = (positionen) =>
+    positionen.map((position) => ({ ...position }))
+
+  const cloneCalculationSnapshot = (snapshot) => ({
+    ...snapshot,
+    positions: clonePositions(snapshot.positions ?? [])
+  })
+
+  const normalizePositionSnapshot = (position, modellName, variantenName) => {
+    if (position?.istDrucker) {
+      return {
+        ...createDruckerPosition(modellName, variantenName),
+        ...position,
+        id: position.id ?? 1,
+        istDrucker: true,
+        zubehoer: 'Drucker',
+        bezeichnung: modellName,
+        epKategorie: 'body'
+      }
+    }
+
+    const produkt = verfuegbaresZubehoer.value.find(
+      (eintrag) =>
+        eintrag.zubehoer === position?.zubehoer &&
+        eintrag.bezeichnung === position?.bezeichnung
+    )
+
+    return {
+      id: position?.id ?? naechsteId.value,
+      zubehoerId: produkt?.id ?? position?.zubehoerId ?? null,
+      zubehoer: position?.zubehoer ?? '',
+      bezeichnung: position?.bezeichnung ?? '',
+      menge: position?.menge ?? 1,
+      vp: position?.vp ?? formatAmount(produkt?.vp ?? 0),
+      epKategorie: produkt?.epKategorie ?? position?.epKategorie ?? 'optionen'
+    }
+  }
+
+  const createCalculationSnapshot = () => ({
+    kundeId: kundeId.value,
+    druckermodellId: selectedDruckermodell.value?.id ?? null,
+    druckerVarianteId: selectedVariante.value?.id ?? null,
+    druckermodell: druckermodell.value,
+    variante: variante.value,
+    eintauschRabattProzent: eintauschRabattProzent.value,
+    lieferungOption: lieferungOption.value,
+    lieferungBetrag: lieferungBetrag.value,
+    restwertMonate: restwertMonate.value,
+    restwertBetrag: restwertBetrag.value,
+    positions: clonePositions(positions.value),
+    naechsteId: naechsteId.value
+  })
+
+  const createDefaultCalculationSnapshot = (
+    modell = druckermodell.value,
+    variantenName = getDefaultVarianteName(modell)
+  ) => {
+    const option = getDefaultLieferungOption()
+
+    return {
+      kundeId: kundeId.value,
+      druckermodellId: getDruckermodellByName(modell)?.id ?? null,
+      druckerVarianteId: getDruckerVarianteId(modell, variantenName),
+      druckermodell: modell,
+      variante: variantenName,
+      eintauschRabattProzent: '0.00',
+      lieferungOption: option,
+      lieferungBetrag: formatAmount(getLieferungBetrag(option)),
+      restwertMonate: 0,
+      restwertBetrag: formatAmount(0),
+      positions: createDefaultPositions(modell, variantenName),
+      naechsteId: 3
+    }
+  }
+
+  const clearCalculationSelection = () => {
+    isLoadingConfigurationVariant = true
+    druckermodell.value = ''
+    variante.value = ''
+    eintauschRabattProzent.value = '0.00'
+    lieferungOption.value = getDefaultLieferungOption()
+    lieferungBetrag.value = formatAmount(getLieferungBetrag(lieferungOption.value))
+    restwertMonate.value = 0
+    restwertBetrag.value = formatAmount(0)
+    positions.value = []
+    naechsteId.value = 1
+    isLoadingConfigurationVariant = false
+  }
+
+  const normalizeCalculationSnapshot = (snapshot) => {
+    const fallbackModell = katalog.value.druckermodelle[0]
+    const modell =
+      getDruckermodellById(snapshot?.druckermodellId) ??
+      getDruckermodellByName(snapshot?.druckermodell) ??
+      fallbackModell
+    const modellName = modell?.name ?? ''
+    const variantenName =
+      modell?.varianten.find((eintrag) => eintrag.id === Number(snapshot?.druckerVarianteId))
+        ?.bezeichnung ??
+      snapshot?.variante ??
+      getDefaultVarianteName(modellName)
+    const option = snapshot?.lieferungOption || getDefaultLieferungOption()
+    const normalizedPositions = Array.isArray(snapshot?.positions)
+      ? snapshot.positions.map((position) =>
+          normalizePositionSnapshot(position, modellName, variantenName)
+        )
+      : createDefaultPositions(modellName, variantenName)
+
+    return {
+      kundeId: snapshot?.kundeId ?? null,
+      druckermodellId: modell?.id ?? null,
+      druckerVarianteId: getDruckerVarianteId(modellName, variantenName),
+      druckermodell: modellName,
+      variante: variantenName,
+      eintauschRabattProzent: snapshot?.eintauschRabattProzent ?? '0.00',
+      lieferungOption: option,
+      lieferungBetrag: formatAmount(getLieferungBetrag(option)),
+      restwertMonate: snapshot?.restwertMonate ?? 0,
+      restwertBetrag: snapshot?.restwertBetrag ?? formatAmount(0),
+      positions: normalizedPositions,
+      naechsteId:
+        snapshot?.naechsteId ??
+        Math.max(3, ...normalizedPositions.map((position) => Number(position.id) + 1))
+    }
+  }
+
+  const getSnapshotGesamtpreis = (snapshot) =>
+    snapshot.positions.reduce(
+      (summe, position) =>
+        summe + normalizeNumber(position.menge) * normalizeNumber(position.vp),
+      0
+    )
+
+  const getSnapshotNettopreis = (snapshot) => {
+    const verkaufspreisSnapshot = getSnapshotGesamtpreis(snapshot)
+    const eintauschRabattSnapshot =
+      verkaufspreisSnapshot * (normalizeNumber(snapshot.eintauschRabattProzent) / 100)
+    const restwertSnapshot =
+      normalizeNumber(snapshot.restwertMonate) * normalizeNumber(snapshot.restwertBetrag)
+
+    return Math.max(
+      0,
+      verkaufspreisSnapshot -
+        eintauschRabattSnapshot +
+        normalizeNumber(snapshot.lieferungBetrag) +
+        restwertSnapshot
+    )
+  }
+
+  const mapConfigurationFromApi = (configurationVariant) => {
+    const kundeIdFromDatabase = configurationVariant.kundeId ?? null
+    const calculation = normalizeCalculationSnapshot(configurationVariant.calculation)
+    calculation.kundeId = kundeIdFromDatabase
+
+    return {
+      id: configurationVariant.id,
+      name: configurationVariant.name,
+      kundeId: kundeIdFromDatabase,
+      druckermodellId: configurationVariant.druckermodellId,
+      druckerVarianteId: configurationVariant.druckerVarianteId,
+      druckermodell: calculation.druckermodell,
+      total: configurationVariant.total ?? getSnapshotNettopreis(calculation),
+      calculation
+    }
+  }
+
+  const createConfigurationPayload = (configurationVariant) => {
+    const calculation = cloneCalculationSnapshot(configurationVariant.calculation)
+
+    return {
+      name: configurationVariant.name,
+      kundeId: configurationVariant.kundeId ?? null,
+      druckermodellId: calculation.druckermodellId,
+      druckerVarianteId: calculation.druckerVarianteId,
+      total: configurationVariant.total,
+      calculation
+    }
+  }
+
+  const persistConfigurationVariant = async (configurationVariant) => {
+    if (!configurationVariant?.id || !isConfigurationComplete(configurationVariant)) {
+      return
+    }
+
+    const sequence = ++saveSequence
+
+    await api.updateKonfiguration(
+      configurationVariant.id,
+      createConfigurationPayload(configurationVariant)
+    )
+
+    if (sequence === saveSequence) {
+      catalogError.value = ''
+    }
+  }
+
+  const queueSaveConfigurationVariant = (configurationVariant) => {
+    if (
+      !isInitialDataLoaded ||
+      !configurationVariant?.id ||
+      !isConfigurationComplete(configurationVariant)
+    ) {
+      return
+    }
+
+    window.clearTimeout(saveTimer)
+    saveTimer = window.setTimeout(() => {
+      persistConfigurationVariant(configurationVariant).catch((error) => {
+        catalogError.value = `Offerte konnte nicht gespeichert werden: ${error.message}`
+      })
+    }, 350)
+  }
+
+  const saveActiveConfigurationVariant = (shouldPersist = true) => {
+    if (isLoadingConfigurationVariant || !hasCompleteMachineSelection.value) {
+      return
+    }
+
+    const activeConfigurationVariant = getActiveConfigurationVariant()
+
+    if (!activeConfigurationVariant) {
+      return
+    }
+
+    activeConfigurationVariant.calculation = createCalculationSnapshot()
+    activeConfigurationVariant.kundeId = currentConfigurationKundeId.value
+    activeConfigurationVariant.druckermodellId = selectedDruckermodell.value?.id ?? null
+    activeConfigurationVariant.druckerVarianteId = selectedVariante.value?.id ?? null
+    activeConfigurationVariant.druckermodell = druckermodell.value
+    activeConfigurationVariant.total = nettopreis.value
+
+    if (shouldPersist) {
+      queueSaveConfigurationVariant(activeConfigurationVariant)
+    }
+  }
+
+  const loadConfigurationVariant = (configurationVariant) => {
+    if (!configurationVariant) {
+      return
+    }
+
+    projectName.value = configurationVariant.name ?? ''
+    loadCalculationSnapshot(configurationVariant.calculation)
+  }
+
+  const loadCalculationSnapshot = (calculation) => {
+    const snapshot = normalizeCalculationSnapshot(calculation)
+
+    isLoadingConfigurationVariant = true
+    druckermodell.value = snapshot.druckermodell
+    kundeId.value = snapshot.kundeId ?? null
+    variante.value = snapshot.variante
+    eintauschRabattProzent.value = snapshot.eintauschRabattProzent
+    lieferungOption.value = snapshot.lieferungOption
+    lieferungBetrag.value = snapshot.lieferungBetrag
+    restwertMonate.value = snapshot.restwertMonate
+    restwertBetrag.value = snapshot.restwertBetrag
+    positions.value = clonePositions(snapshot.positions)
+    naechsteId.value = snapshot.naechsteId
+    isLoadingConfigurationVariant = false
+  }
+
+  const createConfigurationVariantInDatabase = async (
+    modell,
+    calculation = createDefaultCalculationSnapshot(modell),
+    name = getNextConfigurationVariantName(modell)
+  ) => {
+    const calculationWithKunde = {
+      ...calculation,
+      kundeId: currentConfigurationKundeId.value
+    }
+    const payload = {
+      name,
+      kundeId: calculationWithKunde.kundeId,
+      druckermodellId: calculationWithKunde.druckermodellId,
+      druckerVarianteId: calculationWithKunde.druckerVarianteId,
+      total: getSnapshotNettopreis(calculationWithKunde),
+      calculation: calculationWithKunde
+    }
+    const savedConfigurationVariant = await api.createKonfiguration(payload)
+
+    return mapConfigurationFromApi(savedConfigurationVariant)
+  }
+
+  const getGesamtpreis = (position) =>
+    normalizeNumber(position.menge) * normalizeNumber(position.vp)
+
+  const getProdukteByZubehoer = (zubehoer) =>
+    verfuegbaresZubehoer.value.filter((produkt) => produkt.zubehoer === zubehoer)
+
+  const getProdukt = (zubehoer, bezeichnung) =>
+    verfuegbaresZubehoer.value.find(
+      (produkt) =>
+        produkt.zubehoer === zubehoer && produkt.bezeichnung === bezeichnung
+    )
+
+  const updatePositionZubehoer = (position) => {
+    position.bezeichnung = ''
+    position.zubehoerId = null
+    position.vp = formatAmount(0)
+    position.epKategorie =
+      katalog.value.zubehoerKategorien.find((kategorie) => kategorie.name === position.zubehoer)
+        ?.epKategorie ?? 'optionen'
+  }
+
+  const updatePositionProdukt = (position) => {
+    const produkt = getProdukt(position.zubehoer, position.bezeichnung)
+
+    if (!produkt) {
+      position.zubehoerId = null
+      position.vp = formatAmount(0)
+      position.epKategorie =
+        katalog.value.zubehoerKategorien.find((kategorie) => kategorie.name === position.zubehoer)
+          ?.epKategorie ?? 'optionen'
+      return
+    }
+
+    position.zubehoerId = produkt.id
+    position.vp = formatAmount(produkt.vp)
+    position.epKategorie = produkt.epKategorie ?? 'optionen'
+  }
+
+  const normalizeQuantity = (position) => {
+    const menge = Math.trunc(normalizeNumber(position.menge))
+    position.menge = Math.max(1, menge)
+  }
+
+  const normalizePrice = (position) => {
+    position.vp = formatAmount(normalizeNumber(position.vp))
+  }
+
+  const normalizePercent = () => {
+    const rabatt = normalizeNumber(eintauschRabattProzent.value)
+    eintauschRabattProzent.value = formatDecimal(Math.max(0, Math.min(100, rabatt)))
+  }
+
+  const updateLieferungOption = (optionValue = lieferungOption.value) => {
+    lieferungOption.value = optionValue
+    lieferungBetrag.value = formatAmount(getLieferungBetrag(optionValue))
+  }
+
+  const normalizeRestwertBetrag = () => {
+    restwertBetrag.value = formatAmount(Math.max(0, normalizeNumber(restwertBetrag.value)))
+  }
+
+  const normalizeRestwertMonate = () => {
+    const monate = Math.trunc(normalizeNumber(restwertMonate.value))
+    restwertMonate.value = Math.max(0, monate)
+  }
+
+  const isEmptyPosition = (position) =>
+    !position.zubehoer &&
+    !position.bezeichnung &&
+    normalizeNumber(position.vp) === 0 &&
+    getEinkaufspreis(position) === 0
+
+  const verkaufspreis = computed(() =>
+    positions.value.reduce(
+      (summe, position) => summe + getGesamtpreis(position),
+      0
+    )
+  )
+
+  const eintauschRabattBetrag = computed(() =>
+    verkaufspreis.value * (normalizeNumber(eintauschRabattProzent.value) / 100)
+  )
+
+  const restwertGesamt = computed(() =>
+    normalizeNumber(restwertMonate.value) * normalizeNumber(restwertBetrag.value)
+  )
+
+  const nettopreis = computed(() =>
+    Math.max(
+      0,
+      verkaufspreis.value -
+        eintauschRabattBetrag.value +
+        normalizeNumber(lieferungBetrag.value) +
+        restwertGesamt.value
+    )
+  )
+
+  const einkaufspreis = computed(() =>
+    nettopreis.value * getKalkulationsEpFaktor()
+  )
+
+  const mietbasis = computed(() => Math.max(0, einkaufspreis.value))
+
+  const getMietbetrag = (monate) => {
+    const mietansatz = mietansaetze.value[monate]
+
+    return mietansatz > 0 ? mietbasis.value / mietansatz : 0
+  }
+
+  const filteredConfigurationVariants = computed(() =>
+    configurationVariants.value.filter(
+      (configurationVariant) => isConfigurationComplete(configurationVariant)
+    )
+  )
+
+  const getConfigurationPositionCount = (configurationVariant) =>
+    configurationVariant.calculation.positions.filter(
+      (position) =>
+        position.zubehoer ||
+        position.bezeichnung ||
+        normalizeNumber(position.vp) > 0
+    ).length
+
+  const getConfigurationMeta = (configurationVariant) => {
+    const positionCount = getConfigurationPositionCount(configurationVariant)
+    const positionLabel = positionCount === 1 ? 'Position' : 'Positionen'
+    const kundeName =
+      kunden.value.find((kunde) => kunde.id === configurationVariant.kundeId)?.firmenname ??
+      'Ohne Kunde'
+
+    return {
+      line1: `${kundeName} · ${positionCount} ${positionLabel}`,
+      line2: `${configurationVariant.calculation.druckermodell} · ${configurationVariant.calculation.variante}`
+    }
+  }
+
+  const getActiveConfigurationVariant = () =>
+    configurationVariants.value.find(
+      (configurationVariant) => configurationVariant.id === activeConfigurationVariantId.value
+    )
+
+  const activeConfigurationName = computed(
+    () => getActiveConfigurationVariant()?.name ?? (projectName.value.trim() || 'Keine Offerte')
+  )
+
+  const deleteConfigurationConfirmationText = computed(
+    () => `„${activeConfigurationName.value}“ wirklich löschen?`
+  )
+
+  const isEditingConfigurationNameDuplicate = computed(() => {
+    const name = editingConfigurationVariantName.value.trim()
+    const editingConfigurationVariant = getActiveConfigurationVariant()
+
+    if (!name || !editingConfigurationVariant) {
+      return false
+    }
+
+    return configurationVariants.value.some(
+      (configurationVariant) =>
+        configurationVariant.id !== editingConfigurationVariant.id &&
+        configurationVariant.kundeId === editingConfigurationVariant.kundeId &&
+        configurationVariant.name === name
+    )
+  })
+
+  const canSaveConfigurationVariantName = computed(() => {
+    const name = editingConfigurationVariantName.value.trim()
+
+    return name.length > 0 && !isEditingConfigurationNameDuplicate.value
+  })
+
+  const getUniqueConfigurationName = (modell, baseName) => {
+    const existingNames = configurationVariants.value
+      .filter(isConfigurationComplete)
+      .map((configurationVariant) => configurationVariant.name)
+
+    if (!existingNames.includes(baseName)) {
+      return baseName
+    }
+
+    let suffix = 2
+    let name = `${baseName} ${suffix}`
+
+    while (existingNames.includes(name)) {
+      suffix += 1
+      name = `${baseName} ${suffix}`
+    }
+
+    return name
+  }
+
+  const getNextConfigurationVariantName = (modell) => {
+    const alternativesCount = configurationVariants.value.filter(
+      (configurationVariant) =>
+        isConfigurationComplete(configurationVariant) &&
+        configurationVariant.name.startsWith('Alternative')
+    ).length
+
+    return getUniqueConfigurationName(modell, `Alternative ${alternativesCount + 1}`)
+  }
+
+  const getProjectConfigurationBaseName = () =>
+    projectName.value.trim() || selectedKunde.value?.firmenname?.trim() || 'Offerte'
+
+  const updateProjectName = (name) => {
+    projectName.value = name
+
+    const activeConfigurationVariant = getActiveConfigurationVariant()
+    const cleanName = name.trim()
+
+    if (!activeConfigurationVariant || !cleanName || activeConfigurationVariant.name === cleanName) {
+      return
+    }
+
+    activeConfigurationVariant.name = cleanName
+    queueSaveConfigurationVariant(activeConfigurationVariant)
+  }
+
+  const normalizeProjectName = () => {
+    const cleanName = projectName.value.trim()
+    const activeConfigurationVariant = getActiveConfigurationVariant()
+
+    if (!cleanName) {
+      projectName.value = activeConfigurationVariant?.name ?? ''
+      return
+    }
+
+    updateProjectName(cleanName)
+  }
+
+  const generateDuplicateConfigurationName = (modell, configName) => {
+    const existingNames = configurationVariants.value
+      .filter(isConfigurationComplete)
+      .map((configurationVariant) => configurationVariant.name)
+    const cleanName = configName
+      .replace(/^Kopie von\s+/i, '')
+      .replace(/\s+Kopie(\s+\d+)?$/i, '')
+      .trim()
+
+    if (cleanName === 'Standard' || cleanName.startsWith('Alternative')) {
+      let index = 1
+      let candidate = `Alternative ${index}`
+
+      while (existingNames.includes(candidate)) {
+        index += 1
+        candidate = `Alternative ${index}`
+      }
+
+      return candidate
+    }
+
+    let index = 1
+    let candidate = `${cleanName} Kopie`
+
+    while (existingNames.includes(candidate)) {
+      index += 1
+      candidate = `${cleanName} Kopie ${index}`
+    }
+
+    return candidate
+  }
+
+  const selectDruckermodell = (modell) => {
+    if (modell === druckermodell.value || !canEditConfigurationSelection.value) {
+      return
+    }
+
+    saveActiveConfigurationVariant()
+
+    if (!modell) {
+      activeConfigurationVariantId.value = null
+      isNewConfigurationDraft.value = true
+      clearCalculationSelection()
+      return
+    }
+
+    if (!hasActiveConfigurationVariant.value) {
+      isNewConfigurationDraft.value = true
+    }
+
+    loadCalculationSnapshot(createDefaultCalculationSnapshot(modell))
+  }
+
+  const selectVariante = (nextVariante) => {
+    if (nextVariante === variante.value || !canEditConfigurationSelection.value) {
+      return
+    }
+
+    saveActiveConfigurationVariant()
+
+    if (!druckermodell.value || !nextVariante) {
+      variante.value = ''
+      positions.value = []
+      naechsteId.value = 1
+      return
+    }
+
+    loadCalculationSnapshot(createDefaultCalculationSnapshot(druckermodell.value, nextVariante))
+  }
+
+  const selectKunde = (id) => {
+    const nextKundeId = id ? Number(id) : null
+
+    if (nextKundeId === kundeId.value || !canEditConfigurationSelection.value) {
+      return
+    }
+
+    saveActiveConfigurationVariant()
+    kundeId.value = nextKundeId
+
+    const activeConfigurationVariant = getActiveConfigurationVariant()
+
+    if (activeConfigurationVariant && hasCompleteMachineSelection.value) {
+      activeConfigurationVariant.kundeId = nextKundeId
+      activeConfigurationVariant.calculation = createCalculationSnapshot()
+      activeConfigurationVariant.calculation.kundeId = nextKundeId
+      queueSaveConfigurationVariant(activeConfigurationVariant)
+    }
+  }
+
+  const createKunde = async () => {
+    const firmenname = neuerKundenname.value.trim()
+
+    if (!firmenname || isCreatingKunde.value) {
+      return
+    }
+
+    isCreatingKunde.value = true
+
+    try {
+      const kunde = await api.createKunde({ firmenname })
+
+      kunden.value = [...kunden.value, kunde].sort((a, b) =>
+        a.firmenname.localeCompare(b.firmenname, 'de-CH')
+      )
+      neuerKundenname.value = ''
+      selectKunde(kunde.id)
+      catalogError.value = ''
+    } catch (error) {
+      catalogError.value = `Kunde konnte nicht erstellt werden: ${error.message}`
+    } finally {
+      isCreatingKunde.value = false
+    }
+  }
+
+  const selectConfigurationVariant = (id) => {
+    if (id === activeConfigurationVariantId.value) {
+      return
+    }
+
+    isRenameConfigurationPanelVisible.value = false
+    isDeleteConfigurationConfirmationVisible.value = false
+    saveActiveConfigurationVariant()
+    isNewConfigurationDraft.value = false
+    activeConfigurationVariantId.value = id
+    loadConfigurationVariant(getActiveConfigurationVariant())
+  }
+
+  const addConfigurationVariant = async () => {
+    if (!hasCompleteMachineSelection.value) {
+      catalogError.value = 'Bitte zuerst Drucker wählen.'
+      return
+    }
+
+    saveActiveConfigurationVariant()
+
+    try {
+      const calculation = createCalculationSnapshot()
+      const name = getUniqueConfigurationName(
+        druckermodell.value,
+        getProjectConfigurationBaseName()
+      )
+      const configurationVariant = await createConfigurationVariantInDatabase(
+        druckermodell.value,
+        calculation,
+        name
+      )
+
+      configurationVariants.value.push(configurationVariant)
+      activeConfigurationVariantId.value = configurationVariant.id
+      isNewConfigurationDraft.value = false
+      projectName.value = configurationVariant.name
+      saveActiveConfigurationVariant()
+    } catch (error) {
+      catalogError.value = `Offerte konnte nicht erstellt werden: ${error.message}`
+    }
+  }
+
+  const ensureActiveConfigurationVariant = async () => {
+    if (
+      !isInitialDataLoaded ||
+      isCatalogLoading.value ||
+      isLoadingConfigurationVariant ||
+      !isNewConfigurationDraft.value ||
+      !hasCompleteMachineSelection.value ||
+      getActiveConfigurationVariant() ||
+      isCreatingConfigurationVariant
+    ) {
+      return
+    }
+
+    isCreatingConfigurationVariant = true
+    try {
+      await addConfigurationVariant()
+    } finally {
+      isCreatingConfigurationVariant = false
+    }
+  }
+
+  const startNewConfiguration = () => {
+    saveActiveConfigurationVariant()
+    activeConfigurationVariantId.value = null
+    isNewConfigurationDraft.value = true
+    kundeId.value = null
+    projectName.value = ''
+    clearCalculationSelection()
+    isRenameConfigurationPanelVisible.value = false
+    isDeleteConfigurationConfirmationVisible.value = false
+    editingConfigurationVariantName.value = ''
+    isConfigurationOffcanvasOpen.value = false
+    catalogError.value = ''
+  }
+
+  const renameConfigurationVariant = () => {
+    const activeConfigurationVariant = getActiveConfigurationVariant()
+
+    if (!activeConfigurationVariant) {
+      return
+    }
+
+    isDeleteConfigurationConfirmationVisible.value = false
+    isRenameConfigurationPanelVisible.value = true
+    editingConfigurationVariantName.value = activeConfigurationVariant.name
+  }
+
+  const commitConfigurationVariantRename = async () => {
+    const configurationVariant = getActiveConfigurationVariant()
+    const name = editingConfigurationVariantName.value.trim()
+
+    if (!configurationVariant) {
+      cancelConfigurationVariantRename()
+      return
+    }
+
+    if (!canSaveConfigurationVariantName.value) {
+      return
+    }
+
+    configurationVariant.name = name
+    projectName.value = name
+    isRenameConfigurationPanelVisible.value = false
+    editingConfigurationVariantName.value = ''
+
+    try {
+      await persistConfigurationVariant(configurationVariant)
+    } catch (error) {
+      catalogError.value = `Name konnte nicht gespeichert werden: ${error.message}`
+    }
+  }
+
+  const cancelConfigurationVariantRename = () => {
+    isRenameConfigurationPanelVisible.value = false
+    editingConfigurationVariantName.value = ''
+  }
+
+  const duplicateConfigurationVariant = async () => {
+    saveActiveConfigurationVariant()
+
+    const activeConfigurationVariant = getActiveConfigurationVariant()
+
+    if (!activeConfigurationVariant) {
+      return
+    }
+
+    try {
+      const name = generateDuplicateConfigurationName(
+        activeConfigurationVariant.druckermodell,
+        activeConfigurationVariant.name
+      )
+      const configurationVariant = await createConfigurationVariantInDatabase(
+        activeConfigurationVariant.druckermodell,
+        cloneCalculationSnapshot(activeConfigurationVariant.calculation),
+        name
+      )
+
+      configurationVariants.value.push(configurationVariant)
+      activeConfigurationVariantId.value = configurationVariant.id
+      isNewConfigurationDraft.value = false
+      projectName.value = configurationVariant.name
+      loadConfigurationVariant(configurationVariant)
+    } catch (error) {
+      catalogError.value = `Offerte konnte nicht dupliziert werden: ${error.message}`
+    }
+  }
+
+  const deleteConfigurationVariant = () => {
+    if (!getActiveConfigurationVariant()) {
+      return
+    }
+
+    isDeleteConfigurationConfirmationVisible.value = true
+  }
+
+  const cancelDeleteConfigurationVariant = () => {
+    isDeleteConfigurationConfirmationVisible.value = false
+  }
+
+  const confirmDeleteConfigurationVariant = async () => {
+    if (!getActiveConfigurationVariant()) {
+      isDeleteConfigurationConfirmationVisible.value = false
+      return
+    }
+
+    const deletedId = activeConfigurationVariantId.value
+    const activeIndex = filteredConfigurationVariants.value.findIndex(
+      (configurationVariant) => configurationVariant.id === deletedId
+    )
+    const nextActiveIndex = Math.max(0, activeIndex - 1)
+
+    try {
+      await api.deleteKonfiguration(deletedId)
+      configurationVariants.value = configurationVariants.value.filter(
+        (configurationVariant) => configurationVariant.id !== deletedId
+      )
+      const nextConfigurationVariant =
+        filteredConfigurationVariants.value[nextActiveIndex] ??
+        filteredConfigurationVariants.value[0] ??
+        null
+
+      activeConfigurationVariantId.value = nextConfigurationVariant?.id ?? null
+
+      if (nextConfigurationVariant) {
+        isNewConfigurationDraft.value = false
+        loadConfigurationVariant(nextConfigurationVariant)
+      } else {
+        isNewConfigurationDraft.value = false
+        kundeId.value = null
+        projectName.value = ''
+        clearCalculationSelection()
+      }
+
+      isDeleteConfigurationConfirmationVisible.value = false
+    } catch (error) {
+      catalogError.value = `Offerte konnte nicht gelöscht werden: ${error.message}`
+    }
+  }
+
+  const addPosition = () => {
+    if (!canEditPositions.value) {
+      return
+    }
+
+    positions.value.push(createEmptyPosition(naechsteId.value))
+    naechsteId.value += 1
+  }
+
+  const removePosition = (id) => {
+    positions.value = positions.value.filter((position) => position.id !== id)
+  }
+
+  const openConfigurationOffcanvas = async () => {
+    if (!canOpenConfigurationOffcanvas.value) {
+      return
+    }
+
+    saveActiveConfigurationVariant()
+    isConfigurationOffcanvasOpen.value = true
+  }
+
+  const closeConfigurationOffcanvas = () => {
+    isRenameConfigurationPanelVisible.value = false
+    isDeleteConfigurationConfirmationVisible.value = false
+    isConfigurationOffcanvasOpen.value = false
+  }
+
+  const loadInitialData = async () => {
+    isCatalogLoading.value = true
+    catalogError.value = ''
+
+    try {
+      const [loadedKatalog, loadedKunden] = await Promise.all([
+        api.getKatalog(),
+        api.getKunden()
+      ])
+      katalog.value = loadedKatalog
+      kunden.value = loadedKunden
+
+      if (!katalog.value.druckermodelle.length) {
+        throw new Error('Keine Druckermodelle in der Datenbank gefunden')
+      }
+      const savedConfigurations = await api.getKonfigurationen()
+      configurationVariants.value = savedConfigurations
+        .map(mapConfigurationFromApi)
+        .filter(isConfigurationComplete)
+
+      const rememberedCustomerId = getRememberedSelectedCustomerId()
+      const rememberedCustomerExists = loadedKunden.some(
+        (kunde) => kunde.id === rememberedCustomerId
+      )
+
+      kundeId.value = rememberedCustomerExists ? rememberedCustomerId : null
+      projectName.value = ''
+      activeConfigurationVariantId.value = null
+      isNewConfigurationDraft.value = false
+      clearCalculationSelection()
+
+      isInitialDataLoaded = true
+    } catch (error) {
+      catalogError.value = `Datenbank konnte nicht geladen werden: ${error.message}`
+    } finally {
+      isCatalogLoading.value = false
+    }
+  }
+
+  watch(isConfigurationOffcanvasOpen, setPageScrollLock)
+
+  watch(
+    [lieferungOption, lieferungOptionen],
+    ([optionValue]) => {
+      if (!optionValue) {
+        return
+      }
+
+      const nextLieferungBetrag = formatAmount(getLieferungBetrag(optionValue))
+
+      if (lieferungBetrag.value !== nextLieferungBetrag) {
+        lieferungBetrag.value = nextLieferungBetrag
+      }
+    },
+    { deep: true }
+  )
+
+  watch(
+    [
+      druckermodell,
+      variante,
+      eintauschRabattProzent,
+      lieferungOption,
+      lieferungBetrag,
+      restwertMonate,
+      restwertBetrag,
+      positions,
+      nettopreis
+    ],
+    () => {
+      saveActiveConfigurationVariant()
+      ensureActiveConfigurationVariant()
+    },
+    { deep: true }
+  )
+
+  onMounted(loadInitialData)
+
+  onBeforeUnmount(() => {
+    window.clearTimeout(saveTimer)
+    saveActiveConfigurationVariant()
+    const activeConfigurationVariant = getActiveConfigurationVariant()
+
+    if (activeConfigurationVariant) {
+      persistConfigurationVariant(activeConfigurationVariant).catch(() => {})
+    }
+
+    setPageScrollLock(false)
+  })
+
+  return {
+    isCatalogLoading,
+    catalogError,
+    kunden,
+    kundeId,
+    projectName,
+    updateProjectName,
+    normalizeProjectName,
+    selectedKunde,
+    neuerKundenname,
+    isCreatingKunde,
+    selectKunde,
+    createKunde,
+    druckermodell,
+    selectDruckermodell,
+    druckermodelle,
+    variante,
+    selectVariante,
+    varianten,
+    canEditConfigurationSelection,
+    canEditPositions,
+    isConfigurationOffcanvasOpen,
+    canOpenConfigurationOffcanvas,
+    configurationVariants,
+    startNewConfiguration,
+    openConfigurationOffcanvas,
+    positions,
+    isEmptyPosition,
+    updatePositionZubehoer,
+    zubehoerKategorien,
+    updatePositionProdukt,
+    getProdukteByZubehoer,
+    normalizeQuantity,
+    normalizePrice,
+    formatAmount,
+    getEinkaufspreis,
+    getGesamtpreis,
+    removePosition,
+    addPosition,
+    verkaufspreis,
+    eintauschRabattProzent,
+    normalizePercent,
+    eintauschRabattBetrag,
+    lieferungOption,
+    updateLieferungOption,
+    lieferungOptionen,
+    restwertMonate,
+    normalizeRestwertMonate,
+    restwertBetrag,
+    normalizeRestwertBetrag,
+    nettopreis,
+    mietoptionen,
+    getMietbetrag,
+    mietbasis,
+    closeConfigurationOffcanvas,
+    filteredConfigurationVariants,
+    activeConfigurationVariantId,
+    selectConfigurationVariant,
+    getConfigurationMeta,
+    activeConfigurationName,
+    isRenameConfigurationPanelVisible,
+    isDeleteConfigurationConfirmationVisible,
+    editingConfigurationVariantName,
+    commitConfigurationVariantRename,
+    cancelConfigurationVariantRename,
+    isEditingConfigurationNameDuplicate,
+    canSaveConfigurationVariantName,
+    deleteConfigurationConfirmationText,
+    cancelDeleteConfigurationVariant,
+    confirmDeleteConfigurationVariant,
+    renameConfigurationVariant,
+    duplicateConfigurationVariant,
+    deleteConfigurationVariant
+  }
+}

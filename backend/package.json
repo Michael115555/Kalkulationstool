@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "Prisma backend for the Kalkulationstool",
   "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
     "prisma:validate": "prisma validate",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",

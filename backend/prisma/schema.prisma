@@ -40,20 +40,26 @@ model Benutzer {
   aktiv    Boolean       @default(true)
 
   offerten Offerte[] @relation("OfferteBenutzer")
+  kunden   Kunde[]   @relation("KundeVerkaeufer")
 
   erstelltAm     DateTime @default(now())
   aktualisiertAm DateTime @updatedAt
 }
 
 model Kunde {
-  id          Int     @id @default(autoincrement())
-  firmenname  String
-  kontaktname String?
-  email       String?
-  telefon     String?
-  ort         String?
+  id           Int       @id @default(autoincrement())
+  firmenname   String
+  kontaktname  String?
+  email        String?
+  telefon      String?
+  ort          String?
+  kontaktart   String?
+  versandart   String?
+  verkaeuferId Int?
+  verkaeufer   Benutzer? @relation("KundeVerkaeufer", fields: [verkaeuferId], references: [id])
 
   offerten Offerte[] @relation("OfferteKunde")
+  konfigurationen Konfiguration[] @relation("KonfigurationKunde")
 
   erstelltAm     DateTime @default(now())
   aktualisiertAm DateTime @updatedAt
@@ -77,10 +83,14 @@ model Druckermodell {
   herstellerId Int
   hersteller   Hersteller @relation(fields: [herstellerId], references: [id])
 
+  epFaktorGruppeId Int?
+  epFaktorGruppe   EpFaktorGruppe? @relation(fields: [epFaktorGruppeId], references: [id])
+
   varianten DruckerVariante[]
   zubehoer  DruckermodellZubehoer[]
 
   offerten Offerte[] @relation("OfferteDruckermodell")
+  konfigurationen Konfiguration[] @relation("KonfigurationDruckermodell")
 
   erstelltAm     DateTime @default(now())
   aktualisiertAm DateTime @updatedAt
@@ -100,6 +110,7 @@ model DruckerVariante {
   einkaufsPreis Int?
 
   offerten Offerte[] @relation("OfferteDruckerVariante")
+  konfigurationen Konfiguration[] @relation("KonfigurationDruckerVariante")
 
   erstelltAm     DateTime @default(now())
   aktualisiertAm DateTime @updatedAt
@@ -110,6 +121,9 @@ model DruckerVariante {
 model ZubehoerKategorie {
   id   Int    @id @default(autoincrement())
   name String @unique
+
+  epFaktorKategorieId Int?
+  epFaktorKategorie   EpFaktorKategorie? @relation("ZubehoerKategorieEpFaktor", fields: [epFaktorKategorieId], references: [id])
 
   zubehoer Zubehoer[]
 }
@@ -157,6 +171,7 @@ model EpFaktorKategorie {
   id            Int            @id @default(autoincrement())
   name          String         @unique
   epFaktorWerts EpFaktorWert[]
+  zubehoerKategorien ZubehoerKategorie[] @relation("ZubehoerKategorieEpFaktor")
 }
 
 model EpFaktorGruppe {
@@ -164,6 +179,7 @@ model EpFaktorGruppe {
   name String @unique
 
   werte EpFaktorWert[]
+  druckermodelle Druckermodell[]
 }
 
 model EpFaktorWert {
@@ -187,6 +203,17 @@ model VrgTarif {
   gebuehr   Int
 
   @@unique([vonBetrag, bisBetrag])
+}
+
+model LieferOption {
+  id        Int    @id @default(autoincrement())
+  value     String @unique
+  label     String
+  betrag    Int    @default(0)
+  sortierung Int   @default(0)
+
+  erstelltAm     DateTime @default(now())
+  aktualisiertAm DateTime @updatedAt
 }
 
 model KonditionDefinition {
@@ -266,6 +293,28 @@ model Offerte {
 
   erstelltAm     DateTime @default(now())
   aktualisiertAm DateTime @updatedAt
+}
+
+model Konfiguration {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  kundeId Int?
+  kunde   Kunde? @relation("KonfigurationKunde", fields: [kundeId], references: [id])
+
+  druckermodellId Int
+  druckermodell   Druckermodell @relation("KonfigurationDruckermodell", fields: [druckermodellId], references: [id])
+
+  druckerVarianteId Int?
+  druckerVariante   DruckerVariante? @relation("KonfigurationDruckerVariante", fields: [druckerVarianteId], references: [id])
+
+  snapshotJson String
+  total        Int    @default(0)
+
+  erstelltAm     DateTime @default(now())
+  aktualisiertAm DateTime @updatedAt
+
+  @@unique([kundeId, name])
 }
 
 model OffertePosition {

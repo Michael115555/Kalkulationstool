@@ -15,11 +15,18 @@ npm install
 npm run dev
 ```
 
-## Backend pruefen
+## Backend starten
 
 ```bash
 cd backend
 npm install
+npm run start
+```
+
+## Backend pruefen
+
+```bash
+cd backend
 npm run prisma:validate
 ```
 
