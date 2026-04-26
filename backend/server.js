@@ -3,6 +3,14 @@ const { URL } = require('node:url')
 const { PrismaClient } = require('@prisma/client')
 require('dotenv').config()
 
+const {
+  validateInteger,
+  validateKundePayload,
+  validateKonfigurationPayload,
+  ApiError
+} = require('./validators')
+const { getCatalogCache, setCatalogCache, invalidateCatalogCache } = require('./catalogCache')
+
 const prisma = new PrismaClient()
 const port = Number(process.env.PORT || 3001)
 
@@ -47,6 +55,12 @@ const readJsonBody = (request) =>
   })
 
 const getKatalog = async () => {
+  // Cache prüfen
+  const cachedKatalog = getCatalogCache()
+  if (cachedKatalog) {
+    return cachedKatalog
+  }
+
   const [
     druckermodelle,
     zubehoerKategorien,
@@ -106,7 +120,7 @@ const getKatalog = async () => {
     })
   ])
 
-  return {
+  const katalog = {
     druckermodelle: druckermodelle.map((modell) => ({
       id: modell.id,
       name: modell.name,
@@ -154,6 +168,10 @@ const getKatalog = async () => {
       ])
     )
   }
+
+  // Cache speichern
+  setCatalogCache(katalog)
+  return katalog
 }
 
 const serializeKunde = (kunde) => ({
@@ -188,24 +206,18 @@ const getKunden = async () => {
 }
 
 const createKunde = async (payload) => {
-  const firmenname = optionalString(payload.firmenname)
-
-  if (!firmenname) {
-    throw new Error('Kundenname darf nicht leer sein')
-  }
-
-  const verkaeuferId = payload.verkaeuferId ? Number(payload.verkaeuferId) : null
+  const validated = validateKundePayload(payload)
 
   const kunde = await prisma.kunde.create({
     data: {
-      firmenname,
-      kontaktname: optionalString(payload.kontaktname),
-      email: optionalString(payload.email),
-      telefon: optionalString(payload.telefon),
-      ort: optionalString(payload.ort),
-      kontaktart: optionalString(payload.kontaktart),
-      versandart: optionalString(payload.versandart),
-      verkaeuferId
+      firmenname: validated.firmenname,
+      kontaktname: validated.kontaktname,
+      email: validated.email,
+      telefon: validated.telefon,
+      ort: validated.ort,
+      kontaktart: validated.kontaktart,
+      versandart: validated.versandart,
+      verkaeuferId: validated.verkaeuferId
     },
     include: {
       verkaeufer: true
@@ -216,25 +228,20 @@ const createKunde = async (payload) => {
 }
 
 const updateKunde = async (id, payload) => {
-  const firmenname = optionalString(payload.firmenname)
-
-  if (!firmenname) {
-    throw new Error('Kundenname darf nicht leer sein')
-  }
-
-  const verkaeuferId = payload.verkaeuferId ? Number(payload.verkaeuferId) : null
+  validateInteger(id, 'Kunde ID')
+  const validated = validateKundePayload(payload)
 
   const kunde = await prisma.kunde.update({
     where: { id },
     data: {
-      firmenname,
-      kontaktname: optionalString(payload.kontaktname),
-      email: optionalString(payload.email),
-      telefon: optionalString(payload.telefon),
-      ort: optionalString(payload.ort),
-      kontaktart: optionalString(payload.kontaktart),
-      versandart: optionalString(payload.versandart),
-      verkaeuferId
+      firmenname: validated.firmenname,
+      kontaktname: validated.kontaktname,
+      email: validated.email,
+      telefon: validated.telefon,
+      ort: validated.ort,
+      kontaktart: validated.kontaktart,
+      versandart: validated.versandart,
+      verkaeuferId: validated.verkaeuferId
     },
     include: {
       verkaeufer: true
@@ -245,6 +252,20 @@ const updateKunde = async (id, payload) => {
 }
 
 const deleteKunde = async (id) => {
+  validateInteger(id, 'Kunde ID')
+  
+  // Prüfen, ob der Kunde in Verwendung ist
+  const offerteCount = await prisma.offerte.count({
+    where: { kundeId: id }
+  })
+  
+  if (offerteCount > 0) {
+    throw new ApiError(
+      `Kunde kann nicht gelöscht werden, da ${offerteCount} Offerte(n) damit verbunden sind`,
+      400
+    )
+  }
+
   await prisma.kunde.delete({
     where: { id }
   })
@@ -293,18 +314,20 @@ const getKonfigurationen = async () => {
 }
 
 const createKonfiguration = async (payload) => {
-  const kundeId = payload.kundeId ? Number(payload.kundeId) : null
+  const validated = validateKonfigurationPayload(payload)
+  
   const calculation = {
-    ...payload.calculation,
-    kundeId
+    ...validated.calculation,
+    kundeId: validated.kundeId
   }
+  
   const konfiguration = await prisma.konfiguration.create({
     data: {
-      name: payload.name,
-      kundeId,
-      druckermodellId: Number(payload.druckermodellId),
-      druckerVarianteId: payload.druckerVarianteId ? Number(payload.druckerVarianteId) : null,
-      total: amountToDb(payload.total),
+      name: validated.name,
+      kundeId: validated.kundeId,
+      druckermodellId: validated.druckermodellId,
+      druckerVarianteId: validated.druckerVarianteId,
+      total: amountToDb(validated.total),
       snapshotJson: JSON.stringify(calculation)
     }
   })
@@ -313,19 +336,22 @@ const createKonfiguration = async (payload) => {
 }
 
 const updateKonfiguration = async (id, payload) => {
-  const kundeId = payload.kundeId ? Number(payload.kundeId) : null
+  validateInteger(id, 'Konfiguration ID')
+  const validated = validateKonfigurationPayload(payload)
+  
   const calculation = {
-    ...payload.calculation,
-    kundeId
+    ...validated.calculation,
+    kundeId: validated.kundeId
   }
+  
   const konfiguration = await prisma.konfiguration.update({
     where: { id },
     data: {
-      name: payload.name,
-      kundeId,
-      druckermodellId: Number(payload.druckermodellId),
-      druckerVarianteId: payload.druckerVarianteId ? Number(payload.druckerVarianteId) : null,
-      total: amountToDb(payload.total),
+      name: validated.name,
+      kundeId: validated.kundeId,
+      druckermodellId: validated.druckermodellId,
+      druckerVarianteId: validated.druckerVarianteId,
+      total: amountToDb(validated.total),
       snapshotJson: JSON.stringify(calculation)
     }
   })
@@ -406,7 +432,39 @@ const handleRequest = async (request, response) => {
 
     sendJson(response, 404, { error: 'Nicht gefunden' })
   } catch (error) {
-    console.error(error)
+    console.error('API Error:', {
+      path: url.pathname,
+      method: request.method,
+      message: error.message,
+      stack: error.stack
+    })
+
+    // ApiError mit eigenem statusCode
+    if (error instanceof ApiError) {
+      sendJson(response, error.statusCode, { error: error.message })
+      return
+    }
+
+    // Prisma Unique Constraint Violation
+    if (error.code === 'P2002') {
+      const field = error.meta?.target?.[0] ?? 'Feld'
+      sendJson(response, 400, { error: `${field} existiert bereits` })
+      return
+    }
+
+    // Prisma Record Not Found
+    if (error.code === 'P2025') {
+      sendJson(response, 404, { error: 'Datensatz nicht gefunden' })
+      return
+    }
+
+    // Prisma Foreign Key Constraint
+    if (error.code === 'P2003') {
+      sendJson(response, 400, { error: 'Referenzierte Datensatz existiert nicht' })
+      return
+    }
+
+    // Allgemeiner Fehler
     sendJson(response, 500, { error: error.message || 'Interner Serverfehler' })
   }
 }

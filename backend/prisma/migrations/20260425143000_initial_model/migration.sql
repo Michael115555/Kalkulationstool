@@ -170,7 +170,7 @@ CREATE TABLE "Offerte" (
     "termin" DATETIME,
     "waehrung" TEXT NOT NULL DEFAULT 'CHF',
     "kundeId" INTEGER NOT NULL,
-    "benutzerId" INTEGER NOT NULL,
+    "benutzerId" INTEGER,
     "druckermodellId" INTEGER,
     "druckerVarianteId" INTEGER,
     "kundenkontakt" TEXT,
@@ -192,8 +192,8 @@ CREATE TABLE "Offerte" (
     "nettopreis" INTEGER NOT NULL DEFAULT 0,
     "erstelltAm" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "aktualisiertAm" DATETIME NOT NULL,
-    CONSTRAINT "Offerte_kundeId_fkey" FOREIGN KEY ("kundeId") REFERENCES "Kunde" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "Offerte_benutzerId_fkey" FOREIGN KEY ("benutzerId") REFERENCES "Benutzer" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Offerte_kundeId_fkey" FOREIGN KEY ("kundeId") REFERENCES "Kunde" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Offerte_benutzerId_fkey" FOREIGN KEY ("benutzerId") REFERENCES "Benutzer" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "Offerte_druckermodellId_fkey" FOREIGN KEY ("druckermodellId") REFERENCES "Druckermodell" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "Offerte_druckerVarianteId_fkey" FOREIGN KEY ("druckerVarianteId") REFERENCES "DruckerVariante" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
@@ -210,7 +210,7 @@ CREATE TABLE "Konfiguration" (
     "erstelltAm" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "aktualisiertAm" DATETIME NOT NULL,
     CONSTRAINT "Konfiguration_kundeId_fkey" FOREIGN KEY ("kundeId") REFERENCES "Kunde" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "Konfiguration_druckermodellId_fkey" FOREIGN KEY ("druckermodellId") REFERENCES "Druckermodell" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Konfiguration_druckermodellId_fkey" FOREIGN KEY ("druckermodellId") REFERENCES "Druckermodell" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "Konfiguration_druckerVarianteId_fkey" FOREIGN KEY ("druckerVarianteId") REFERENCES "DruckerVariante" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -283,6 +283,16 @@ CREATE UNIQUE INDEX "Offerte_offertennummer_key" ON "Offerte"("offertennummer");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Konfiguration_kundeId_name_key" ON "Konfiguration"("kundeId", "name");
+
+-- CreateIndex - Performance Optimierungen
+CREATE INDEX "Benutzer_email_idx" ON "Benutzer"("email");
+CREATE INDEX "Benutzer_aktiv_idx" ON "Benutzer"("aktiv");
+CREATE INDEX "Kunde_firmenname_idx" ON "Kunde"("firmenname");
+CREATE INDEX "Kunde_verkaeuferId_idx" ON "Kunde"("verkaeuferId");
+CREATE INDEX "Offerte_kundeId_idx" ON "Offerte"("kundeId");
+CREATE INDEX "Offerte_benutzerId_idx" ON "Offerte"("benutzerId");
+CREATE INDEX "Offerte_offertennummer_idx" ON "Offerte"("offertennummer");
+CREATE INDEX "Konfiguration_druckermodellId_idx" ON "Konfiguration"("druckermodellId");
 
 -- SeedData
 INSERT INTO "Benutzer" ("vorname", "nachname", "email", "rolle", "aktiv", "aktualisiertAm") VALUES

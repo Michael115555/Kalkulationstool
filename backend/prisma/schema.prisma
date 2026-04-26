@@ -44,6 +44,9 @@ model Benutzer {
 
   erstelltAm     DateTime @default(now())
   aktualisiertAm DateTime @updatedAt
+
+  @@index([email])
+  @@index([aktiv])
 }
 
 model Kunde {
@@ -56,13 +59,16 @@ model Kunde {
   kontaktart   String?
   versandart   String?
   verkaeuferId Int?
-  verkaeufer   Benutzer? @relation("KundeVerkaeufer", fields: [verkaeuferId], references: [id])
+  verkaeufer   Benutzer? @relation("KundeVerkaeufer", fields: [verkaeuferId], references: [id], onDelete: SetNull)
 
   offerten Offerte[] @relation("OfferteKunde")
   konfigurationen Konfiguration[] @relation("KonfigurationKunde")
 
   erstelltAm     DateTime @default(now())
   aktualisiertAm DateTime @updatedAt
+
+  @@index([firmenname])
+  @@index([verkaeuferId])
 }
 
 model Hersteller {
@@ -253,16 +259,16 @@ model Offerte {
   waehrung       String    @default("CHF")
 
   kundeId Int
-  kunde   Kunde @relation("OfferteKunde", fields: [kundeId], references: [id])
+  kunde   Kunde @relation("OfferteKunde", fields: [kundeId], references: [id], onDelete: Cascade)
 
-  benutzerId Int
-  benutzer   Benutzer @relation("OfferteBenutzer", fields: [benutzerId], references: [id])
+  benutzerId Int?
+  benutzer   Benutzer? @relation("OfferteBenutzer", fields: [benutzerId], references: [id], onDelete: SetNull)
 
   druckermodellId Int?
-  druckermodell   Druckermodell? @relation("OfferteDruckermodell", fields: [druckermodellId], references: [id])
+  druckermodell   Druckermodell? @relation("OfferteDruckermodell", fields: [druckermodellId], references: [id], onDelete: SetNull)
 
   druckerVarianteId Int?
-  druckerVariante   DruckerVariante? @relation("OfferteDruckerVariante", fields: [druckerVarianteId], references: [id])
+  druckerVariante   DruckerVariante? @relation("OfferteDruckerVariante", fields: [druckerVarianteId], references: [id], onDelete: SetNull)
 
   kundenkontakt String?
   versand       String?
@@ -293,6 +299,10 @@ model Offerte {
 
   erstelltAm     DateTime @default(now())
   aktualisiertAm DateTime @updatedAt
+
+  @@index([kundeId])
+  @@index([benutzerId])
+  @@index([offertennummer])
 }
 
 model Konfiguration {
@@ -300,13 +310,13 @@ model Konfiguration {
   name String
 
   kundeId Int?
-  kunde   Kunde? @relation("KonfigurationKunde", fields: [kundeId], references: [id])
+  kunde   Kunde? @relation("KonfigurationKunde", fields: [kundeId], references: [id], onDelete: SetNull)
 
   druckermodellId Int
-  druckermodell   Druckermodell @relation("KonfigurationDruckermodell", fields: [druckermodellId], references: [id])
+  druckermodell   Druckermodell @relation("KonfigurationDruckermodell", fields: [druckermodellId], references: [id], onDelete: Cascade)
 
   druckerVarianteId Int?
-  druckerVariante   DruckerVariante? @relation("KonfigurationDruckerVariante", fields: [druckerVarianteId], references: [id])
+  druckerVariante   DruckerVariante? @relation("KonfigurationDruckerVariante", fields: [druckerVarianteId], references: [id], onDelete: SetNull)
 
   snapshotJson String
   total        Int    @default(0)
@@ -315,6 +325,7 @@ model Konfiguration {
   aktualisiertAm DateTime @updatedAt
 
   @@unique([kundeId, name])
+  @@index([druckermodellId])
 }
 
 model OffertePosition {
