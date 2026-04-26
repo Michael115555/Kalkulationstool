@@ -67,7 +67,6 @@ const emit = defineEmits(['add-position', 'remove-position'])
           <th scope="col" class="text-end">Menge</th>
           <th scope="col" class="text-end price-header">VP (CHF)</th>
           <th scope="col" class="text-end price-header">EP (CHF)</th>
-          <th scope="col" class="text-end total-header">Gesamtpreis (CHF)</th>
           <th scope="col" class="text-center">Aktion</th>
         </tr>
       </thead>
@@ -161,9 +160,6 @@ const emit = defineEmits(['add-position', 'remove-position'])
               aria-label="Einkaufspreis"
             />
           </td>
-          <td class="text-end fw-semibold">
-            {{ formatAmount(getGesamtpreis(position)) }}
-          </td>
           <td class="text-center align-middle">
             <i
               v-if="!position.istDrucker"
@@ -176,7 +172,7 @@ const emit = defineEmits(['add-position', 'remove-position'])
           </td>
         </tr>
         <tr class="position-add-table-row">
-          <td colspan="7">
+          <td colspan="6">
             <div class="position-add-content">
               <button
                 type="button"
