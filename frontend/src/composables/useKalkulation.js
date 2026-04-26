@@ -154,14 +154,16 @@ export const useKalkulation = () => {
         configurationVariant?.calculation?.variante
     )
 
-  const getKalkulationsEpFaktor = () => {
-    const faktorGruppe = getEpFaktorGruppe()
-
-    return faktorGruppe ? katalog.value.epFaktoren[faktorGruppe]?.body ?? 0 : 0
+    const getKalkulationsEpFaktor = () => {
+      const faktorGruppe = getEpFaktorGruppe()
+      return faktorGruppe ? katalog.value.epFaktoren[faktorGruppe]?.body ?? 0 : 0
+    }
+    const getEinkaufspreis = (position) => {
+    if (position.einkaufsPreis !== null && position.einkaufsPreis !== undefined) {
+      return normalizeNumber(position.einkaufsPreis)
+    }
+    return normalizeNumber(position.vp) * getEpFaktor(position)
   }
-
-  const getEinkaufspreis = (position) =>
-    normalizeNumber(position.vp) * getEpFaktor(position)
 
   const getDruckerVarianteId = (modellName, variantenName) =>
     getVarianteByName(modellName, variantenName)?.id ?? null
@@ -181,7 +183,10 @@ export const useKalkulation = () => {
       bezeichnung: modell,
       menge: 1,
       vp: formatAmount(druckerVariante?.verkaufsPreis ?? 0),
-      epKategorie: 'body'
+      einkaufsPreis: druckerVariante?.einkaufsPreis !== null && druckerVariante?.einkaufsPreis !== undefined
+  ? formatAmount(druckerVariante.einkaufsPreis)
+  : null,
+epKategorie: 'body'
     }
   }
 
@@ -192,7 +197,8 @@ export const useKalkulation = () => {
     bezeichnung: '',
     menge: 1,
     vp: formatAmount(0),
-    epKategorie: 'optionen'
+einkaufsPreis: null,
+epKategorie: 'optionen'
   })
 
   const createDefaultPositions = (
@@ -208,35 +214,39 @@ export const useKalkulation = () => {
     positions: clonePositions(snapshot.positions ?? [])
   })
 
-  const normalizePositionSnapshot = (position, modellName, variantenName) => {
-    if (position?.istDrucker) {
-      return {
-        ...createDruckerPosition(modellName, variantenName),
-        ...position,
-        id: position.id ?? 1,
-        istDrucker: true,
-        zubehoer: 'Drucker',
-        bezeichnung: modellName,
-        epKategorie: 'body'
-      }
-    }
-
-    const produkt = verfuegbaresZubehoer.value.find(
-      (eintrag) =>
-        eintrag.zubehoer === position?.zubehoer &&
-        eintrag.bezeichnung === position?.bezeichnung
-    )
-
+ const normalizePositionSnapshot = (position, modellName, variantenName) => {
+  if (position?.istDrucker) {
     return {
-      id: position?.id ?? naechsteId.value,
-      zubehoerId: produkt?.id ?? position?.zubehoerId ?? null,
-      zubehoer: position?.zubehoer ?? '',
-      bezeichnung: position?.bezeichnung ?? '',
-      menge: position?.menge ?? 1,
-      vp: position?.vp ?? formatAmount(produkt?.vp ?? 0),
-      epKategorie: produkt?.epKategorie ?? position?.epKategorie ?? 'optionen'
+      ...createDruckerPosition(modellName, variantenName),
+      ...position,
+      id: position.id ?? 1,
+      istDrucker: true,
+      zubehoer: 'Drucker',
+      bezeichnung: modellName,
+      epKategorie: 'body'
     }
   }
+
+  const produkt = verfuegbaresZubehoer.value.find(
+    (eintrag) =>
+      eintrag.zubehoer === position?.zubehoer &&
+      eintrag.bezeichnung === position?.bezeichnung
+  )
+
+  return {
+    id: position?.id ?? naechsteId.value,
+    zubehoerId: produkt?.id ?? position?.zubehoerId ?? null,
+    zubehoer: position?.zubehoer ?? '',
+    bezeichnung: position?.bezeichnung ?? '',
+    menge: position?.menge ?? 1,
+    vp: position?.vp ?? formatAmount(produkt?.vp ?? 0),
+    einkaufsPreis: position?.einkaufsPreis ??
+      (produkt?.einkaufsPreis !== null && produkt?.einkaufsPreis !== undefined
+        ? formatAmount(produkt.einkaufsPreis)
+        : null),
+    epKategorie: produkt?.epKategorie ?? position?.epKategorie ?? 'optionen'
+  }
+}
 
   const createCalculationSnapshot = () => ({
     kundeId: kundeId.value,
@@ -501,6 +511,7 @@ export const useKalkulation = () => {
     position.bezeichnung = ''
     position.zubehoerId = null
     position.vp = formatAmount(0)
+    position.einkaufsPreis = null
     position.epKategorie =
       katalog.value.zubehoerKategorien.find((kategorie) => kategorie.name === position.zubehoer)
         ?.epKategorie ?? 'optionen'
@@ -512,7 +523,8 @@ export const useKalkulation = () => {
     if (!produkt) {
       position.zubehoerId = null
       position.vp = formatAmount(0)
-      position.epKategorie =
+      position.einkaufsPreis = null
+        position.epKategorie =
         katalog.value.zubehoerKategorien.find((kategorie) => kategorie.name === position.zubehoer)
           ?.epKategorie ?? 'optionen'
       return
@@ -520,7 +532,11 @@ export const useKalkulation = () => {
 
     position.zubehoerId = produkt.id
     position.vp = formatAmount(produkt.vp)
-    position.epKategorie = produkt.epKategorie ?? 'optionen'
+
+position.einkaufsPreis = produkt.einkaufsPreis !== null && produkt.einkaufsPreis !== undefined
+  ? formatAmount(produkt.einkaufsPreis)
+  : null
+position.epKategorie = produkt.epKategorie ?? 'optionen'
   }
 
   const normalizeQuantity = (position) => {
@@ -583,16 +599,25 @@ export const useKalkulation = () => {
   )
 
   const einkaufspreis = computed(() =>
-    nettopreis.value * getKalkulationsEpFaktor()
-  )
+  positions.value.reduce(
+    (summe, position) =>
+      summe + normalizeNumber(position.menge) * getEinkaufspreis(position),
 
-  const mietbasis = computed(() => Math.max(0, einkaufspreis.value))
+    0
+  )
+)
+
+const mietbasis = computed(() => Math.max(0, nettopreis.value))
 
   const getMietbetrag = (monate) => {
-    const mietansatz = mietansaetze.value[monate]
+  const mietansatz = mietansaetze.value[monate]
 
-    return mietansatz > 0 ? mietbasis.value / mietansatz : 0
+  if (!mietansatz || mietansatz <= 0) {
+    return 0
   }
+
+  return Math.round(mietbasis.value / mietansatz)
+}
 
   const filteredConfigurationVariants = computed(() =>
     configurationVariants.value.filter(
