@@ -180,7 +180,7 @@ export const useKalkulation = () => {
       druckermodellId: getDruckermodellByName(modell)?.id ?? null,
       druckerVarianteId: druckerVariante?.id ?? null,
       zubehoer: 'Drucker',
-      bezeichnung: modell,
+      bezeichnung: druckerVariante?.bezeichnung ?? modell,
       menge: 1,
       vp: formatAmount(druckerVariante?.verkaufsPreis ?? 0),
       einkaufsPreis: druckerVariante?.einkaufsPreis !== null && druckerVariante?.einkaufsPreis !== undefined
@@ -222,7 +222,6 @@ epKategorie: 'optionen'
       id: position.id ?? 1,
       istDrucker: true,
       zubehoer: 'Drucker',
-      bezeichnung: modellName,
       epKategorie: 'body'
     }
   }

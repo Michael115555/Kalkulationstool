@@ -84,7 +84,7 @@ const emit = defineEmits([
           :disabled="!canEditConfigurationSelection || !druckermodelle.length"
           @change="emit('select-druckermodell', $event.target.value)"
         >
-          <option value="" disabled>Drucker wählen</option>
+          <option value="" disabled>Druckermodell wählen</option>
           <option
             v-for="modell in druckermodelle"
             :key="modell"
