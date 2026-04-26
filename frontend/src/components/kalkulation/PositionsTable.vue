@@ -59,7 +59,7 @@ const emit = defineEmits(['add-position', 'remove-position'])
   </div>
 
   <div class="table-responsive">
-    <table class="table align-middle mb-0 table-bordered">
+    <table class="table align-middle mb-0 table-bordered positions-table">
       <thead>
         <tr>
           <th scope="col">Kategorie</th>

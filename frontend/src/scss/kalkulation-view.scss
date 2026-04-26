@@ -640,6 +640,43 @@ body.configuration-offcanvas-open {
   min-width: 10rem;
 }
 
+.kalkulation-view .positions-table {
+  table-layout: auto;
+  width: 100%;
+}
+
+.kalkulation-view .positions-table th:nth-child(1),
+.kalkulation-view .positions-table td:nth-child(1) {
+  width: clamp(9rem, 16vw, 14rem);
+}
+
+.kalkulation-view .positions-table th:nth-child(2),
+.kalkulation-view .positions-table td:nth-child(2) {
+  width: auto;
+}
+
+.kalkulation-view .positions-table th:nth-child(3),
+.kalkulation-view .positions-table td:nth-child(3) {
+  width: clamp(6rem, 9vw, 9rem);
+}
+
+.kalkulation-view .positions-table th:nth-child(4),
+.kalkulation-view .positions-table td:nth-child(4),
+.kalkulation-view .positions-table th:nth-child(5),
+.kalkulation-view .positions-table td:nth-child(5) {
+  width: clamp(7rem, 10vw, 10rem);
+}
+
+.kalkulation-view .positions-table th:nth-child(6),
+.kalkulation-view .positions-table td:nth-child(6) {
+  width: clamp(8rem, 12vw, 12rem);
+}
+
+.kalkulation-view .positions-table th:nth-child(7),
+.kalkulation-view .positions-table td:nth-child(7) {
+  width: 4rem;
+}
+
 .table tbody td {
   background-color: #ffffff;
 }

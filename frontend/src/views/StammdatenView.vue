@@ -452,6 +452,10 @@ onBeforeUnmount(() => {
   line-height: 2.35rem;
 }
 
+.customers-table-responsive {
+  overflow-x: hidden;
+}
+
 .customers-table {
   width: 100%;
   min-width: 0;
@@ -475,40 +479,59 @@ onBeforeUnmount(() => {
 
 .customers-table th,
 .customers-table td {
+  min-width: 0;
   padding: 0.32rem;
+  vertical-align: middle;
 }
 
-.customers-table th:nth-child(1) {
-  width: 13%;
+.customers-table th:nth-child(1),
+.customers-table td:nth-child(1) {
+  width: 14%;
 }
 
-.customers-table th:nth-child(2) {
-  width: 13%;
+.customers-table th:nth-child(2),
+.customers-table td:nth-child(2) {
+  width: 14%;
 }
 
-.customers-table th:nth-child(3) {
-  width: 15%;
+.customers-table th:nth-child(3),
+.customers-table td:nth-child(3) {
+  width: 19%;
 }
 
-.customers-table th:nth-child(4) {
-  width: 11%;
-}
-
-.customers-table th:nth-child(5) {
-  width: 15%;
-}
-
-.customers-table th:nth-child(6) {
+.customers-table th:nth-child(4),
+.customers-table td:nth-child(4) {
   width: 12%;
 }
 
-.customers-table th:nth-child(7) {
-  width: 18%;
+.customers-table th:nth-child(5),
+.customers-table td:nth-child(5) {
+  width: 13%;
 }
 
-.customers-table .action-header {
-  width: 3%;
-  font-size: 0;
+.customers-table th:nth-child(6),
+.customers-table td:nth-child(6) {
+  width: 10%;
+}
+
+.customers-table th:nth-child(7),
+.customers-table td:nth-child(7) {
+  width: 14%;
+}
+
+.customers-table th:nth-child(8),
+.customers-table td:nth-child(8) {
+  width: 4%;
+  min-width: 2.6rem;
+  max-width: 2.8rem;
+  text-align: center;
+}
+
+.customers-table input,
+.customers-table select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .control-field {
