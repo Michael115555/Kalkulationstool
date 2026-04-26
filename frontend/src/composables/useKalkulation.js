@@ -1209,6 +1209,7 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
     removePosition,
     addPosition,
     verkaufspreis,
+    einkaufspreis,
     eintauschRabattProzent,
     normalizePercent,
     eintauschRabattBetrag,

@@ -23,6 +23,10 @@ const props = defineProps({
     type: Number,
     required: true
   },
+  einkaufspreis: {
+    type: Number,
+    required: true
+  },
   eintauschRabattBetrag: {
     type: Number,
     required: true
@@ -87,9 +91,20 @@ const selectedLieferungBetrag = computed(
         <h4 class="positions-heading calculation-card-heading">Kalkulation</h4>
 
         <div class="calculation-form">
-          <div class="calculation-form-row">
-            <div class="calculation-form-label">Verkaufspreis</div>
-            <div class="calculation-empty-cell"></div>
+          <div class="calculation-form-row price-comparison-row">
+            <div class="calculation-form-label">Einkaufspreis / Verkaufspreis</div>
+
+            <div class="input-group currency-group">
+              <span class="input-group-text">CHF</span>
+              <input
+                :value="formatAmount(einkaufspreis)"
+                type="text"
+                class="form-control amount-input readonly-price calculated-price-input"
+                readonly
+                tabindex="-1"
+              />
+            </div>
+
             <div class="input-group currency-group">
               <span class="input-group-text">CHF</span>
               <input

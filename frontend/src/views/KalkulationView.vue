@@ -44,6 +44,7 @@ const {
   removePosition,
   addPosition,
   verkaufspreis,
+  einkaufspreis,
   eintauschRabattProzent,
   normalizePercent,
   eintauschRabattBetrag,
@@ -145,6 +146,7 @@ onBeforeUnmount(() => {
               v-model:restwert-monate="restwertMonate"
               v-model:restwert-betrag="restwertBetrag"
               :verkaufspreis="verkaufspreis"
+              :einkaufspreis="einkaufspreis"
               :eintausch-rabatt-betrag="eintauschRabattBetrag"
               :lieferung-optionen="lieferungOptionen"
               :lieferung-betrag="lieferungBetrag"

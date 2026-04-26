@@ -858,6 +858,19 @@ body.configuration-offcanvas-open {
   background-color: #eef4ff;
   border-color: transparent;
   box-shadow: none;
+}
+
+.price-comparison-row {
+  grid-template-columns: minmax(12rem, 1.2fr) minmax(10rem, 0.8fr) minmax(16rem, 1fr);
+}
+
+.price-comparison-row .currency-group {
+  justify-self: end;
+  width: 100%;
+  max-width: 18rem;
+}
+
+.price-comparison-row .amount-input {
   text-align: right;
 }
 
