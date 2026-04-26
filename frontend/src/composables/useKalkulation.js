@@ -1,7 +1,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { createKalkulationApi } from '../services/kalkulationApi'
 import { formatAmount, formatDecimal, normalizeNumber } from '../utils/numberFormat'
-import { getRememberedSelectedCustomerId } from '../utils/selectedCustomer'
+//import { getRememberedSelectedCustomerId } from '../utils/selectedCustomer'
 import { usePageScrollLock } from './usePageScrollLock'
 
 export const useKalkulation = () => {
@@ -254,26 +254,27 @@ export const useKalkulation = () => {
   })
 
   const createDefaultCalculationSnapshot = (
-    modell = druckermodell.value,
-    variantenName = getDefaultVarianteName(modell)
-  ) => {
-    const option = getDefaultLieferungOption()
+  modell = druckermodell.value,
+  variantenName = ''
+) => {
+  const option = getDefaultLieferungOption()
+  const hasVariante = Boolean(variantenName)
 
-    return {
-      kundeId: kundeId.value,
-      druckermodellId: getDruckermodellByName(modell)?.id ?? null,
-      druckerVarianteId: getDruckerVarianteId(modell, variantenName),
-      druckermodell: modell,
-      variante: variantenName,
-      eintauschRabattProzent: '0.00',
-      lieferungOption: option,
-      lieferungBetrag: formatAmount(getLieferungBetrag(option)),
-      restwertMonate: 0,
-      restwertBetrag: formatAmount(0),
-      positions: createDefaultPositions(modell, variantenName),
-      naechsteId: 3
-    }
+  return {
+    kundeId: kundeId.value,
+    druckermodellId: getDruckermodellByName(modell)?.id ?? null,
+    druckerVarianteId: hasVariante ? getDruckerVarianteId(modell, variantenName) : null,
+    druckermodell: modell,
+    variante: variantenName,
+    eintauschRabattProzent: '0.00',
+    lieferungOption: option,
+    lieferungBetrag: formatAmount(getLieferungBetrag(option)),
+    restwertMonate: 0,
+    restwertBetrag: formatAmount(0),
+    positions: hasVariante ? createDefaultPositions(modell, variantenName) : [],
+    naechsteId: hasVariante ? 3 : 1
   }
+}
 
   const clearCalculationSelection = () => {
     isLoadingConfigurationVariant = true
@@ -820,7 +821,7 @@ export const useKalkulation = () => {
         a.firmenname.localeCompare(b.firmenname, 'de-CH')
       )
       neuerKundenname.value = ''
-      selectKunde(kunde.id)
+      //selectKunde(kunde.id)
       catalogError.value = ''
     } catch (error) {
       catalogError.value = `Kunde konnte nicht erstellt werden: ${error.message}`
@@ -1079,12 +1080,7 @@ export const useKalkulation = () => {
         .map(mapConfigurationFromApi)
         .filter(isConfigurationComplete)
 
-      const rememberedCustomerId = getRememberedSelectedCustomerId()
-      const rememberedCustomerExists = loadedKunden.some(
-        (kunde) => kunde.id === rememberedCustomerId
-      )
-
-      kundeId.value = rememberedCustomerExists ? rememberedCustomerId : null
+      kundeId.value = null
       projectName.value = ''
       activeConfigurationVariantId.value = null
       isNewConfigurationDraft.value = false

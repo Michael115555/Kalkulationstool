@@ -56,16 +56,6 @@ const openKalkulationOfferten = () => {
           </ul>
 
           <div class="d-flex topbar-actions justify-content-lg-end">
-            <button
-              v-if="route.name === 'kalkulation'"
-              class="topbar-offerten-button btn shadow-none text-decoration-none d-inline-flex align-items-center ms-lg-3"
-              type="button"
-              aria-label="Offerten öffnen"
-              @click="openKalkulationOfferten"
-            >
-              <i class="pi pi-list" aria-hidden="true"></i>
-              <span>Offerten</span>
-            </button>
           </div>
         </div>
       </div>

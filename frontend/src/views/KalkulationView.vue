@@ -5,6 +5,10 @@ import ConfigurationOffcanvas from '../components/kalkulation/ConfigurationOffca
 import CalculationToolbar from '../components/kalkulation/CalculationToolbar.vue'
 import PositionsTable from '../components/kalkulation/PositionsTable.vue'
 import { useKalkulation } from '../composables/useKalkulation'
+import { ref, computed } from 'vue'
+
+const lieferungInklusiv = ref(true)
+const lieferungBetrag = ref(0)
 
 const {
   isCatalogLoading,
@@ -89,7 +93,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="kalkulation-view row g-3">
+  <section class="kalkulation-view">
     <div class="col-12">
       <div class="card shadow-sm border-0">
         <div class="card-body calculation-page-card-body">

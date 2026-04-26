@@ -1,5 +1,5 @@
 <template>
-  <section class="stammdaten-view row g-3">
+  <section class="stammdaten-view">
     <div class="col-12">
       <div class="card shadow-sm border-0">
         <div class="card-body customer-page-card-body">

@@ -50,21 +50,6 @@ const emit = defineEmits([
 <template>
   <div class="calculation-config-section">
     <div class="calculation-toolbar">
-      <div class="toolbar-field toolbar-field-project">
-        <label for="project-name" class="toolbar-label">
-          Projekt:
-        </label>
-        <input
-          id="project-name"
-          :value="projectName"
-          type="text"
-          class="form-control control-field toolbar-select"
-          placeholder="Projektname"
-          :disabled="!canEditConfigurationSelection"
-          @input="emit('update-project-name', $event.target.value)"
-          @blur="emit('normalize-project-name')"
-        />
-      </div>
 
       <div class="toolbar-field toolbar-field-customer">
         <label for="kunde" class="toolbar-label">
