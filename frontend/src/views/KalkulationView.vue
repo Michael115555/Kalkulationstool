@@ -138,7 +138,6 @@ onBeforeUnmount(() => {
               :normalize-price="normalizePrice"
               :format-amount="formatAmount"
               :get-einkaufspreis="getEinkaufspreis"
-              :get-gesamtpreis="getGesamtpreis"
               @add-position="addPosition"
               @remove-position="removePosition"
             />

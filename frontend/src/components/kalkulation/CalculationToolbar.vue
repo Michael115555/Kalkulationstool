@@ -122,7 +122,7 @@ const emit = defineEmits([
           :title="canSaveProject ? 'Offerte speichern' : 'Bitte zuerst Kunde, Druckermarke, Druckermodell und Druckerposition wählen'"
           @click="emit('save-project')"
         >
-          Offerte speichern
+          Projekt speichern
         </button>
       </div>
     </div>
