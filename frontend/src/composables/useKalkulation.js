@@ -727,21 +727,29 @@ export const useKalkulation = () => {
     return Math.round(mietbasis.value / mietansatz)
   }
 
-  const canSaveProject = computed(() =>
-    Boolean(
-      currentConfigurationKundeId.value &&
-        druckermarke.value &&
-        druckermodell.value &&
-        hasCompleteMachineSelection.value &&
-        positions.value.some(
-          (position) =>
-            position.zubehoer === 'Drucker' &&
-            position.bezeichnung &&
-            position.druckermodellId &&
-            position.druckerVarianteId
-        )
-    )
+  const hasValidPosition = computed(() =>
+  positions.value.some((position) => {
+    const hasBaseData =
+      position.zubehoer &&
+      position.bezeichnung &&
+      normalizeNumber(position.menge) > 0
+    if (!hasBaseData) {
+      return false
+    }
+    if (position.zubehoer === 'Drucker') {
+      return Boolean(position.druckermodellId && position.druckerVarianteId)
+    }
+    return Boolean(position.zubehoerId)
+  })
+)
+const canSaveProject = computed(() =>
+  Boolean(
+    currentConfigurationKundeId.value &&
+      druckermarke.value &&
+      druckermodell.value &&
+      hasValidPosition.value
   )
+)
 
   const filteredConfigurationVariants = computed(() =>
     configurationVariants.value.filter(
