@@ -1,14 +1,14 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { createKalkulationApi } from '../services/kalkulationApi'
 import { formatAmount, formatDecimal, normalizeNumber } from '../utils/numberFormat'
-//import { getRememberedSelectedCustomerId } from '../utils/selectedCustomer'
 import { usePageScrollLock } from './usePageScrollLock'
 
 export const useKalkulation = () => {
   const api = createKalkulationApi()
   const { setPageScrollLock } = usePageScrollLock('configuration-offcanvas-open')
 
-  const naechsteId = ref(3)
+  const naechsteId = ref(1)
+  const druckermarke = ref('')
   const druckermodell = ref('')
   const variante = ref('')
   const isCatalogLoading = ref(true)
@@ -18,6 +18,7 @@ export const useKalkulation = () => {
   const projectName = ref('')
   const neuerKundenname = ref('')
   const isCreatingKunde = ref(false)
+
   const katalog = ref({
     druckermodelle: [],
     zubehoerKategorien: [],
@@ -25,6 +26,7 @@ export const useKalkulation = () => {
     mietansaetze: {},
     epFaktoren: {}
   })
+
   const isConfigurationOffcanvasOpen = ref(false)
   const activeConfigurationVariantId = ref(null)
   const isNewConfigurationDraft = ref(false)
@@ -32,11 +34,11 @@ export const useKalkulation = () => {
   const isRenameConfigurationPanelVisible = ref(false)
   const editingConfigurationVariantName = ref('')
   const isDeleteConfigurationConfirmationVisible = ref(false)
+
   let isLoadingConfigurationVariant = false
   let isInitialDataLoaded = false
   let saveTimer = null
   let saveSequence = 0
-  let isCreatingConfigurationVariant = false
 
   const eintauschRabattProzent = ref('0.00')
   const lieferungOption = ref('')
@@ -53,9 +55,45 @@ export const useKalkulation = () => {
     kundeId.value ? Number(kundeId.value) : null
   )
 
+  const getHerstellerName = (modell) =>
+    modell.herstellerName ??
+    modell.hersteller?.name ??
+    modell.hersteller ??
+    ''
+
+  const druckermarken = computed(() => {
+    const marken = new Set(
+      katalog.value.druckermodelle
+        .map(getHerstellerName)
+        .filter(Boolean)
+    )
+
+    return Array.from(marken).sort((a, b) => a.localeCompare(b, 'de-CH'))
+  })
+
   const druckermodelle = computed(() =>
     katalog.value.druckermodelle.map((modell) => modell.name)
   )
+
+  const druckermodelleDerMarke = computed(() =>
+    katalog.value.druckermodelle.filter(
+      (modell) => getHerstellerName(modell) === druckermarke.value
+    )
+  )
+
+  const druckermodelleDerMarkeNamen = computed(() =>
+    druckermodelleDerMarke.value.map((modell) => modell.name)
+  )
+
+  const druckermodelleFuerAuswahl = computed(() => {
+    if (!druckermodell.value) {
+      return []
+    }
+
+    return druckermodelleDerMarke.value.filter(
+      (modell) => modell.name === druckermodell.value
+    )
+  })
 
   const selectedDruckermodell = computed(() =>
     katalog.value.druckermodelle.find((modell) => modell.name === druckermodell.value)
@@ -78,22 +116,28 @@ export const useKalkulation = () => {
   const canOpenConfigurationOffcanvas = computed(() => !isCatalogLoading.value)
 
   const hasActiveConfigurationVariant = computed(
-    () => activeConfigurationVariantId.value !== null && activeConfigurationVariantId.value !== undefined
+    () =>
+      activeConfigurationVariantId.value !== null &&
+      activeConfigurationVariantId.value !== undefined
   )
 
   const canEditConfigurationSelection = computed(() => !isCatalogLoading.value)
 
-  const canEditPositions = computed(
-    () => hasCompleteMachineSelection.value && hasActiveConfigurationVariant.value
+  const canEditPositions = computed(() =>
+    Boolean(druckermarke.value && druckermodell.value)
   )
 
   const varianten = computed(() =>
     selectedDruckermodell.value?.varianten.map((eintrag) => eintrag.bezeichnung) ?? []
   )
 
-  const verfuegbaresZubehoer = computed(() =>
-    canEditPositions.value ? selectedDruckermodell.value?.zubehoer ?? [] : []
-  )
+  const verfuegbaresZubehoer = computed(() => {
+    if (!druckermarke.value || !druckermodell.value) {
+      return []
+    }
+
+    return druckermodelleFuerAuswahl.value.flatMap((modell) => modell.zubehoer ?? [])
+  })
 
   const zubehoerKategorien = computed(() => {
     const verfuegbareKategorien = new Set(
@@ -105,8 +149,17 @@ export const useKalkulation = () => {
       .filter((name) => verfuegbareKategorien.has(name))
   })
 
+  const positionsKategorien = computed(() => {
+    if (!druckermarke.value || !druckermodell.value) {
+      return []
+    }
+
+    return ['Drucker', ...zubehoerKategorien.value]
+  })
+
   const lieferungOptionen = computed(() => katalog.value.lieferungOptionen)
   const mietansaetze = computed(() => katalog.value.mietansaetze)
+
   const mietoptionen = computed(() =>
     Object.keys(mietansaetze.value)
       .map(Number)
@@ -124,8 +177,8 @@ export const useKalkulation = () => {
       (eintrag) => eintrag.bezeichnung === variantenName
     )
 
-  const getDefaultVarianteName = (modellName) =>
-    getDruckermodellByName(modellName)?.varianten[0]?.bezeichnung ?? ''
+  const getDruckerVarianteId = (modellName, variantenName) =>
+    getVarianteByName(modellName, variantenName)?.id ?? null
 
   const getDefaultLieferungOption = () => lieferungOptionen.value[0]?.value ?? ''
 
@@ -133,6 +186,7 @@ export const useKalkulation = () => {
     lieferungOptionen.value.find((option) => option.value === optionValue)?.betrag ?? 0
 
   const getEpFaktorGruppe = () => selectedDruckermodell.value?.epFaktorGruppe ?? null
+
   const getEpKategorie = (position) => position.epKategorie ?? 'optionen'
 
   const getEpFaktor = (position) => {
@@ -143,9 +197,6 @@ export const useKalkulation = () => {
     return faktoren?.[kategorie] ?? faktoren?.body ?? 0
   }
 
-  const isConfigurationForCurrentContext = (configurationVariant) =>
-    (configurationVariant.kundeId ?? null) === currentConfigurationKundeId.value
-
   const isConfigurationComplete = (configurationVariant) =>
     Boolean(
       configurationVariant?.druckermodellId &&
@@ -154,19 +205,13 @@ export const useKalkulation = () => {
         configurationVariant?.calculation?.variante
     )
 
-    const getKalkulationsEpFaktor = () => {
-      const faktorGruppe = getEpFaktorGruppe()
-      return faktorGruppe ? katalog.value.epFaktoren[faktorGruppe]?.body ?? 0 : 0
-    }
-    const getEinkaufspreis = (position) => {
+  const getEinkaufspreis = (position) => {
     if (position.einkaufsPreis !== null && position.einkaufsPreis !== undefined) {
       return normalizeNumber(position.einkaufsPreis)
     }
+
     return normalizeNumber(position.vp) * getEpFaktor(position)
   }
-
-  const getDruckerVarianteId = (modellName, variantenName) =>
-    getVarianteByName(modellName, variantenName)?.id ?? null
 
   const createDruckerPosition = (
     modell = druckermodell.value,
@@ -180,31 +225,33 @@ export const useKalkulation = () => {
       druckermodellId: getDruckermodellByName(modell)?.id ?? null,
       druckerVarianteId: druckerVariante?.id ?? null,
       zubehoer: 'Drucker',
-      bezeichnung: druckerVariante?.bezeichnung ?? modell,
+      bezeichnung: druckerVariante?.bezeichnung ?? '',
       menge: 1,
       vp: formatAmount(druckerVariante?.verkaufsPreis ?? 0),
-      einkaufsPreis: druckerVariante?.einkaufsPreis !== null && druckerVariante?.einkaufsPreis !== undefined
-  ? formatAmount(druckerVariante.einkaufsPreis)
-  : null,
-epKategorie: 'body'
+      einkaufsPreis:
+        druckerVariante?.einkaufsPreis !== null &&
+        druckerVariante?.einkaufsPreis !== undefined
+          ? formatAmount(druckerVariante.einkaufsPreis)
+          : null,
+      epKategorie: 'body'
     }
   }
 
   const createEmptyPosition = (id = 1) => ({
     id,
     zubehoerId: null,
+    druckermodellId: null,
+    druckerVarianteId: null,
+    istDrucker: false,
     zubehoer: '',
     bezeichnung: '',
     menge: 1,
     vp: formatAmount(0),
-einkaufsPreis: null,
-epKategorie: 'optionen'
+    einkaufsPreis: null,
+    epKategorie: 'optionen'
   })
 
-  const createDefaultPositions = (
-    modell = druckermodell.value,
-    variantenName = variante.value
-  ) => [createDruckerPosition(modell, variantenName), createEmptyPosition(2)]
+  const createDefaultPositions = () => [createEmptyPosition(1)]
 
   const clonePositions = (positionen) =>
     positionen.map((position) => ({ ...position }))
@@ -214,41 +261,68 @@ epKategorie: 'optionen'
     positions: clonePositions(snapshot.positions ?? [])
   })
 
- const normalizePositionSnapshot = (position, modellName, variantenName) => {
-  if (position?.istDrucker) {
+  const getProdukteByZubehoer = (zubehoer) => {
+    if (zubehoer === 'Drucker') {
+      return druckermodelleFuerAuswahl.value.flatMap((modell) =>
+        (modell.varianten ?? []).map((varianteEintrag) => ({
+          id: `drucker-${varianteEintrag.id}`,
+          zubehoer: 'Drucker',
+          bezeichnung: varianteEintrag.bezeichnung,
+          vp: varianteEintrag.verkaufsPreis,
+          einkaufsPreis: varianteEintrag.einkaufsPreis,
+          epKategorie: 'body',
+          istDrucker: true,
+          druckermodellId: modell.id,
+          druckerVarianteId: varianteEintrag.id,
+          druckermodell: modell.name
+        }))
+      )
+    }
+
+    return verfuegbaresZubehoer.value.filter((produkt) => produkt.zubehoer === zubehoer)
+  }
+
+  const getProdukt = (zubehoer, bezeichnung) =>
+    getProdukteByZubehoer(zubehoer).find(
+      (produkt) => produkt.bezeichnung === bezeichnung
+    )
+
+  const normalizePositionSnapshot = (position, modellName, variantenName) => {
+    if (position?.istDrucker) {
+      return {
+        ...createDruckerPosition(modellName, variantenName),
+        ...position,
+        id: position.id ?? 1,
+        istDrucker: true,
+        zubehoer: 'Drucker',
+        epKategorie: 'body'
+      }
+    }
+
+    const produkt = getProdukt(position?.zubehoer, position?.bezeichnung)
+
     return {
-      ...createDruckerPosition(modellName, variantenName),
-      ...position,
-      id: position.id ?? 1,
-      istDrucker: true,
-      zubehoer: 'Drucker',
-      epKategorie: 'body'
+      id: position?.id ?? naechsteId.value,
+      zubehoerId: produkt?.id ?? position?.zubehoerId ?? null,
+      druckermodellId: position?.druckermodellId ?? null,
+      druckerVarianteId: position?.druckerVarianteId ?? null,
+      istDrucker: false,
+      zubehoer: position?.zubehoer ?? '',
+      bezeichnung: position?.bezeichnung ?? '',
+      menge: position?.menge ?? 1,
+      vp: position?.vp ?? formatAmount(produkt?.vp ?? 0),
+      einkaufsPreis:
+        position?.einkaufsPreis ??
+        (produkt?.einkaufsPreis !== null && produkt?.einkaufsPreis !== undefined
+          ? formatAmount(produkt.einkaufsPreis)
+          : null),
+      epKategorie: produkt?.epKategorie ?? position?.epKategorie ?? 'optionen'
     }
   }
 
-  const produkt = verfuegbaresZubehoer.value.find(
-    (eintrag) =>
-      eintrag.zubehoer === position?.zubehoer &&
-      eintrag.bezeichnung === position?.bezeichnung
-  )
-
-  return {
-    id: position?.id ?? naechsteId.value,
-    zubehoerId: produkt?.id ?? position?.zubehoerId ?? null,
-    zubehoer: position?.zubehoer ?? '',
-    bezeichnung: position?.bezeichnung ?? '',
-    menge: position?.menge ?? 1,
-    vp: position?.vp ?? formatAmount(produkt?.vp ?? 0),
-    einkaufsPreis: position?.einkaufsPreis ??
-      (produkt?.einkaufsPreis !== null && produkt?.einkaufsPreis !== undefined
-        ? formatAmount(produkt.einkaufsPreis)
-        : null),
-    epKategorie: produkt?.epKategorie ?? position?.epKategorie ?? 'optionen'
-  }
-}
-
   const createCalculationSnapshot = () => ({
     kundeId: kundeId.value,
+    druckermarke: druckermarke.value,
     druckermodellId: selectedDruckermodell.value?.id ?? null,
     druckerVarianteId: selectedVariante.value?.id ?? null,
     druckermodell: druckermodell.value,
@@ -263,27 +337,28 @@ epKategorie: 'optionen'
   })
 
   const createDefaultCalculationSnapshot = (
-  modell = druckermodell.value,
-  variantenName = ''
-) => {
-  const option = getDefaultLieferungOption()
-  const hasVariante = Boolean(variantenName)
+    modell = druckermodell.value,
+    variantenName = ''
+  ) => {
+    const option = getDefaultLieferungOption()
+    const hasVariante = Boolean(variantenName)
 
-  return {
-    kundeId: kundeId.value,
-    druckermodellId: getDruckermodellByName(modell)?.id ?? null,
-    druckerVarianteId: hasVariante ? getDruckerVarianteId(modell, variantenName) : null,
-    druckermodell: modell,
-    variante: variantenName,
-    eintauschRabattProzent: '0.00',
-    lieferungOption: option,
-    lieferungBetrag: formatAmount(getLieferungBetrag(option)),
-    restwertMonate: 0,
-    restwertBetrag: formatAmount(0),
-    positions: hasVariante ? createDefaultPositions(modell, variantenName) : [],
-    naechsteId: hasVariante ? 3 : 1
+    return {
+      kundeId: kundeId.value,
+      druckermarke: druckermarke.value,
+      druckermodellId: hasVariante ? getDruckermodellByName(modell)?.id ?? null : null,
+      druckerVarianteId: hasVariante ? getDruckerVarianteId(modell, variantenName) : null,
+      druckermodell: modell,
+      variante: variantenName,
+      eintauschRabattProzent: '0.00',
+      lieferungOption: option,
+      lieferungBetrag: formatAmount(getLieferungBetrag(option)),
+      restwertMonate: 0,
+      restwertBetrag: formatAmount(0),
+      positions: createDefaultPositions(),
+      naechsteId: 2
+    }
   }
-}
 
   const clearCalculationSelection = () => {
     isLoadingConfigurationVariant = true
@@ -305,21 +380,26 @@ epKategorie: 'optionen'
       getDruckermodellById(snapshot?.druckermodellId) ??
       getDruckermodellByName(snapshot?.druckermodell) ??
       fallbackModell
+
     const modellName = modell?.name ?? ''
     const variantenName =
       modell?.varianten.find((eintrag) => eintrag.id === Number(snapshot?.druckerVarianteId))
         ?.bezeichnung ??
       snapshot?.variante ??
-      getDefaultVarianteName(modellName)
+      ''
+
     const option = snapshot?.lieferungOption || getDefaultLieferungOption()
     const normalizedPositions = Array.isArray(snapshot?.positions)
       ? snapshot.positions.map((position) =>
           normalizePositionSnapshot(position, modellName, variantenName)
         )
-      : createDefaultPositions(modellName, variantenName)
+      : createDefaultPositions()
 
     return {
       kundeId: snapshot?.kundeId ?? null,
+      druckermarke:
+        snapshot?.druckermarke ??
+        getHerstellerName(modell),
       druckermodellId: modell?.id ?? null,
       druckerVarianteId: getDruckerVarianteId(modellName, variantenName),
       druckermodell: modellName,
@@ -332,7 +412,7 @@ epKategorie: 'optionen'
       positions: normalizedPositions,
       naechsteId:
         snapshot?.naechsteId ??
-        Math.max(3, ...normalizedPositions.map((position) => Number(position.id) + 1))
+        Math.max(2, ...normalizedPositions.map((position) => Number(position.id) + 1))
     }
   }
 
@@ -423,6 +503,11 @@ epKategorie: 'optionen'
     }, 350)
   }
 
+  const getActiveConfigurationVariant = () =>
+    configurationVariants.value.find(
+      (configurationVariant) => configurationVariant.id === activeConfigurationVariantId.value
+    )
+
   const saveActiveConfigurationVariant = (shouldPersist = true) => {
     if (isLoadingConfigurationVariant || !hasCompleteMachineSelection.value) {
       return
@@ -459,6 +544,7 @@ epKategorie: 'optionen'
     const snapshot = normalizeCalculationSnapshot(calculation)
 
     isLoadingConfigurationVariant = true
+    druckermarke.value = snapshot.druckermarke ?? ''
     druckermodell.value = snapshot.druckermodell
     kundeId.value = snapshot.kundeId ?? null
     variante.value = snapshot.variante
@@ -481,6 +567,7 @@ epKategorie: 'optionen'
       ...calculation,
       kundeId: currentConfigurationKundeId.value
     }
+
     const payload = {
       name,
       kundeId: calculationWithKunde.kundeId,
@@ -489,6 +576,7 @@ epKategorie: 'optionen'
       total: getSnapshotNettopreis(calculationWithKunde),
       calculation: calculationWithKunde
     }
+
     const savedConfigurationVariant = await api.createKonfiguration(payload)
 
     return mapConfigurationFromApi(savedConfigurationVariant)
@@ -497,23 +585,20 @@ epKategorie: 'optionen'
   const getGesamtpreis = (position) =>
     normalizeNumber(position.menge) * normalizeNumber(position.vp)
 
-  const getProdukteByZubehoer = (zubehoer) =>
-    verfuegbaresZubehoer.value.filter((produkt) => produkt.zubehoer === zubehoer)
-
-  const getProdukt = (zubehoer, bezeichnung) =>
-    verfuegbaresZubehoer.value.find(
-      (produkt) =>
-        produkt.zubehoer === zubehoer && produkt.bezeichnung === bezeichnung
-    )
-
   const updatePositionZubehoer = (position) => {
+    const isDrucker = position.zubehoer === 'Drucker'
+
     position.bezeichnung = ''
     position.zubehoerId = null
+    position.druckermodellId = null
+    position.druckerVarianteId = null
+    position.istDrucker = isDrucker
     position.vp = formatAmount(0)
     position.einkaufsPreis = null
-    position.epKategorie =
-      katalog.value.zubehoerKategorien.find((kategorie) => kategorie.name === position.zubehoer)
-        ?.epKategorie ?? 'optionen'
+    position.epKategorie = isDrucker
+      ? 'body'
+      : katalog.value.zubehoerKategorien.find((kategorie) => kategorie.name === position.zubehoer)
+          ?.epKategorie ?? 'optionen'
   }
 
   const updatePositionProdukt = (position) => {
@@ -521,21 +606,46 @@ epKategorie: 'optionen'
 
     if (!produkt) {
       position.zubehoerId = null
+      position.druckermodellId = null
+      position.druckerVarianteId = null
+      position.istDrucker = position.zubehoer === 'Drucker'
       position.vp = formatAmount(0)
       position.einkaufsPreis = null
-        position.epKategorie =
-        katalog.value.zubehoerKategorien.find((kategorie) => kategorie.name === position.zubehoer)
-          ?.epKategorie ?? 'optionen'
+      position.epKategorie = position.zubehoer === 'Drucker'
+        ? 'body'
+        : katalog.value.zubehoerKategorien.find((kategorie) => kategorie.name === position.zubehoer)
+            ?.epKategorie ?? 'optionen'
       return
     }
 
+    if (position.zubehoer === 'Drucker') {
+      position.istDrucker = true
+      position.zubehoerId = null
+      position.druckermodellId = produkt.druckermodellId
+      position.druckerVarianteId = produkt.druckerVarianteId
+      position.vp = formatAmount(produkt.vp)
+      position.einkaufsPreis =
+        produkt.einkaufsPreis !== null && produkt.einkaufsPreis !== undefined
+          ? formatAmount(produkt.einkaufsPreis)
+          : null
+      position.epKategorie = 'body'
+
+      druckermodell.value = produkt.druckermodell
+      variante.value = produkt.bezeichnung
+
+      return
+    }
+
+    position.istDrucker = false
+    position.druckermodellId = null
+    position.druckerVarianteId = null
     position.zubehoerId = produkt.id
     position.vp = formatAmount(produkt.vp)
-
-position.einkaufsPreis = produkt.einkaufsPreis !== null && produkt.einkaufsPreis !== undefined
-  ? formatAmount(produkt.einkaufsPreis)
-  : null
-position.epKategorie = produkt.epKategorie ?? 'optionen'
+    position.einkaufsPreis =
+      produkt.einkaufsPreis !== null && produkt.einkaufsPreis !== undefined
+        ? formatAmount(produkt.einkaufsPreis)
+        : null
+    position.epKategorie = produkt.epKategorie ?? 'optionen'
   }
 
   const normalizeQuantity = (position) => {
@@ -579,6 +689,14 @@ position.epKategorie = produkt.epKategorie ?? 'optionen'
     )
   )
 
+  const einkaufspreis = computed(() =>
+    positions.value.reduce(
+      (summe, position) =>
+        summe + normalizeNumber(position.menge) * getEinkaufspreis(position),
+      0
+    )
+  )
+
   const eintauschRabattBetrag = computed(() =>
     verkaufspreis.value * (normalizeNumber(eintauschRabattProzent.value) / 100)
   )
@@ -597,26 +715,33 @@ position.epKategorie = produkt.epKategorie ?? 'optionen'
     )
   )
 
-  const einkaufspreis = computed(() =>
-  positions.value.reduce(
-    (summe, position) =>
-      summe + normalizeNumber(position.menge) * getEinkaufspreis(position),
-
-    0
-  )
-)
-
-const mietbasis = computed(() => Math.max(0, nettopreis.value))
+  const mietbasis = computed(() => Math.max(0, nettopreis.value))
 
   const getMietbetrag = (monate) => {
-  const mietansatz = mietansaetze.value[monate]
+    const mietansatz = mietansaetze.value[monate]
 
-  if (!mietansatz || mietansatz <= 0) {
-    return 0
+    if (!mietansatz || mietansatz <= 0) {
+      return 0
+    }
+
+    return Math.round(mietbasis.value / mietansatz)
   }
 
-  return Math.round(mietbasis.value / mietansatz)
-}
+  const canSaveProject = computed(() =>
+    Boolean(
+      currentConfigurationKundeId.value &&
+        druckermarke.value &&
+        druckermodell.value &&
+        hasCompleteMachineSelection.value &&
+        positions.value.some(
+          (position) =>
+            position.zubehoer === 'Drucker' &&
+            position.bezeichnung &&
+            position.druckermodellId &&
+            position.druckerVarianteId
+        )
+    )
+  )
 
   const filteredConfigurationVariants = computed(() =>
     configurationVariants.value.filter(
@@ -644,11 +769,6 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
       line2: `${configurationVariant.calculation.druckermodell} · ${configurationVariant.calculation.variante}`
     }
   }
-
-  const getActiveConfigurationVariant = () =>
-    configurationVariants.value.find(
-      (configurationVariant) => configurationVariant.id === activeConfigurationVariantId.value
-    )
 
   const activeConfigurationName = computed(
     () => getActiveConfigurationVariant()?.name ?? (projectName.value.trim() || 'Keine Offerte')
@@ -743,6 +863,7 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
     const existingNames = configurationVariants.value
       .filter(isConfigurationComplete)
       .map((configurationVariant) => configurationVariant.name)
+
     const cleanName = configName
       .replace(/^Kopie von\s+/i, '')
       .replace(/\s+Kopie(\s+\d+)?$/i, '')
@@ -771,26 +892,42 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
     return candidate
   }
 
-  const selectDruckermodell = (modell) => {
-    if (modell === druckermodell.value || !canEditConfigurationSelection.value) {
+  const selectDruckermarke = (marke) => {
+    if (marke === druckermarke.value || !canEditConfigurationSelection.value) {
       return
     }
 
     saveActiveConfigurationVariant()
 
-    if (!modell) {
-      activeConfigurationVariantId.value = null
-      isNewConfigurationDraft.value = true
-      clearCalculationSelection()
-      return
-    }
+    druckermarke.value = marke
+    druckermodell.value = ''
+    variante.value = ''
+    positions.value = []
+    naechsteId.value = 1
+    catalogError.value = ''
 
     if (!hasActiveConfigurationVariant.value) {
       isNewConfigurationDraft.value = true
     }
-
-    loadCalculationSnapshot(createDefaultCalculationSnapshot(modell))
   }
+
+  const selectDruckermodell = (modell) => {
+  if (modell === druckermodell.value || !canEditConfigurationSelection.value) {
+    return
+  }
+
+  saveActiveConfigurationVariant()
+
+  druckermodell.value = modell
+  variante.value = ''
+  positions.value = modell ? [createEmptyPosition(1)] : []
+  naechsteId.value = modell ? 2 : 1
+  catalogError.value = ''
+
+  if (!hasActiveConfigurationVariant.value) {
+    isNewConfigurationDraft.value = true
+  }
+}
 
   const selectVariante = (nextVariante) => {
     if (nextVariante === variante.value || !canEditConfigurationSelection.value) {
@@ -818,6 +955,7 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
 
     saveActiveConfigurationVariant()
     kundeId.value = nextKundeId
+    catalogError.value = ''
 
     const activeConfigurationVariant = getActiveConfigurationVariant()
 
@@ -845,7 +983,6 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
         a.firmenname.localeCompare(b.firmenname, 'de-CH')
       )
       neuerKundenname.value = ''
-      //selectKunde(kunde.id)
       catalogError.value = ''
     } catch (error) {
       catalogError.value = `Kunde konnte nicht erstellt werden: ${error.message}`
@@ -868,12 +1005,10 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
   }
 
   const addConfigurationVariant = async () => {
-    if (!hasCompleteMachineSelection.value) {
-      catalogError.value = 'Bitte zuerst Drucker wählen.'
+    if (!canSaveProject.value) {
+      catalogError.value = 'Bitte Kunde, Druckermarke, Druckermodell und mindestens eine Druckerposition erfassen.'
       return
     }
-
-    saveActiveConfigurationVariant()
 
     try {
       const calculation = createCalculationSnapshot()
@@ -881,6 +1016,7 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
         druckermodell.value,
         getProjectConfigurationBaseName()
       )
+
       const configurationVariant = await createConfigurationVariantInDatabase(
         druckermodell.value,
         calculation,
@@ -891,31 +1027,14 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
       activeConfigurationVariantId.value = configurationVariant.id
       isNewConfigurationDraft.value = false
       projectName.value = configurationVariant.name
-      saveActiveConfigurationVariant()
+      catalogError.value = ''
     } catch (error) {
       catalogError.value = `Offerte konnte nicht erstellt werden: ${error.message}`
     }
   }
 
-  const ensureActiveConfigurationVariant = async () => {
-    if (
-      !isInitialDataLoaded ||
-      isCatalogLoading.value ||
-      isLoadingConfigurationVariant ||
-      !isNewConfigurationDraft.value ||
-      !hasCompleteMachineSelection.value ||
-      getActiveConfigurationVariant() ||
-      isCreatingConfigurationVariant
-    ) {
-      return
-    }
-
-    isCreatingConfigurationVariant = true
-    try {
-      await addConfigurationVariant()
-    } finally {
-      isCreatingConfigurationVariant = false
-    }
+  const saveProject = async () => {
+    await addConfigurationVariant()
   }
 
   const startNewConfiguration = () => {
@@ -924,6 +1043,7 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
     isNewConfigurationDraft.value = true
     kundeId.value = null
     projectName.value = ''
+    druckermarke.value = ''
     clearCalculationSelection()
     isRenameConfigurationPanelVisible.value = false
     isDeleteConfigurationConfirmationVisible.value = false
@@ -988,6 +1108,7 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
         activeConfigurationVariant.druckermodell,
         activeConfigurationVariant.name
       )
+
       const configurationVariant = await createConfigurationVariantInDatabase(
         activeConfigurationVariant.druckermodell,
         cloneCalculationSnapshot(activeConfigurationVariant.calculation),
@@ -1033,6 +1154,7 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
       configurationVariants.value = configurationVariants.value.filter(
         (configurationVariant) => configurationVariant.id !== deletedId
       )
+
       const nextConfigurationVariant =
         filteredConfigurationVariants.value[nextActiveIndex] ??
         filteredConfigurationVariants.value[0] ??
@@ -1047,6 +1169,7 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
         isNewConfigurationDraft.value = false
         kundeId.value = null
         projectName.value = ''
+        druckermarke.value = ''
         clearCalculationSelection()
       }
 
@@ -1093,12 +1216,14 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
         api.getKatalog(),
         api.getKunden()
       ])
+
       katalog.value = loadedKatalog
       kunden.value = loadedKunden
 
       if (!katalog.value.druckermodelle.length) {
         throw new Error('Keine Druckermodelle in der Datenbank gefunden')
       }
+
       const savedConfigurations = await api.getKonfigurationen()
       configurationVariants.value = savedConfigurations
         .map(mapConfigurationFromApi)
@@ -1108,6 +1233,7 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
       projectName.value = ''
       activeConfigurationVariantId.value = null
       isNewConfigurationDraft.value = false
+      druckermarke.value = ''
       clearCalculationSelection()
 
       isInitialDataLoaded = true
@@ -1150,7 +1276,6 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
     ],
     () => {
       saveActiveConfigurationVariant()
-      ensureActiveConfigurationVariant()
     },
     { deep: true }
   )
@@ -1160,6 +1285,7 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
   onBeforeUnmount(() => {
     window.clearTimeout(saveTimer)
     saveActiveConfigurationVariant()
+
     const activeConfigurationVariant = getActiveConfigurationVariant()
 
     if (activeConfigurationVariant) {
@@ -1182,12 +1308,21 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
     isCreatingKunde,
     selectKunde,
     createKunde,
+
+    druckermarke,
+    druckermarken,
+    selectDruckermarke,
+    canSaveProject,
+    saveProject,
+
     druckermodell,
     selectDruckermodell,
     druckermodelle,
+    druckermodelleDerMarkeNamen,
     variante,
     selectVariante,
     varianten,
+
     canEditConfigurationSelection,
     canEditPositions,
     isConfigurationOffcanvasOpen,
@@ -1195,10 +1330,12 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
     configurationVariants,
     startNewConfiguration,
     openConfigurationOffcanvas,
+
     positions,
     isEmptyPosition,
     updatePositionZubehoer,
     zubehoerKategorien,
+    positionsKategorien,
     updatePositionProdukt,
     getProdukteByZubehoer,
     normalizeQuantity,
@@ -1208,6 +1345,7 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
     getGesamtpreis,
     removePosition,
     addPosition,
+
     verkaufspreis,
     einkaufspreis,
     eintauschRabattProzent,
@@ -1216,6 +1354,7 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
     lieferungOption,
     updateLieferungOption,
     lieferungOptionen,
+    lieferungBetrag,
     restwertMonate,
     normalizeRestwertMonate,
     restwertBetrag,
@@ -1224,6 +1363,7 @@ const mietbasis = computed(() => Math.max(0, nettopreis.value))
     mietoptionen,
     getMietbetrag,
     mietbasis,
+
     closeConfigurationOffcanvas,
     filteredConfigurationVariants,
     activeConfigurationVariantId,

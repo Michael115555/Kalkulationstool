@@ -43,10 +43,6 @@ defineProps({
   getEinkaufspreis: {
     type: Function,
     required: true
-  },
-  getGesamtpreis: {
-    type: Function,
-    required: true
   }
 })
 
@@ -77,21 +73,13 @@ const emit = defineEmits(['add-position', 'remove-position'])
           :class="{ 'empty-position-row': isEmptyPosition(position) }"
         >
           <td>
-            <input
-              v-if="position.istDrucker"
-              :value="position.zubehoer"
-              type="text"
-              class="form-control control-field readonly-price"
-              readonly
-              tabindex="-1"
-            />
             <select
-              v-else
               v-model="position.zubehoer"
               class="form-select control-field"
+              :disabled="!canEditPositions"
               @change="updatePositionZubehoer(position)"
             >
-              <option value="" disabled>Zubehör wählen</option>
+              <option value="" disabled>Kategorie wählen</option>
               <option
                 v-for="zubehoer in zubehoerKategorien"
                 :key="zubehoer"
@@ -101,32 +89,25 @@ const emit = defineEmits(['add-position', 'remove-position'])
               </option>
             </select>
           </td>
+
           <td>
-            <input
-              v-if="position.istDrucker"
-              :value="position.bezeichnung"
-              type="text"
-              class="form-control control-field readonly-price"
-              readonly
-              tabindex="-1"
-            />
             <select
-              v-else
               v-model="position.bezeichnung"
               class="form-select control-field"
-              :disabled="!position.zubehoer"
+              :disabled="!canEditPositions || !position.zubehoer"
               @change="updatePositionProdukt(position)"
             >
               <option value="" disabled>Bezeichnung wählen</option>
               <option
                 v-for="produkt in getProdukteByZubehoer(position.zubehoer)"
-                :key="produkt.bezeichnung"
+                :key="produkt.id ?? produkt.bezeichnung"
                 :value="produkt.bezeichnung"
               >
                 {{ produkt.bezeichnung }}
               </option>
             </select>
           </td>
+
           <td>
             <input
               v-model.number="position.menge"
@@ -136,10 +117,12 @@ const emit = defineEmits(['add-position', 'remove-position'])
               inputmode="numeric"
               class="form-control control-field text-end"
               placeholder="1"
+              :disabled="!canEditPositions"
               @change="normalizeQuantity(position)"
               @blur="normalizeQuantity(position)"
             />
           </td>
+
           <td>
             <input
               v-model="position.vp"
@@ -147,9 +130,11 @@ const emit = defineEmits(['add-position', 'remove-position'])
               inputmode="decimal"
               class="form-control control-field text-end"
               placeholder="0.00"
+              :disabled="!canEditPositions"
               @blur="normalizePrice(position)"
             />
           </td>
+
           <td>
             <input
               :value="formatAmount(getEinkaufspreis(position))"
@@ -160,9 +145,9 @@ const emit = defineEmits(['add-position', 'remove-position'])
               aria-label="Einkaufspreis"
             />
           </td>
+
           <td class="text-center align-middle">
             <i
-              v-if="!position.istDrucker"
               class="pi pi-trash delete-icon"
               role="button"
               tabindex="0"
@@ -171,6 +156,7 @@ const emit = defineEmits(['add-position', 'remove-position'])
             ></i>
           </td>
         </tr>
+
         <tr class="position-add-table-row">
           <td colspan="6">
             <div class="position-add-content">

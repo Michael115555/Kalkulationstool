@@ -5,35 +5,36 @@ import ConfigurationOffcanvas from '../components/kalkulation/ConfigurationOffca
 import CalculationToolbar from '../components/kalkulation/CalculationToolbar.vue'
 import PositionsTable from '../components/kalkulation/PositionsTable.vue'
 import { useKalkulation } from '../composables/useKalkulation'
-import { ref, computed } from 'vue'
-
-const lieferungInklusiv = ref(true)
-const lieferungBetrag = ref(0)
 
 const {
   isCatalogLoading,
   catalogError,
+
   kunden,
   kundeId,
-  projectName,
-  updateProjectName,
-  normalizeProjectName,
   selectKunde,
+
+  druckermarke,
+  druckermarken,
+  selectDruckermarke,
+
   druckermodell,
+  druckermodelleDerMarkeNamen,
   selectDruckermodell,
-  druckermodelle,
-  variante,
-  selectVariante,
-  varianten,
+
+  positionsKategorien,
+  canSaveProject,
+  saveProject,
   canEditConfigurationSelection,
   canEditPositions,
+
   isConfigurationOffcanvasOpen,
   startNewConfiguration,
   openConfigurationOffcanvas,
+
   positions,
   isEmptyPosition,
   updatePositionZubehoer,
-  zubehoerKategorien,
   updatePositionProdukt,
   getProdukteByZubehoer,
   normalizeQuantity,
@@ -43,6 +44,7 @@ const {
   getGesamtpreis,
   removePosition,
   addPosition,
+
   verkaufspreis,
   einkaufspreis,
   eintauschRabattProzent,
@@ -51,6 +53,7 @@ const {
   lieferungOption,
   updateLieferungOption,
   lieferungOptionen,
+  lieferungBetrag,
   restwertMonate,
   normalizeRestwertMonate,
   restwertBetrag,
@@ -59,6 +62,7 @@ const {
   mietoptionen,
   getMietbetrag,
   mietbasis,
+
   closeConfigurationOffcanvas,
   filteredConfigurationVariants,
   activeConfigurationVariantId,
@@ -101,6 +105,7 @@ onBeforeUnmount(() => {
           <div v-if="isCatalogLoading" class="alert alert-info mt-3 mb-0">
             Daten werden aus der Datenbank geladen...
           </div>
+
           <div v-if="catalogError" class="alert alert-danger mt-3 mb-0">
             {{ catalogError }}
           </div>
@@ -108,24 +113,22 @@ onBeforeUnmount(() => {
           <CalculationToolbar
             :kunden="kunden"
             :kunde-id="kundeId"
-            :project-name="projectName"
+            :druckermarken="druckermarken"
+            :druckermarke="druckermarke"
+            :druckermodelle="druckermodelleDerMarkeNamen"
             :druckermodell="druckermodell"
-            :druckermodelle="druckermodelle"
-            :variante="variante"
-            :varianten="varianten"
-            :is-catalog-loading="isCatalogLoading"
+            :can-save-project="canSaveProject"
             :can-edit-configuration-selection="canEditConfigurationSelection"
-            @update-project-name="updateProjectName"
-            @normalize-project-name="normalizeProjectName"
             @select-kunde="selectKunde"
+            @select-druckermarke="selectDruckermarke"
             @select-druckermodell="selectDruckermodell"
-            @update:variante="selectVariante"
+            @save-project="saveProject"
           />
 
-          <template v-if="activeConfigurationVariantId !== null && activeConfigurationVariantId !== undefined">
+          <template v-if="druckermarke && druckermodell">
             <PositionsTable
               :positions="positions"
-              :zubehoer-kategorien="zubehoerKategorien"
+              :zubehoer-kategorien="positionsKategorien"
               :can-edit-positions="canEditPositions"
               :is-empty-position="isEmptyPosition"
               :update-position-zubehoer="updatePositionZubehoer"
@@ -161,13 +164,15 @@ onBeforeUnmount(() => {
               :format-amount="formatAmount"
             />
           </template>
+
           <div v-else class="calculation-empty-offer">
             <i class="pi pi-print calculation-empty-icon" aria-hidden="true"></i>
+
             <div class="calculation-empty-title">
-              Kunde und Drucker wählen
+              Auswahl starten
             </div>
             <div class="calculation-empty-text">
-              Danach erscheinen Positionen, Kalkulation und Mietoptionen.
+              Wähle Kunde, Druckermarke und Druckermodell, um Positionen zu erfassen.
             </div>
           </div>
         </div>

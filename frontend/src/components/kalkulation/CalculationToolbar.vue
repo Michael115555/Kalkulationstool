@@ -8,27 +8,23 @@ defineProps({
     type: [Number, String],
     default: null
   },
-  projectName: {
-    type: String,
+  druckermarken: {
+    type: Array,
     required: true
   },
-  druckermodell: {
+  druckermarke: {
     type: String,
     required: true
   },
   druckermodelle: {
-    type: Array,
-    required: true
-  },
-  variante: {
+  type: Array,
+  required: true
+},
+  druckermodell: {
     type: String,
     required: true
   },
-  varianten: {
-    type: Array,
-    required: true
-  },
-  isCatalogLoading: {
+  canSaveProject: {
     type: Boolean,
     required: true
   },
@@ -39,27 +35,26 @@ defineProps({
 })
 
 const emit = defineEmits([
-  'update-project-name',
-  'normalize-project-name',
   'select-kunde',
+  'select-druckermarke',
   'select-druckermodell',
-  'update:variante'
+  'save-project'
 ])
 </script>
 
 <template>
   <div class="calculation-config-section">
     <div class="calculation-toolbar">
-
       <div class="toolbar-field toolbar-field-customer">
-        <label for="kunde" class="toolbar-label">
+        <label for="calculation-kunde" class="toolbar-label">
           Kunde:
         </label>
+
         <select
-          id="kunde"
+          id="calculation-kunde"
           :value="kundeId ?? ''"
           class="form-select control-field toolbar-select"
-          :disabled="!canEditConfigurationSelection"
+          :disabled="false"
           @change="emit('select-kunde', $event.target.value)"
         >
           <option value="">Kunde wählen</option>
@@ -73,18 +68,42 @@ const emit = defineEmits([
         </select>
       </div>
 
+      <div class="toolbar-field toolbar-field-brand">
+        <label for="calculation-druckermarke" class="toolbar-label">
+          Druckermarke:
+        </label>
+
+        <select
+          id="calculation-druckermarke"
+          :value="druckermarke"
+          class="form-select control-field toolbar-select"
+          :disabled="!druckermarken.length"
+          @change="emit('select-druckermarke', $event.target.value)"
+        >
+          <option value="">Druckermarke wählen</option>
+          <option
+            v-for="marke in druckermarken"
+            :key="marke"
+            :value="marke"
+          >
+            {{ marke }}
+          </option>
+        </select>
+      </div>
+
       <div class="toolbar-field toolbar-field-model">
-        <label for="druckermodell" class="toolbar-label">
+        <label for="calculation-druckermodell" class="toolbar-label">
           Druckermodell:
         </label>
+
         <select
-          id="druckermodell"
+          id="calculation-druckermodell"
           :value="druckermodell"
           class="form-select control-field toolbar-select"
-          :disabled="!canEditConfigurationSelection || !druckermodelle.length"
+          :disabled="!canEditConfigurationSelection || !druckermarke || !druckermodelle.length"
           @change="emit('select-druckermodell', $event.target.value)"
         >
-          <option value="" disabled>Druckermodell wählen</option>
+          <option value="">Druckermodell wählen</option>
           <option
             v-for="modell in druckermodelle"
             :key="modell"
@@ -95,26 +114,16 @@ const emit = defineEmits([
         </select>
       </div>
 
-      <div class="toolbar-field toolbar-field-variant">
-        <label for="variante" class="toolbar-label">
-          Variante:
-        </label>
-        <select
-          id="variante"
-          :value="variante"
-          class="form-select control-field toolbar-select"
-          :disabled="!canEditConfigurationSelection || !varianten.length"
-          @change="emit('update:variante', $event.target.value)"
+      <div class="toolbar-field toolbar-field-save">
+       <button
+          type="button"
+          class="btn btn-primary toolbar-save-button"
+          :disabled="!canSaveProject"
+          :title="canSaveProject ? 'Offerte speichern' : 'Bitte zuerst Kunde, Druckermarke, Druckermodell und Druckerposition wählen'"
+          @click="emit('save-project')"
         >
-          <option value="" disabled>Variante wählen</option>
-          <option
-            v-for="eintrag in varianten"
-            :key="eintrag"
-            :value="eintrag"
-          >
-            {{ eintrag }}
-          </option>
-        </select>
+          Offerte speichern
+        </button>
       </div>
     </div>
   </div>
