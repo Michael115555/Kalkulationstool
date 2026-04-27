@@ -24,9 +24,9 @@ const router = createRouter({
       component: StammdatenView
     },
     {
-      path: '/auswertungen',
-      name: 'auswertungen',
-      component: AuswertungenView
+      path: '/projekte',
+      name: 'projekte',
+      component: ProjekteView
     }
   ]
 })

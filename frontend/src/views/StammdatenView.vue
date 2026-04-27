@@ -123,7 +123,7 @@
                         class="customer-row-button customer-delete-button"
                         aria-label="Kunde löschen"
                         :disabled="customer.isDeleting || (customers.length === 1 && customer.isNew)"
-                        @click="deleteCustomer(customer)"
+                        @click.stop="askDeleteCustomer(customer)"
                       >
                         <i class="pi pi-trash" aria-hidden="true"></i>
                       </button>
@@ -148,6 +148,50 @@
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="customerToDelete"
+      class="confirm-delete-backdrop"
+      role="presentation"
+      @click.self="cancelDeleteCustomer"
+    >
+      <div
+        class="confirm-delete-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="customer-delete-title"
+      >
+        <div class="confirm-delete-content">
+          <h5 id="customer-delete-title" class="confirm-delete-title">
+            Kunde löschen?
+          </h5>
+
+          <p class="confirm-delete-text">
+            Möchtest du „{{ customerToDelete.name || 'Ohne Kundennamen' }}“ wirklich löschen?
+          </p>
+        </div>
+
+        <div class="confirm-delete-actions">
+          <button
+            type="button"
+            class="confirm-delete-button confirm-delete-button-secondary"
+            :disabled="isDeletingCustomer"
+            @click="cancelDeleteCustomer"
+          >
+            Abbrechen
+          </button>
+
+          <button
+            type="button"
+            class="confirm-delete-button confirm-delete-button-danger"
+            :disabled="isDeletingCustomer"
+            @click="confirmDeleteCustomer"
+          >
+            Löschen
+          </button>
         </div>
       </div>
     </div>
@@ -182,6 +226,8 @@ const customers = ref([])
 const salespeople = ref([])
 const isLoadingCustomers = ref(false)
 const customerError = ref('')
+const customerToDelete = ref(null)
+const isDeletingCustomer = ref(false)
 const autoSaveTimers = new Map()
 const AUTO_SAVE_DELAY = 550
 
@@ -354,6 +400,7 @@ async function saveCustomer(customer) {
     const savedCustomer = customer.isNew
       ? await api.createKunde(createCustomerPayload(customer))
       : await api.updateKunde(customer.persistedId, createCustomerPayload(customer))
+
     applySavedCustomer(customer, savedCustomer, savedSnapshot)
     rememberSelectedCustomerId(savedCustomer.id)
   } catch (error) {
@@ -367,20 +414,40 @@ async function saveCustomer(customer) {
   }
 }
 
-async function deleteCustomer(customer) {
+function askDeleteCustomer(customer) {
   clearCustomerAutoSave(customer)
 
+  function askDeleteCustomer(customer) {
+    clearCustomerAutoSave(customer)
+    customerToDelete.value = customer
+  }
+
+  customerToDelete.value = customer
+}
+
+function cancelDeleteCustomer() {
+  if (isDeletingCustomer.value) {
+    return
+  }
+
+  customerToDelete.value = null
+}
+
+async function confirmDeleteCustomer() {
+  if (!customerToDelete.value || isDeletingCustomer.value) {
+    return
+  }
+
+  const customer = customerToDelete.value
+
   if (customer.isNew) {
-    customers.value = customers.value.filter((entry) => entry.id !== customer.id)
-
-    if (!customers.value.length) {
-      customers.value.push(createDraftCustomer())
-    }
-
+    removeDraftCustomer(customer)
+    customerToDelete.value = null
     return
   }
 
   customer.isDeleting = true
+  isDeletingCustomer.value = true
   customerError.value = ''
 
   try {
@@ -391,10 +458,21 @@ async function deleteCustomer(customer) {
     if (!customers.value.length) {
       customers.value.push(createDraftCustomer())
     }
+
+    customerToDelete.value = null
   } catch (error) {
     customerError.value = `Kunde konnte nicht gelöscht werden: ${error.message}`
   } finally {
     customer.isDeleting = false
+    isDeletingCustomer.value = false
+  }
+}
+
+function removeDraftCustomer(customer) {
+  customers.value = customers.value.filter((entry) => entry.id !== customer.id)
+
+  if (!customers.value.length) {
+    customers.value.push(createDraftCustomer())
   }
 }
 
@@ -643,6 +721,98 @@ onBeforeUnmount(() => {
   border-radius: 0.2rem;
   outline: 2px solid #bfdbfe;
   outline-offset: 0.2rem;
+}
+
+.confirm-delete-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(16, 24, 40, 0.46);
+  backdrop-filter: blur(0.15rem);
+}
+
+.confirm-delete-dialog {
+  display: grid;
+  gap: 1rem;
+  width: min(31rem, 100%);
+  padding: 1.25rem;
+  border: 1px solid #e4e7ec;
+  border-radius: 0.42rem;
+  background: #ffffff;
+  box-shadow: 0 1.5rem 4rem rgba(16, 24, 40, 0.24);
+}
+
+.confirm-delete-content {
+  min-width: 0;
+}
+
+.confirm-delete-title {
+  margin: 0 0 0.3rem;
+  color: #101828;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.confirm-delete-text {
+  margin: 0;
+  color: #667085;
+  font-size: var(--kt-font-size-md);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.confirm-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  margin-top: 0.3rem;
+}
+
+.confirm-delete-button {
+  min-height: 2.55rem;
+  padding: 0.45rem 1rem;
+  border-radius: 0.42rem;
+  font-size: var(--kt-font-size-md);
+  font-weight: 500;
+  line-height: 1.2;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.confirm-delete-button-secondary {
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  color: #344054;
+}
+
+.confirm-delete-button-secondary:hover:not(:disabled),
+.confirm-delete-button-secondary:focus-visible:not(:disabled) {
+  background: #f8fafc;
+  border-color: #98a2b3;
+}
+
+.confirm-delete-button-danger {
+  border: 1px solid #dc2626;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.confirm-delete-button-danger:hover:not(:disabled),
+.confirm-delete-button-danger:focus-visible:not(:disabled) {
+  border-color: #b91c1c;
+  background: #b91c1c;
+}
+
+.confirm-delete-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 @media (max-width: 1199.98px) {

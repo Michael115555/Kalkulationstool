@@ -1,0 +1,45 @@
+// ===================================================================
+// CSS VARIABLES MAPPING - Diese Datei ersetzt alle Hardcodes
+// ===================================================================
+
+// Color Mapping
+$color-border: var(--kt-color-border);
+$color-border-light: var(--kt-color-border-light);
+$color-text-primary: var(--kt-color-text-primary);
+$color-text-secondary: var(--kt-color-text-secondary);
+$color-text-tertiary: var(--kt-color-text-tertiary);
+$color-text-light: var(--kt-color-text-light);
+$color-bg-white: var(--kt-color-bg-white);
+$color-bg-light: var(--kt-color-bg-light);
+$color-bg-very-light: var(--kt-color-bg-very-light);
+$color-primary: var(--kt-color-primary);
+$color-primary-dark: var(--kt-color-primary-dark);
+$color-primary-light: var(--kt-color-primary-light);
+$color-success: var(--kt-color-success);
+$color-warning: var(--kt-color-warning);
+$color-error: var(--kt-color-error);
+$color-error-bg: var(--kt-color-error-bg);
+
+// Spacing Mapping
+$spacing-xs: var(--kt-spacing-xs);
+$spacing-sm: var(--kt-spacing-sm);
+$spacing-md: var(--kt-spacing-md);
+$spacing-lg: var(--kt-spacing-lg);
+$spacing-xl: var(--kt-spacing-xl);
+$spacing-2xl: var(--kt-spacing-2xl);
+$spacing-3xl: var(--kt-spacing-3xl);
+
+// Border Radius Mapping
+$border-radius-sm: var(--kt-border-radius-sm);
+$border-radius-md: var(--kt-border-radius-md);
+$border-radius-lg: var(--kt-border-radius-lg);
+
+// Transition Mapping
+$transition-fast: var(--kt-transition-fast);
+$transition-base: var(--kt-transition-base);
+$transition-slow: var(--kt-transition-slow);
+
+// Shadow Mapping
+$shadow-sm: var(--kt-shadow-sm);
+$shadow-base: var(--kt-shadow-base);
+$shadow-md: var(--kt-shadow-md);

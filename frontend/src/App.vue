@@ -5,9 +5,8 @@ const route = useRoute()
 
 const navigationItems = [
   { to: '/', label: 'Kalkulation', icon: 'pi pi-calculator' },
-  { to: '/stammdaten', label: 'Kunden', icon: 'pi pi-users' }
-  //{ to: '/projekte', label: 'Seite 2', icon: 'pi pi-folder' },
-  //{ to: '/auswertungen', label: 'Seite 4', icon: 'pi pi-folder' }
+  { to: '/stammdaten', label: 'Kunden', icon: 'pi pi-users' },
+  { to: '/projekte', label: 'Projekte', icon: 'pi pi-folder' }
 ]
 
 const openKalkulationOfferten = () => {

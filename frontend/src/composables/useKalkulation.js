@@ -105,6 +105,16 @@ export const useKalkulation = () => {
     )
   )
 
+  const selectedDruckerPosition = computed(() =>
+    positions.value.find(
+      (position) =>
+        position.zubehoer === 'Drucker' &&
+        position.bezeichnung &&
+        position.druckermodellId &&
+        position.druckerVarianteId
+    )
+  )
+
   const hasCompleteMachineSelection = computed(() =>
     Boolean(
       !isCatalogLoading.value &&
@@ -320,21 +330,30 @@ export const useKalkulation = () => {
     }
   }
 
-  const createCalculationSnapshot = () => ({
-    kundeId: kundeId.value,
-    druckermarke: druckermarke.value,
-    druckermodellId: selectedDruckermodell.value?.id ?? null,
-    druckerVarianteId: selectedVariante.value?.id ?? null,
-    druckermodell: druckermodell.value,
-    variante: variante.value,
-    eintauschRabattProzent: eintauschRabattProzent.value,
-    lieferungOption: lieferungOption.value,
-    lieferungBetrag: lieferungBetrag.value,
-    restwertMonate: restwertMonate.value,
-    restwertBetrag: restwertBetrag.value,
-    positions: clonePositions(positions.value),
-    naechsteId: naechsteId.value
-  })
+  const createCalculationSnapshot = () => {
+    const druckerPosition = selectedDruckerPosition.value
+    const druckermodellId =
+      druckerPosition?.druckermodellId ?? selectedDruckermodell.value?.id ?? null
+    const druckerVarianteId =
+      druckerPosition?.druckerVarianteId ?? selectedVariante.value?.id ?? null
+    const variantenName = druckerPosition?.bezeichnung ?? variante.value
+
+    return {
+      kundeId: kundeId.value,
+      druckermarke: druckermarke.value,
+      druckermodellId,
+      druckerVarianteId,
+      druckermodell: druckermodell.value,
+      variante: variantenName,
+      eintauschRabattProzent: eintauschRabattProzent.value,
+      lieferungOption: lieferungOption.value,
+      lieferungBetrag: lieferungBetrag.value,
+      restwertMonate: restwertMonate.value,
+      restwertBetrag: restwertBetrag.value,
+      positions: clonePositions(positions.value),
+      naechsteId: naechsteId.value
+    }
+  }
 
   const createDefaultCalculationSnapshot = (
     modell = druckermodell.value,
@@ -521,8 +540,8 @@ export const useKalkulation = () => {
 
     activeConfigurationVariant.calculation = createCalculationSnapshot()
     activeConfigurationVariant.kundeId = currentConfigurationKundeId.value
-    activeConfigurationVariant.druckermodellId = selectedDruckermodell.value?.id ?? null
-    activeConfigurationVariant.druckerVarianteId = selectedVariante.value?.id ?? null
+    activeConfigurationVariant.druckermodellId = activeConfigurationVariant.calculation.druckermodellId
+    activeConfigurationVariant.druckerVarianteId = activeConfigurationVariant.calculation.druckerVarianteId
     activeConfigurationVariant.druckermodell = druckermodell.value
     activeConfigurationVariant.total = nettopreis.value
 
@@ -728,28 +747,37 @@ export const useKalkulation = () => {
   }
 
   const hasValidPosition = computed(() =>
-  positions.value.some((position) => {
-    const hasBaseData =
-      position.zubehoer &&
-      position.bezeichnung &&
-      normalizeNumber(position.menge) > 0
-    if (!hasBaseData) {
-      return false
-    }
-    if (position.zubehoer === 'Drucker') {
-      return Boolean(position.druckermodellId && position.druckerVarianteId)
-    }
-    return Boolean(position.zubehoerId)
-  })
-)
-const canSaveProject = computed(() =>
-  Boolean(
-    currentConfigurationKundeId.value &&
-      druckermarke.value &&
-      druckermodell.value &&
-      hasValidPosition.value
+    positions.value.some((position) => {
+      const hasBaseData =
+        position.zubehoer &&
+        position.bezeichnung &&
+        normalizeNumber(position.menge) > 0
+
+      if (!hasBaseData) {
+        return false
+      }
+
+      if (position.zubehoer === 'Drucker') {
+        return Boolean(position.druckermodellId && position.druckerVarianteId)
+      }
+
+      return Boolean(position.zubehoerId)
+    })
   )
-)
+
+  const hasValidDruckerPosition = computed(() =>
+    Boolean(selectedDruckerPosition.value)
+  )
+
+  const canSaveProject = computed(() =>
+    Boolean(
+      currentConfigurationKundeId.value &&
+        druckermarke.value &&
+        druckermodell.value &&
+        hasValidPosition.value &&
+        hasValidDruckerPosition.value
+    )
+  )
 
   const filteredConfigurationVariants = computed(() =>
     configurationVariants.value.filter(
@@ -838,8 +866,23 @@ const canSaveProject = computed(() =>
     return getUniqueConfigurationName(modell, `Alternative ${alternativesCount + 1}`)
   }
 
-  const getProjectConfigurationBaseName = () =>
-    projectName.value.trim() || selectedKunde.value?.firmenname?.trim() || 'Offerte'
+  const getProjectConfigurationBaseName = () => {
+    const druckerPosition = selectedDruckerPosition.value
+    const druckerName = [druckermodell.value, druckerPosition?.bezeichnung]
+      .filter(Boolean)
+      .join(' ')
+      .trim()
+
+    if (druckerName) {
+      return druckerName
+    }
+
+    if (projectName.value.trim()) {
+      return projectName.value.trim()
+    }
+
+    return 'Offerte'
+  }
 
   const updateProjectName = (name) => {
     projectName.value = name
@@ -920,22 +963,22 @@ const canSaveProject = computed(() =>
   }
 
   const selectDruckermodell = (modell) => {
-  if (modell === druckermodell.value || !canEditConfigurationSelection.value) {
-    return
+    if (modell === druckermodell.value || !canEditConfigurationSelection.value) {
+      return
+    }
+
+    saveActiveConfigurationVariant()
+
+    druckermodell.value = modell
+    variante.value = ''
+    positions.value = modell ? [createEmptyPosition(1)] : []
+    naechsteId.value = modell ? 2 : 1
+    catalogError.value = ''
+
+    if (!hasActiveConfigurationVariant.value) {
+      isNewConfigurationDraft.value = true
+    }
   }
-
-  saveActiveConfigurationVariant()
-
-  druckermodell.value = modell
-  variante.value = ''
-  positions.value = modell ? [createEmptyPosition(1)] : []
-  naechsteId.value = modell ? 2 : 1
-  catalogError.value = ''
-
-  if (!hasActiveConfigurationVariant.value) {
-    isNewConfigurationDraft.value = true
-  }
-}
 
   const selectVariante = (nextVariante) => {
     if (nextVariante === variante.value || !canEditConfigurationSelection.value) {
@@ -1014,8 +1057,9 @@ const canSaveProject = computed(() =>
 
   const addConfigurationVariant = async () => {
     if (!canSaveProject.value) {
-      catalogError.value = 'Bitte Kunde, Druckermarke, Druckermodell und mindestens eine Druckerposition erfassen.'
-      return
+      catalogError.value =
+        'Bitte Kunde, Druckermarke, Druckermodell und eine Druckerposition erfassen.'
+      return null
     }
 
     try {
@@ -1036,13 +1080,27 @@ const canSaveProject = computed(() =>
       isNewConfigurationDraft.value = false
       projectName.value = configurationVariant.name
       catalogError.value = ''
+
+      return configurationVariant
     } catch (error) {
       catalogError.value = `Offerte konnte nicht erstellt werden: ${error.message}`
+      return null
     }
   }
 
   const saveProject = async () => {
-    await addConfigurationVariant()
+    const savedProject = await addConfigurationVariant()
+
+    if (!savedProject) {
+      return
+    }
+
+    activeConfigurationVariantId.value = null
+    isNewConfigurationDraft.value = false
+    projectName.value = ''
+    kundeId.value = null
+    druckermarke.value = ''
+    clearCalculationSelection()
   }
 
   const startNewConfiguration = () => {
