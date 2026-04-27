@@ -234,7 +234,7 @@ onMounted(loadProjekte)
 
                   <td class="text-center align-middle">
                     <div class="project-action-list">
-                      <i
+                     <!--  <<i
                         class="pi pi-pencil project-action-icon"
                         role="button"
                         tabindex="0"
@@ -242,7 +242,7 @@ onMounted(loadProjekte)
                         title="Projekt bearbeiten"
                         @click="editProjekt(projekt)"
                         @keydown.enter="editProjekt(projekt)"
-                      ></i>
+                      ></i>> -->
 
                       <i
                         class="pi pi-trash project-action-icon project-action-icon-danger"
