@@ -53,12 +53,12 @@
                   </td>
                   <td>
                     <input
-                      v-model="customer.email"
-                      class="form-control control-field"
-                      placeholder="E Mail"
-                      type="email"
-                      @input="scheduleCustomerAutoSave(customer)"
-                    />
+                    v-model="customer.email"
+                    class="form-control control-field"
+                    placeholder="E Mail"
+                    type="text"
+                    @input="scheduleCustomerAutoSave(customer)"
+                  />
                   </td>
                   <td>
                     <input
@@ -416,12 +416,6 @@ async function saveCustomer(customer) {
 
 function askDeleteCustomer(customer) {
   clearCustomerAutoSave(customer)
-
-  function askDeleteCustomer(customer) {
-    clearCustomerAutoSave(customer)
-    customerToDelete.value = customer
-  }
-
   customerToDelete.value = customer
 }
 
@@ -579,7 +573,7 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(4),
 .customers-table td:nth-child(4) {
-  width: 12%;
+  width: 10%;
 }
 
 .customers-table th:nth-child(5),
@@ -589,19 +583,19 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(6),
 .customers-table td:nth-child(6) {
-  width: 10%;
+  width: 9%;
 }
 
 .customers-table th:nth-child(7),
 .customers-table td:nth-child(7) {
-  width: 14%;
+  width: 17%;
 }
 
 .customers-table th:nth-child(8),
 .customers-table td:nth-child(8) {
   width: 4%;
-  min-width: 2.6rem;
-  max-width: 2.8rem;
+  min-width: 3rem;
+  max-width: 3.2rem;
   text-align: center;
 }
 
@@ -624,7 +618,10 @@ onBeforeUnmount(() => {
 }
 
 .customers-table .form-select.control-field {
-  padding-right: 1.9rem;
+  overflow: hidden;
+  padding-right: 2rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .customer-action-buttons {
