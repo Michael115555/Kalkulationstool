@@ -1,0 +1,54 @@
+import { describe, expect, test } from 'vitest'
+import { normalizeNumber } from './numberFormat'
+import {
+  calculateLineTotal,
+  calculateNetPrice,
+  calculateSalesTotal
+} from './kalkulationMath'
+
+describe('kalkulationMath', () => {
+  test('berechnet Positions Total', () => {
+    const position = {
+      menge: 2,
+      vp: "1’250.00"
+    }
+
+    expect(calculateLineTotal(position, normalizeNumber)).toBe(2500)
+  })
+
+  test('berechnet Verkaufspreis über mehrere Positionen', () => {
+    const positions = [
+      { menge: 1, vp: "1’000.00" },
+      { menge: 2, vp: '250.00' },
+      { menge: 3, vp: '100.00' }
+    ]
+
+    expect(calculateSalesTotal(positions, normalizeNumber)).toBe(1800)
+  })
+
+  test('berechnet Nettopreis mit Rabatt, Lieferung und Restwert', () => {
+    const result = calculateNetPrice({
+      verkaufspreis: 10000,
+      eintauschRabattProzent: 10,
+      lieferungBetrag: 250,
+      restwertMonate: 12,
+      restwertBetrag: 100,
+      normalizeNumber
+    })
+
+    expect(result).toBe(10450)
+  })
+
+  test('Nettopreis wird nie negativ', () => {
+    const result = calculateNetPrice({
+      verkaufspreis: 1000,
+      eintauschRabattProzent: 100,
+      lieferungBetrag: 0,
+      restwertMonate: 0,
+      restwertBetrag: 0,
+      normalizeNumber
+    })
+
+    expect(result).toBe(0)
+  })
+})
