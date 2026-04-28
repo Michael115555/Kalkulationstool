@@ -17,6 +17,7 @@ const {
   druckermarke,
   druckermarken,
   selectDruckermarke,
+  isExotischesModell,
 
   druckermodell,
   druckermodelleDerMarkeNamen,
@@ -125,11 +126,12 @@ onBeforeUnmount(() => {
             @save-project="saveProject"
           />
 
-          <template v-if="druckermarke && druckermodell">
+          <template v-if="druckermarke && (druckermodell || isExotischesModell)">
             <PositionsTable
               :positions="positions"
               :zubehoer-kategorien="positionsKategorien"
               :can-edit-positions="canEditPositions"
+              :is-exotisches-modell="isExotischesModell"
               :is-empty-position="isEmptyPosition"
               :update-position-zubehoer="updatePositionZubehoer"
               :update-position-produkt="updatePositionProdukt"
@@ -171,7 +173,7 @@ onBeforeUnmount(() => {
               Auswahl starten
             </div>
             <div class="calculation-empty-text">
-              Wähle Kunde, Druckermarke und Druckermodell, um Positionen zu erfassen.
+              Wähle Kunde, Druckermarke und Druckermodell, um Positionen zu erfassen. Für exotische Modelle wird die manuelle Kalkulation automatisch geöffnet.
             </div>
           </div>
         </div>

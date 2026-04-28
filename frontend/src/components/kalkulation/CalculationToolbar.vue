@@ -1,5 +1,10 @@
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const EXOTIC_MODEL_OPTION = 'Exotisches Modell'
+const MANUAL_CALCULATION_MODEL = 'Manuelle Kalkulation'
+
+const props = defineProps({
   kunden: {
     type: Array,
     required: true
@@ -17,9 +22,9 @@ defineProps({
     required: true
   },
   druckermodelle: {
-  type: Array,
-  required: true
-},
+    type: Array,
+    required: true
+  },
   druckermodell: {
     type: String,
     required: true
@@ -40,6 +45,37 @@ const emit = defineEmits([
   'select-druckermodell',
   'save-project'
 ])
+
+const isExotischesModellSelected = computed(() =>
+  props.druckermarke === EXOTIC_MODEL_OPTION
+)
+
+const druckermarkenMitExotischemModell = computed(() => {
+  const marken = Array.isArray(props.druckermarken)
+    ? props.druckermarken.filter(Boolean)
+    : []
+
+  if (marken.includes(EXOTIC_MODEL_OPTION)) {
+    return marken
+  }
+
+  return [
+    ...marken,
+    EXOTIC_MODEL_OPTION
+  ]
+})
+
+const saveButtonTitle = computed(() => {
+  if (isExotischesModellSelected.value) {
+    return 'Exotische Modelle werden manuell kalkuliert und nicht in der Datenbank gespeichert'
+  }
+
+  if (props.canSaveProject) {
+    return 'Offerte speichern'
+  }
+
+  return 'Bitte zuerst Kunde, Druckermarke, Druckermodell und Druckerposition wählen'
+})
 </script>
 
 <template>
@@ -54,7 +90,6 @@ const emit = defineEmits([
           id="calculation-kunde"
           :value="kundeId ?? ''"
           class="form-select control-field toolbar-select"
-          :disabled="false"
           @change="emit('select-kunde', $event.target.value)"
         >
           <option value="">Kunde wählen</option>
@@ -77,12 +112,12 @@ const emit = defineEmits([
           id="calculation-druckermarke"
           :value="druckermarke"
           class="form-select control-field toolbar-select"
-          :disabled="!druckermarken.length"
+          :disabled="!canEditConfigurationSelection"
           @change="emit('select-druckermarke', $event.target.value)"
         >
           <option value="">Druckermarke wählen</option>
           <option
-            v-for="marke in druckermarken"
+            v-for="marke in druckermarkenMitExotischemModell"
             :key="marke"
             :value="marke"
           >
@@ -100,12 +135,17 @@ const emit = defineEmits([
           id="calculation-druckermodell"
           :value="druckermodell"
           class="form-select control-field toolbar-select"
-          :disabled="!canEditConfigurationSelection || !druckermarke || !druckermodelle.length"
+          :disabled="!canEditConfigurationSelection || !druckermarke || isExotischesModellSelected"
           @change="emit('select-druckermodell', $event.target.value)"
         >
-          <option value="">Druckermodell wählen</option>
+          <option
+            :value="isExotischesModellSelected ? MANUAL_CALCULATION_MODEL : ''"
+          >
+            {{ isExotischesModellSelected ? MANUAL_CALCULATION_MODEL : 'Druckermodell wählen' }}
+          </option>
           <option
             v-for="modell in druckermodelle"
+            v-show="!isExotischesModellSelected"
             :key="modell"
             :value="modell"
           >
@@ -115,11 +155,11 @@ const emit = defineEmits([
       </div>
 
       <div class="toolbar-field toolbar-field-save">
-       <button
+        <button
           type="button"
           class="btn btn-primary toolbar-save-button"
-          :disabled="!canSaveProject"
-          :title="canSaveProject ? 'Offerte speichern' : 'Bitte zuerst Kunde, Druckermarke, Druckermodell und Druckerposition wählen'"
+          :disabled="!canSaveProject || isExotischesModellSelected"
+          :title="saveButtonTitle"
           @click="emit('save-project')"
         >
           Projekt speichern

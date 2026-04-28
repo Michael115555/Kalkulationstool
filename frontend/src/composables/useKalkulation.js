@@ -3,6 +3,9 @@ import { createKalkulationApi } from '../services/kalkulationApi'
 import { formatAmount, formatDecimal, normalizeNumber } from '../utils/numberFormat'
 import { usePageScrollLock } from './usePageScrollLock'
 
+const EXOTIC_MODEL_OPTION = 'Exotisches Modell'
+const MANUAL_CALCULATION_MODEL = 'Manuelle Kalkulation'
+
 export const useKalkulation = () => {
   const api = createKalkulationApi()
   const { setPageScrollLock } = usePageScrollLock('configuration-offcanvas-open')
@@ -86,7 +89,7 @@ export const useKalkulation = () => {
   )
 
   const druckermodelleFuerAuswahl = computed(() => {
-    if (!druckermodell.value) {
+    if (!druckermodell.value || isExotischesModell.value) {
       return []
     }
 
@@ -97,6 +100,10 @@ export const useKalkulation = () => {
 
   const selectedDruckermodell = computed(() =>
     katalog.value.druckermodelle.find((modell) => modell.name === druckermodell.value)
+  )
+
+  const isExotischesModell = computed(() =>
+    druckermarke.value === EXOTIC_MODEL_OPTION
   )
 
   const selectedVariante = computed(() =>
@@ -117,7 +124,8 @@ export const useKalkulation = () => {
 
   const hasCompleteMachineSelection = computed(() =>
     Boolean(
-      !isCatalogLoading.value &&
+      !isExotischesModell.value &&
+        !isCatalogLoading.value &&
         selectedDruckermodell.value?.id &&
         selectedVariante.value?.id
     )
@@ -134,7 +142,7 @@ export const useKalkulation = () => {
   const canEditConfigurationSelection = computed(() => !isCatalogLoading.value)
 
   const canEditPositions = computed(() =>
-    Boolean(druckermarke.value && druckermodell.value)
+    Boolean(druckermarke.value && (druckermodell.value || isExotischesModell.value))
   )
 
   const varianten = computed(() =>
@@ -142,7 +150,7 @@ export const useKalkulation = () => {
   )
 
   const verfuegbaresZubehoer = computed(() => {
-    if (!druckermarke.value || !druckermodell.value) {
+    if (!druckermarke.value || !druckermodell.value || isExotischesModell.value) {
       return []
     }
 
@@ -159,12 +167,65 @@ export const useKalkulation = () => {
       .filter((name) => verfuegbareKategorien.has(name))
   })
 
+  const normalizeKategorieName = (name) =>
+    String(name ?? '')
+      .trim()
+      .replace(/\s*\+\s*/g, ' & ')
+      .replace(/\s*\/\s*/g, ' / ')
+      .replace(/\s+/g, ' ')
+
+  const getKategorieKey = (name) =>
+    normalizeKategorieName(name)
+      .toLowerCase()
+      .replace(/\s*&\s*/g, '&')
+      .replace(/\s*\/\s*/g, '/')
+
+  const getUniqueKategorieNamen = (kategorien) => {
+    const seen = new Set()
+
+    return kategorien
+      .map((kategorie) => normalizeKategorieName(kategorie))
+      .filter(Boolean)
+      .filter((kategorie) => {
+        const key = getKategorieKey(kategorie)
+
+        if (seen.has(key)) {
+          return false
+        }
+
+        seen.add(key)
+        return true
+      })
+  }
+
+  const getZubehoerKategorieByName = (name) => {
+    const key = getKategorieKey(name)
+
+    return katalog.value.zubehoerKategorien.find(
+      (kategorie) => getKategorieKey(kategorie.name) === key
+    )
+  }
+
   const positionsKategorien = computed(() => {
-    if (!druckermarke.value || !druckermodell.value) {
+    if (!druckermarke.value || (!druckermodell.value && !isExotischesModell.value)) {
       return []
     }
 
-    return ['Drucker', ...zubehoerKategorien.value]
+    if (isExotischesModell.value) {
+      const kategorien = getUniqueKategorieNamen([
+        'Drucker',
+        ...katalog.value.zubehoerKategorien.map((kategorie) => kategorie.name)
+      ])
+
+      return kategorien.sort((a, b) => {
+        if (a === 'Drucker') return -1
+        if (b === 'Drucker') return 1
+
+        return a.localeCompare(b, 'de-CH')
+      })
+    }
+
+    return getUniqueKategorieNamen(['Drucker', ...zubehoerKategorien.value])
   })
 
   const lieferungOptionen = computed(() => katalog.value.lieferungOptionen)
@@ -200,6 +261,10 @@ export const useKalkulation = () => {
   const getEpKategorie = (position) => position.epKategorie ?? 'optionen'
 
   const getEpFaktor = (position) => {
+    if (isExotischesModell.value) {
+      return 0
+    }
+
     const faktorGruppe = getEpFaktorGruppe()
     const faktoren = faktorGruppe ? katalog.value.epFaktoren[faktorGruppe] : null
     const kategorie = getEpKategorie(position)
@@ -261,6 +326,22 @@ export const useKalkulation = () => {
     epKategorie: 'optionen'
   })
 
+  const createManualPosition = (id = 1, zubehoer = '') => ({
+    id,
+    zubehoerId: null,
+    druckermodellId: null,
+    druckerVarianteId: null,
+    istDrucker: zubehoer === 'Drucker',
+    zubehoer,
+    bezeichnung: '',
+    menge: 1,
+    vp: formatAmount(0),
+    einkaufsPreis: formatAmount(0),
+    epKategorie: zubehoer === 'Drucker' ? 'body' : 'optionen'
+  })
+
+  const createManualDruckerPosition = (id = 1) => createManualPosition(id, 'Drucker')
+
   const createDefaultPositions = () => [createEmptyPosition(1)]
 
   const clonePositions = (positionen) =>
@@ -272,6 +353,10 @@ export const useKalkulation = () => {
   })
 
   const getProdukteByZubehoer = (zubehoer) => {
+    if (isExotischesModell.value) {
+      return []
+    }
+
     if (zubehoer === 'Drucker') {
       return druckermodelleFuerAuswahl.value.flatMap((modell) =>
         (modell.varianten ?? []).map((varianteEintrag) => ({
@@ -298,6 +383,26 @@ export const useKalkulation = () => {
     )
 
   const normalizePositionSnapshot = (position, modellName, variantenName) => {
+    if (isExotischesModell.value) {
+      const zubehoer = normalizeKategorieName(position?.zubehoer ?? '')
+      const isDrucker = zubehoer === 'Drucker'
+
+      return {
+        ...createManualPosition(position?.id ?? 1, zubehoer),
+        ...position,
+        id: position?.id ?? 1,
+        zubehoer,
+        istDrucker: isDrucker,
+        druckermodellId: null,
+        druckerVarianteId: null,
+        zubehoerId: null,
+        einkaufsPreis: position?.einkaufsPreis ?? formatAmount(0),
+        epKategorie: isDrucker
+          ? 'body'
+          : getZubehoerKategorieByName(zubehoer)?.epKategorie ?? position?.epKategorie ?? 'optionen'
+      }
+    }
+
     if (position?.istDrucker) {
       return {
         ...createDruckerPosition(modellName, variantenName),
@@ -341,10 +446,10 @@ export const useKalkulation = () => {
     return {
       kundeId: kundeId.value,
       druckermarke: druckermarke.value,
-      druckermodellId,
-      druckerVarianteId,
+      druckermodellId: isExotischesModell.value ? null : druckermodellId,
+      druckerVarianteId: isExotischesModell.value ? null : druckerVarianteId,
       druckermodell: druckermodell.value,
-      variante: variantenName,
+      variante: isExotischesModell.value ? MANUAL_CALCULATION_MODEL : variantenName,
       eintauschRabattProzent: eintauschRabattProzent.value,
       lieferungOption: lieferungOption.value,
       lieferungBetrag: lieferungBetrag.value,
@@ -507,6 +612,7 @@ export const useKalkulation = () => {
 
   const queueSaveConfigurationVariant = (configurationVariant) => {
     if (
+      isExotischesModell.value ||
       !isInitialDataLoaded ||
       !configurationVariant?.id ||
       !isConfigurationComplete(configurationVariant)
@@ -528,7 +634,11 @@ export const useKalkulation = () => {
     )
 
   const saveActiveConfigurationVariant = (shouldPersist = true) => {
-    if (isLoadingConfigurationVariant || !hasCompleteMachineSelection.value) {
+    if (
+      isExotischesModell.value ||
+      isLoadingConfigurationVariant ||
+      !hasCompleteMachineSelection.value
+    ) {
       return
     }
 
@@ -613,14 +723,24 @@ export const useKalkulation = () => {
     position.druckerVarianteId = null
     position.istDrucker = isDrucker
     position.vp = formatAmount(0)
-    position.einkaufsPreis = null
+    position.einkaufsPreis = isExotischesModell.value ? formatAmount(0) : null
     position.epKategorie = isDrucker
       ? 'body'
-      : katalog.value.zubehoerKategorien.find((kategorie) => kategorie.name === position.zubehoer)
-          ?.epKategorie ?? 'optionen'
+      : getZubehoerKategorieByName(position.zubehoer)?.epKategorie ?? 'optionen'
   }
 
   const updatePositionProdukt = (position) => {
+    if (isExotischesModell.value) {
+      position.istDrucker = position.zubehoer === 'Drucker'
+      position.druckermodellId = null
+      position.druckerVarianteId = null
+      position.zubehoerId = null
+      position.epKategorie = position.zubehoer === 'Drucker'
+        ? 'body'
+        : getZubehoerKategorieByName(position.zubehoer)?.epKategorie ?? 'optionen'
+      return
+    }
+
     const produkt = getProdukt(position.zubehoer, position.bezeichnung)
 
     if (!produkt) {
@@ -632,8 +752,7 @@ export const useKalkulation = () => {
       position.einkaufsPreis = null
       position.epKategorie = position.zubehoer === 'Drucker'
         ? 'body'
-        : katalog.value.zubehoerKategorien.find((kategorie) => kategorie.name === position.zubehoer)
-            ?.epKategorie ?? 'optionen'
+        : getZubehoerKategorieByName(position.zubehoer)?.epKategorie ?? 'optionen'
       return
     }
 
@@ -757,6 +876,10 @@ export const useKalkulation = () => {
         return false
       }
 
+      if (isExotischesModell.value) {
+        return normalizeNumber(position.vp) > 0 || getEinkaufspreis(position) > 0
+      }
+
       if (position.zubehoer === 'Drucker') {
         return Boolean(position.druckermodellId && position.druckerVarianteId)
       }
@@ -765,13 +888,20 @@ export const useKalkulation = () => {
     })
   )
 
-  const hasValidDruckerPosition = computed(() =>
-    Boolean(selectedDruckerPosition.value)
-  )
+  const hasValidDruckerPosition = computed(() => {
+    if (isExotischesModell.value) {
+      return positions.value.some(
+        (position) => position.zubehoer === 'Drucker' && position.bezeichnung
+      )
+    }
+
+    return Boolean(selectedDruckerPosition.value)
+  })
 
   const canSaveProject = computed(() =>
     Boolean(
-      currentConfigurationKundeId.value &&
+      !isExotischesModell.value &&
+        currentConfigurationKundeId.value &&
         druckermarke.value &&
         druckermodell.value &&
         hasValidPosition.value &&
@@ -951,11 +1081,18 @@ export const useKalkulation = () => {
     saveActiveConfigurationVariant()
 
     druckermarke.value = marke
-    druckermodell.value = ''
     variante.value = ''
-    positions.value = []
-    naechsteId.value = 1
     catalogError.value = ''
+
+    if (marke === EXOTIC_MODEL_OPTION) {
+      druckermodell.value = MANUAL_CALCULATION_MODEL
+      positions.value = [createManualPosition(1)]
+      naechsteId.value = 2
+    } else {
+      druckermodell.value = ''
+      positions.value = []
+      naechsteId.value = 1
+    }
 
     if (!hasActiveConfigurationVariant.value) {
       isNewConfigurationDraft.value = true
@@ -963,7 +1100,11 @@ export const useKalkulation = () => {
   }
 
   const selectDruckermodell = (modell) => {
-    if (modell === druckermodell.value || !canEditConfigurationSelection.value) {
+    if (
+      isExotischesModell.value ||
+      modell === druckermodell.value ||
+      !canEditConfigurationSelection.value
+    ) {
       return
     }
 
@@ -1010,7 +1151,11 @@ export const useKalkulation = () => {
 
     const activeConfigurationVariant = getActiveConfigurationVariant()
 
-    if (activeConfigurationVariant && hasCompleteMachineSelection.value) {
+    if (
+      activeConfigurationVariant &&
+      hasCompleteMachineSelection.value &&
+      !isExotischesModell.value
+    ) {
       activeConfigurationVariant.kundeId = nextKundeId
       activeConfigurationVariant.calculation = createCalculationSnapshot()
       activeConfigurationVariant.calculation.kundeId = nextKundeId
@@ -1250,7 +1395,11 @@ export const useKalkulation = () => {
       return
     }
 
-    positions.value.push(createEmptyPosition(naechsteId.value))
+    positions.value.push(
+      isExotischesModell.value
+        ? createManualPosition(naechsteId.value)
+        : createEmptyPosition(naechsteId.value)
+    )
     naechsteId.value += 1
   }
 
@@ -1354,7 +1503,7 @@ export const useKalkulation = () => {
 
     const activeConfigurationVariant = getActiveConfigurationVariant()
 
-    if (activeConfigurationVariant) {
+    if (activeConfigurationVariant && !isExotischesModell.value) {
       persistConfigurationVariant(activeConfigurationVariant).catch(() => {})
     }
 
@@ -1378,6 +1527,7 @@ export const useKalkulation = () => {
     druckermarke,
     druckermarken,
     selectDruckermarke,
+    isExotischesModell,
     canSaveProject,
     saveProject,
 

@@ -1,5 +1,5 @@
 <script setup>
-defineProps({
+const props = defineProps({
   positions: {
     type: Array,
     required: true
@@ -11,6 +11,10 @@ defineProps({
   canEditPositions: {
     type: Boolean,
     required: true
+  },
+  isExotischesModell: {
+    type: Boolean,
+    default: false
   },
   isEmptyPosition: {
     type: Function,
@@ -47,6 +51,10 @@ defineProps({
 })
 
 const emit = defineEmits(['add-position', 'remove-position'])
+
+const normalizeManualEinkaufspreis = (position) => {
+  position.einkaufsPreis = props.formatAmount(position.einkaufsPreis)
+}
 </script>
 
 <template>
@@ -66,6 +74,7 @@ const emit = defineEmits(['add-position', 'remove-position'])
           <th scope="col" class="text-center">Aktion</th>
         </tr>
       </thead>
+
       <tbody>
         <tr
           v-for="position in positions"
@@ -79,7 +88,7 @@ const emit = defineEmits(['add-position', 'remove-position'])
               :disabled="!canEditPositions"
               @change="updatePositionZubehoer(position)"
             >
-              <option value="" disabled>Kategorie wählen</option>
+              <option value="">Kategorie wählen</option>
               <option
                 v-for="zubehoer in zubehoerKategorien"
                 :key="zubehoer"
@@ -91,7 +100,18 @@ const emit = defineEmits(['add-position', 'remove-position'])
           </td>
 
           <td>
+            <input
+              v-if="isExotischesModell"
+              v-model="position.bezeichnung"
+              type="text"
+              class="form-control control-field"
+              placeholder="Bezeichnung eingeben"
+              :disabled="!canEditPositions"
+              aria-label="Bezeichnung"
+            />
+
             <select
+              v-else
               v-model="position.bezeichnung"
               class="form-select control-field"
               :disabled="!canEditPositions || !position.zubehoer"
@@ -137,6 +157,19 @@ const emit = defineEmits(['add-position', 'remove-position'])
 
           <td>
             <input
+              v-if="isExotischesModell"
+              v-model="position.einkaufsPreis"
+              type="text"
+              inputmode="decimal"
+              class="form-control control-field text-end"
+              placeholder="0.00"
+              :disabled="!canEditPositions"
+              aria-label="Einkaufspreis"
+              @blur="normalizeManualEinkaufspreis(position)"
+            />
+
+            <input
+              v-else
               :value="formatAmount(getEinkaufspreis(position))"
               type="text"
               class="form-control control-field text-end readonly-price"
