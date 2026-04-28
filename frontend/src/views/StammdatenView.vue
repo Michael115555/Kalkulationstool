@@ -20,7 +20,7 @@
                 <tr>
                   <th scope="col">Kundenname</th>
                   <th scope="col">Ansprechperson</th>
-                  <th scope="col">E Mail</th>
+                  <th scope="col">E-Mail</th>
                   <th scope="col">Telefon</th>
                   <th scope="col">Verkäufer</th>
                   <th scope="col">Kontaktart</th>
@@ -55,7 +55,7 @@
                     <input
                     v-model="customer.email"
                     class="form-control control-field"
-                    placeholder="E Mail"
+                    placeholder="E-Mail"
                     type="text"
                     @input="scheduleCustomerAutoSave(customer)"
                   />
