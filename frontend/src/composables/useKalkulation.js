@@ -1,14 +1,12 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { createKalkulationApi } from '../services/kalkulationApi'
 import { formatAmount, formatDecimal, normalizeNumber } from '../utils/numberFormat'
-import { usePageScrollLock } from './usePageScrollLock'
 
 const EXOTIC_MODEL_OPTION = 'Exotisches Modell'
 const MANUAL_CALCULATION_MODEL = 'Manuelle Kalkulation'
 
 export const useKalkulation = () => {
   const api = createKalkulationApi()
-  const { setPageScrollLock } = usePageScrollLock('configuration-offcanvas-open')
 
   const naechsteId = ref(1)
   const druckermarke = ref('')
@@ -30,7 +28,6 @@ export const useKalkulation = () => {
     epFaktoren: {}
   })
 
-  const isConfigurationOffcanvasOpen = ref(false)
   const activeConfigurationVariantId = ref(null)
   const isNewConfigurationDraft = ref(false)
   const configurationVariants = ref([])
@@ -130,8 +127,6 @@ export const useKalkulation = () => {
         selectedVariante.value?.id
     )
   )
-
-  const canOpenConfigurationOffcanvas = computed(() => !isCatalogLoading.value)
 
   const hasActiveConfigurationVariant = computed(
     () =>
@@ -341,6 +336,13 @@ export const useKalkulation = () => {
   })
 
   const createManualDruckerPosition = (id = 1) => createManualPosition(id, 'Drucker')
+
+  const createDruckerDraftPosition = (id = 1) => ({
+    ...createEmptyPosition(id),
+    zubehoer: 'Drucker',
+    istDrucker: true,
+    epKategorie: 'body'
+  })
 
   const createDefaultPositions = () => [createEmptyPosition(1)]
 
@@ -623,7 +625,7 @@ export const useKalkulation = () => {
     window.clearTimeout(saveTimer)
     saveTimer = window.setTimeout(() => {
       persistConfigurationVariant(configurationVariant).catch((error) => {
-        catalogError.value = `Offerte konnte nicht gespeichert werden: ${error.message}`
+        catalogError.value = `Projekt konnte nicht gespeichert werden: ${error.message}`
       })
     }, 350)
   }
@@ -937,7 +939,7 @@ export const useKalkulation = () => {
   }
 
   const activeConfigurationName = computed(
-    () => getActiveConfigurationVariant()?.name ?? (projectName.value.trim() || 'Keine Offerte')
+    () => getActiveConfigurationVariant()?.name ?? (projectName.value.trim() || 'Kein Projekt')
   )
 
   const deleteConfigurationConfirmationText = computed(
@@ -1011,7 +1013,7 @@ export const useKalkulation = () => {
       return projectName.value.trim()
     }
 
-    return 'Offerte'
+    return 'Projekt'
   }
 
   const updateProjectName = (name) => {
@@ -1086,7 +1088,7 @@ export const useKalkulation = () => {
 
     if (marke === EXOTIC_MODEL_OPTION) {
       druckermodell.value = MANUAL_CALCULATION_MODEL
-      positions.value = [createManualPosition(1)]
+      positions.value = [createManualDruckerPosition(1)]
       naechsteId.value = 2
     } else {
       druckermodell.value = ''
@@ -1112,7 +1114,7 @@ export const useKalkulation = () => {
 
     druckermodell.value = modell
     variante.value = ''
-    positions.value = modell ? [createEmptyPosition(1)] : []
+    positions.value = modell ? [createDruckerDraftPosition(1)] : []
     naechsteId.value = modell ? 2 : 1
     catalogError.value = ''
 
@@ -1228,7 +1230,7 @@ export const useKalkulation = () => {
 
       return configurationVariant
     } catch (error) {
-      catalogError.value = `Offerte konnte nicht erstellt werden: ${error.message}`
+      catalogError.value = `Projekt konnte nicht erstellt werden: ${error.message}`
       return null
     }
   }
@@ -1259,7 +1261,6 @@ export const useKalkulation = () => {
     isRenameConfigurationPanelVisible.value = false
     isDeleteConfigurationConfirmationVisible.value = false
     editingConfigurationVariantName.value = ''
-    isConfigurationOffcanvasOpen.value = false
     catalogError.value = ''
   }
 
@@ -1332,7 +1333,7 @@ export const useKalkulation = () => {
       projectName.value = configurationVariant.name
       loadConfigurationVariant(configurationVariant)
     } catch (error) {
-      catalogError.value = `Offerte konnte nicht dupliziert werden: ${error.message}`
+      catalogError.value = `Projekt konnte nicht dupliziert werden: ${error.message}`
     }
   }
 
@@ -1386,7 +1387,7 @@ export const useKalkulation = () => {
 
       isDeleteConfigurationConfirmationVisible.value = false
     } catch (error) {
-      catalogError.value = `Offerte konnte nicht gelöscht werden: ${error.message}`
+      catalogError.value = `Projekt konnte nicht gelöscht werden: ${error.message}`
     }
   }
 
@@ -1404,22 +1405,14 @@ export const useKalkulation = () => {
   }
 
   const removePosition = (id) => {
-    positions.value = positions.value.filter((position) => position.id !== id)
-  }
+    const positionIndex = positions.value.findIndex((position) => position.id === id)
+    const position = positions.value[positionIndex]
 
-  const openConfigurationOffcanvas = async () => {
-    if (!canOpenConfigurationOffcanvas.value) {
+    if (!isExotischesModell.value && positionIndex === 0 && position?.zubehoer === 'Drucker') {
       return
     }
 
-    saveActiveConfigurationVariant()
-    isConfigurationOffcanvasOpen.value = true
-  }
-
-  const closeConfigurationOffcanvas = () => {
-    isRenameConfigurationPanelVisible.value = false
-    isDeleteConfigurationConfirmationVisible.value = false
-    isConfigurationOffcanvasOpen.value = false
+    positions.value = positions.value.filter((position) => position.id !== id)
   }
 
   const loadInitialData = async () => {
@@ -1458,8 +1451,6 @@ export const useKalkulation = () => {
       isCatalogLoading.value = false
     }
   }
-
-  watch(isConfigurationOffcanvasOpen, setPageScrollLock)
 
   watch(
     [lieferungOption, lieferungOptionen],
@@ -1506,8 +1497,6 @@ export const useKalkulation = () => {
     if (activeConfigurationVariant && !isExotischesModell.value) {
       persistConfigurationVariant(activeConfigurationVariant).catch(() => {})
     }
-
-    setPageScrollLock(false)
   })
 
   return {
@@ -1541,11 +1530,8 @@ export const useKalkulation = () => {
 
     canEditConfigurationSelection,
     canEditPositions,
-    isConfigurationOffcanvasOpen,
-    canOpenConfigurationOffcanvas,
     configurationVariants,
     startNewConfiguration,
-    openConfigurationOffcanvas,
 
     positions,
     isEmptyPosition,
@@ -1580,7 +1566,6 @@ export const useKalkulation = () => {
     getMietbetrag,
     mietbasis,
 
-    closeConfigurationOffcanvas,
     filteredConfigurationVariants,
     activeConfigurationVariantId,
     selectConfigurationVariant,

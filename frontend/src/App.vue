@@ -1,17 +1,11 @@
 <script setup>
-import { RouterLink, RouterView, useRoute } from 'vue-router'
-
-const route = useRoute()
+import { RouterLink, RouterView } from 'vue-router'
 
 const navigationItems = [
   { to: '/', label: 'Kalkulation', icon: 'pi pi-calculator' },
   { to: '/stammdaten', label: 'Kunden', icon: 'pi pi-users' },
   { to: '/projekte', label: 'Projekte', icon: 'pi pi-folder' }
 ]
-
-const openKalkulationOfferten = () => {
-  window.dispatchEvent(new CustomEvent('open-kalkulation-offerten'))
-}
 </script>
 
 <template>
@@ -157,32 +151,6 @@ const openKalkulationOfferten = () => {
 
 .app-nav-link.active .nav-icon {
   color: #2457ff;
-}
-
-.topbar-offerten-button {
-  gap: 0.55rem;
-  min-height: 2.45rem;
-  padding: 0.4rem 0.8rem;
-  border: 1px solid #8bb5ff;
-  border-radius: 0.42rem;
-  background: #ffffff;
-  color: #2563eb;
-  align-self: center;
-  font-size: var(--kt-font-size-md);
-  font-weight: 500;
-  line-height: var(--kt-line-height-tight);
-}
-
-.topbar-offerten-button:hover,
-.topbar-offerten-button:focus-visible {
-  border-color: #2563eb;
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-.topbar-offerten-button .pi {
-  font-size: 1rem;
-  line-height: 1;
 }
 
 @media (max-width: 991.98px) {

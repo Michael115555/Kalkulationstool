@@ -47,10 +47,20 @@ const props = defineProps({
   getEinkaufspreis: {
     type: Function,
     required: true
+  },
+  getGesamtpreis: {
+    type: Function,
+    required: true
   }
 })
 
 const emit = defineEmits(['add-position', 'remove-position'])
+
+const isDruckerPosition = (position) =>
+  position.istDrucker || position.zubehoer === 'Drucker'
+
+const isRequiredDruckerPosition = (position, index) =>
+  !props.isExotischesModell && index === 0 && isDruckerPosition(position)
 
 const normalizeManualEinkaufspreis = (position) => {
   position.einkaufsPreis = props.formatAmount(position.einkaufsPreis)
@@ -71,20 +81,33 @@ const normalizeManualEinkaufspreis = (position) => {
           <th scope="col" class="text-end">Menge</th>
           <th scope="col" class="text-end price-header">VP (CHF)</th>
           <th scope="col" class="text-end price-header">EP (CHF)</th>
+          <th scope="col" class="text-end total-header">Total (CHF)</th>
           <th scope="col" class="text-center">Aktion</th>
         </tr>
       </thead>
 
       <tbody>
         <tr
-          v-for="position in positions"
+          v-for="(position, index) in positions"
           :key="position.id"
           :class="{ 'empty-position-row': isEmptyPosition(position) }"
         >
           <td>
+            <input
+              v-if="isRequiredDruckerPosition(position, index)"
+              type="text"
+              class="form-control control-field readonly-price required-position-field"
+              value="Drucker"
+              readonly
+              tabindex="-1"
+              aria-label="Drucker Pflichtposition"
+            />
+
             <select
+              v-else
               v-model="position.zubehoer"
               class="form-select control-field"
+              :title="position.zubehoer"
               :disabled="!canEditPositions"
               @change="updatePositionZubehoer(position)"
             >
@@ -106,6 +129,7 @@ const normalizeManualEinkaufspreis = (position) => {
               type="text"
               class="form-control control-field"
               placeholder="Bezeichnung eingeben"
+              :title="position.bezeichnung"
               :disabled="!canEditPositions"
               aria-label="Bezeichnung"
             />
@@ -114,6 +138,7 @@ const normalizeManualEinkaufspreis = (position) => {
               v-else
               v-model="position.bezeichnung"
               class="form-select control-field"
+              :title="position.bezeichnung"
               :disabled="!canEditPositions || !position.zubehoer"
               @change="updatePositionProdukt(position)"
             >
@@ -179,19 +204,39 @@ const normalizeManualEinkaufspreis = (position) => {
             />
           </td>
 
+          <td>
+            <input
+              :value="formatAmount(getGesamtpreis(position))"
+              type="text"
+              class="form-control control-field text-end readonly-price"
+              readonly
+              tabindex="-1"
+              aria-label="Positionstotal"
+            />
+          </td>
+
           <td class="text-center align-middle">
+            <span
+              v-if="isRequiredDruckerPosition(position, index)"
+              class="position-required-spacer"
+              aria-hidden="true"
+            ></span>
+
             <i
+              v-else
               class="pi pi-trash delete-icon"
               role="button"
               tabindex="0"
               aria-label="Position loeschen"
               @click="emit('remove-position', position.id)"
+              @keydown.enter.prevent="emit('remove-position', position.id)"
+              @keydown.space.prevent="emit('remove-position', position.id)"
             ></i>
           </td>
         </tr>
 
         <tr class="position-add-table-row">
-          <td colspan="6">
+          <td colspan="7">
             <div class="position-add-content">
               <button
                 type="button"

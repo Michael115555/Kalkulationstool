@@ -32,6 +32,7 @@
                 <tr
                   v-for="customer in customers"
                   :key="customer.id"
+                  :class="{ 'customer-active-row': isActiveCustomer(customer) }"
                   @click="rememberCustomerForCalculation(customer)"
                   @focusin="rememberCustomerForCalculation(customer)"
                 >
@@ -53,12 +54,12 @@
                   </td>
                   <td>
                     <input
-                    v-model="customer.email"
-                    class="form-control control-field"
-                    placeholder="E-Mail"
-                    type="text"
-                    @input="scheduleCustomerAutoSave(customer)"
-                  />
+                      v-model="customer.email"
+                      class="form-control control-field"
+                      placeholder="E-Mail"
+                      type="text"
+                      @input="scheduleCustomerAutoSave(customer)"
+                    />
                   </td>
                   <td>
                     <input
@@ -118,6 +119,27 @@
                   </td>
                   <td class="text-center align-middle">
                     <div class="customer-action-buttons">
+                      <span
+                        v-if="!customer.isSaving && !canSaveCustomer(customer)"
+                        class="customer-save-state is-saved"
+                        :title="getCustomerSaveButtonTitle(customer)"
+                        aria-label="Kunde gespeichert"
+                      >
+                        <i class="pi pi-check" aria-hidden="true"></i>
+                      </span>
+
+                      <button
+                        v-else
+                        type="button"
+                        :class="['customer-row-button', 'customer-save-button', getCustomerSaveButtonClass(customer)]"
+                        :aria-label="getCustomerSaveButtonTitle(customer)"
+                        :title="getCustomerSaveButtonTitle(customer)"
+                        :disabled="customer.isSaving || !canSaveCustomer(customer)"
+                        @click.stop="saveCustomerNow(customer)"
+                      >
+                        <i :class="getCustomerSaveIconClass(customer)" aria-hidden="true"></i>
+                      </button>
+
                       <button
                         type="button"
                         class="customer-row-button customer-delete-button"
@@ -203,6 +225,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { createKalkulationApi } from '../services/kalkulationApi'
 import {
   forgetSelectedCustomerId,
+  getRememberedSelectedCustomerId,
   rememberSelectedCustomerId
 } from '../utils/selectedCustomer'
 
@@ -228,6 +251,7 @@ const isLoadingCustomers = ref(false)
 const customerError = ref('')
 const customerToDelete = ref(null)
 const isDeletingCustomer = ref(false)
+const activeCustomerId = ref(getRememberedSelectedCustomerId())
 const autoSaveTimers = new Map()
 const AUTO_SAVE_DELAY = 550
 
@@ -323,7 +347,56 @@ function addCustomer() {
 function rememberCustomerForCalculation(customer) {
   if (customer.persistedId) {
     rememberSelectedCustomerId(customer.persistedId)
+    activeCustomerId.value = Number(customer.persistedId)
   }
+}
+
+function isActiveCustomer(customer) {
+  return Boolean(
+    customer.persistedId &&
+      activeCustomerId.value &&
+      Number(customer.persistedId) === Number(activeCustomerId.value)
+  )
+}
+
+function getCustomerSaveButtonTitle(customer) {
+  if (customer.isSaving) {
+    return 'Kunde wird gespeichert'
+  }
+
+  if (customer.isNew && !customer.name.trim()) {
+    return 'Kundenname eingeben, um zu speichern'
+  }
+
+  if (customer.hasPendingSave || isCustomerDirty(customer)) {
+    return 'Kunde speichern'
+  }
+
+  return 'Kunde gespeichert'
+}
+
+function getCustomerSaveButtonClass(customer) {
+  if (customer.isSaving) {
+    return 'is-saving'
+  }
+
+  if (customer.hasPendingSave || (isCustomerDirty(customer) && customer.name.trim())) {
+    return 'is-dirty'
+  }
+
+  return 'is-saved'
+}
+
+function getCustomerSaveIconClass(customer) {
+  if (customer.isSaving) {
+    return ['pi', 'pi-spinner', 'pi-spin']
+  }
+
+  if (customer.hasPendingSave || (isCustomerDirty(customer) && customer.name.trim())) {
+    return ['pi', 'pi-save']
+  }
+
+  return ['pi', 'pi-check']
 }
 
 function clearCustomerAutoSave(customer) {
@@ -345,6 +418,11 @@ function scheduleCustomerAutoSave(customer) {
       saveCustomer(customer)
     }, AUTO_SAVE_DELAY)
   )
+}
+
+function saveCustomerNow(customer) {
+  clearCustomerAutoSave(customer)
+  saveCustomer(customer)
 }
 
 function createCustomerSnapshotFromApi(customer) {
@@ -403,6 +481,7 @@ async function saveCustomer(customer) {
 
     applySavedCustomer(customer, savedCustomer, savedSnapshot)
     rememberSelectedCustomerId(savedCustomer.id)
+    activeCustomerId.value = Number(savedCustomer.id)
   } catch (error) {
     customerError.value = `Kunde konnte nicht gespeichert werden: ${error.message}`
   } finally {
@@ -447,6 +526,9 @@ async function confirmDeleteCustomer() {
   try {
     await api.deleteKunde(customer.persistedId)
     forgetSelectedCustomerId(customer.persistedId)
+    if (Number(activeCustomerId.value) === Number(customer.persistedId)) {
+      activeCustomerId.value = null
+    }
     customers.value = customers.value.filter((entry) => entry.id !== customer.id)
 
     if (!customers.value.length) {
@@ -549,6 +631,10 @@ onBeforeUnmount(() => {
   background-color: #ffffff;
 }
 
+.customers-table tbody tr.customer-active-row td {
+  background-color: #fbfdff;
+}
+
 .customers-table th,
 .customers-table td {
   min-width: 0;
@@ -558,44 +644,44 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(1),
 .customers-table td:nth-child(1) {
-  width: 14%;
+  width: 13.5%;
 }
 
 .customers-table th:nth-child(2),
 .customers-table td:nth-child(2) {
-  width: 14%;
+  width: 13.5%;
 }
 
 .customers-table th:nth-child(3),
 .customers-table td:nth-child(3) {
-  width: 19%;
+  width: 17%;
 }
 
 .customers-table th:nth-child(4),
 .customers-table td:nth-child(4) {
-  width: 10%;
+  width: 12%;
 }
 
 .customers-table th:nth-child(5),
 .customers-table td:nth-child(5) {
-  width: 13%;
+  width: 12%;
 }
 
 .customers-table th:nth-child(6),
 .customers-table td:nth-child(6) {
-  width: 9%;
+  width: 12%;
 }
 
 .customers-table th:nth-child(7),
 .customers-table td:nth-child(7) {
-  width: 17%;
+  width: 12%;
 }
 
 .customers-table th:nth-child(8),
 .customers-table td:nth-child(8) {
-  width: 4%;
-  min-width: 3rem;
-  max-width: 3.2rem;
+  width: 7%;
+  min-width: 5rem;
+  max-width: 5.4rem;
   text-align: center;
 }
 
@@ -645,6 +731,34 @@ onBeforeUnmount(() => {
 
 .customer-delete-button {
   color: #c9a0a0;
+}
+
+.customer-save-button {
+  color: #667085;
+}
+
+.customer-save-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: #98a2b3;
+  font-size: 1rem;
+}
+
+.customer-save-button.is-dirty,
+.customer-save-button.is-saving {
+  color: #2563eb;
+}
+
+.customer-save-button:disabled {
+  opacity: 1;
+}
+
+.customer-save-button:hover:not(:disabled),
+.customer-save-button:focus-visible:not(:disabled) {
+  color: #1d4ed8;
 }
 
 .customer-delete-button:hover:not(:disabled),

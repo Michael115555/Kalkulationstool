@@ -1,7 +1,5 @@
 <script setup>
-import { onBeforeUnmount, onMounted } from 'vue'
 import CalculationPanel from '../components/kalkulation/CalculationPanel.vue'
-import ConfigurationOffcanvas from '../components/kalkulation/ConfigurationOffcanvas.vue'
 import CalculationToolbar from '../components/kalkulation/CalculationToolbar.vue'
 import PositionsTable from '../components/kalkulation/PositionsTable.vue'
 import { useKalkulation } from '../composables/useKalkulation'
@@ -28,10 +26,6 @@ const {
   saveProject,
   canEditConfigurationSelection,
   canEditPositions,
-
-  isConfigurationOffcanvasOpen,
-  startNewConfiguration,
-  openConfigurationOffcanvas,
 
   positions,
   isEmptyPosition,
@@ -62,40 +56,8 @@ const {
   nettopreis,
   mietoptionen,
   getMietbetrag,
-  mietbasis,
-
-  closeConfigurationOffcanvas,
-  filteredConfigurationVariants,
-  activeConfigurationVariantId,
-  selectConfigurationVariant,
-  getConfigurationMeta,
-  activeConfigurationName,
-  isRenameConfigurationPanelVisible,
-  isDeleteConfigurationConfirmationVisible,
-  editingConfigurationVariantName,
-  commitConfigurationVariantRename,
-  cancelConfigurationVariantRename,
-  isEditingConfigurationNameDuplicate,
-  canSaveConfigurationVariantName,
-  deleteConfigurationConfirmationText,
-  cancelDeleteConfigurationVariant,
-  confirmDeleteConfigurationVariant,
-  renameConfigurationVariant,
-  duplicateConfigurationVariant,
-  deleteConfigurationVariant
+  mietbasis
 } = useKalkulation()
-
-const handleOpenKalkulationOfferten = () => {
-  openConfigurationOffcanvas()
-}
-
-onMounted(() => {
-  window.addEventListener('open-kalkulation-offerten', handleOpenKalkulationOfferten)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('open-kalkulation-offerten', handleOpenKalkulationOfferten)
-})
 </script>
 
 <template>
@@ -140,6 +102,7 @@ onBeforeUnmount(() => {
               :normalize-price="normalizePrice"
               :format-amount="formatAmount"
               :get-einkaufspreis="getEinkaufspreis"
+              :get-gesamtpreis="getGesamtpreis"
               @add-position="addPosition"
               @remove-position="removePosition"
             />
@@ -167,42 +130,17 @@ onBeforeUnmount(() => {
           </template>
 
           <div v-else class="calculation-empty-offer">
-            <i class="pi pi-print calculation-empty-icon" aria-hidden="true"></i>
-
-            <div class="calculation-empty-title">
-              Auswahl starten
-            </div>
-            <div class="calculation-empty-text">
-              Wähle Kunde, Druckermarke und Druckermodell, um Positionen zu erfassen. Für exotische Modelle wird die manuelle Kalkulation automatisch geöffnet.
+            <div class="calculation-empty-content">
+              <i class="pi pi-print calculation-empty-icon" aria-hidden="true"></i>
+              <div class="calculation-empty-copy">
+                <span class="calculation-empty-title">Auswahl starten:</span>
+                <span class="calculation-empty-text">Kunde, Marke und Modell wählen.</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <ConfigurationOffcanvas
-      v-model:editing-configuration-variant-name="editingConfigurationVariantName"
-      :is-open="isConfigurationOffcanvasOpen"
-      :filtered-configuration-variants="filteredConfigurationVariants"
-      :active-configuration-variant-id="activeConfigurationVariantId"
-      :active-configuration-name="activeConfigurationName"
-      :is-rename-configuration-panel-visible="isRenameConfigurationPanelVisible"
-      :is-delete-configuration-confirmation-visible="isDeleteConfigurationConfirmationVisible"
-      :is-editing-configuration-name-duplicate="isEditingConfigurationNameDuplicate"
-      :can-save-configuration-variant-name="canSaveConfigurationVariantName"
-      :delete-configuration-confirmation-text="deleteConfigurationConfirmationText"
-      :format-amount="formatAmount"
-      :get-configuration-meta="getConfigurationMeta"
-      @close="closeConfigurationOffcanvas"
-      @select-configuration="selectConfigurationVariant"
-      @commit-rename="commitConfigurationVariantRename"
-      @cancel-rename="cancelConfigurationVariantRename"
-      @cancel-delete="cancelDeleteConfigurationVariant"
-      @confirm-delete="confirmDeleteConfigurationVariant"
-      @start-new-configuration="startNewConfiguration"
-      @rename-configuration="renameConfigurationVariant"
-      @duplicate-configuration="duplicateConfigurationVariant"
-      @delete-configuration="deleteConfigurationVariant"
-    />
   </section>
 </template>

@@ -105,10 +105,6 @@ const loadProjekte = async () => {
 const projektToDelete = ref(null)
 const isDeletingProjekt = ref(false)
 
-const editProjekt = (projekt) => {
-  console.log('Projekt bearbeiten:', projekt)
-}
-
 const askDeleteProjekt = (projekt) => {
   projektToDelete.value = projekt
 }
@@ -152,8 +148,8 @@ onMounted(loadProjekte)
     <div class="col-12">
       <div class="card shadow-sm border-0">
         <div class="card-body projekte-page-card-body">
-          <div class="position-toolbar">
-            <h4 class="positions-heading mb-0">Projekte</h4>
+          <div class="projekte-toolbar">
+            <h4 class="projekte-heading mb-0">Projekte</h4>
           </div>
 
           <div v-if="isLoading" class="alert alert-info mt-3 mb-0">
@@ -164,7 +160,7 @@ onMounted(loadProjekte)
             {{ errorMessage }}
           </div>
 
-          <div v-if="!isLoading && !errorMessage" class="table-responsive">
+          <div v-if="!isLoading && !errorMessage" class="table-responsive projekte-table-responsive">
             <table class="table align-middle mb-0 table-bordered projekte-table">
               <thead>
                 <tr>
@@ -234,25 +230,15 @@ onMounted(loadProjekte)
 
                   <td class="text-center align-middle">
                     <div class="project-action-list">
-                     <!--  <<i
-                        class="pi pi-pencil project-action-icon"
-                        role="button"
-                        tabindex="0"
-                        aria-label="Projekt bearbeiten"
-                        title="Projekt bearbeiten"
-                        @click="editProjekt(projekt)"
-                        @keydown.enter="editProjekt(projekt)"
-                      ></i>> -->
-
-                      <i
-                        class="pi pi-trash project-action-icon project-action-icon-danger"
-                        role="button"
-                        tabindex="0"
+                      <button
+                        type="button"
+                        class="project-action-button project-action-icon-danger"
                         aria-label="Projekt löschen"
                         title="Projekt löschen"
                         @click="askDeleteProjekt(projekt)"
-                        @keydown.enter="askDeleteProjekt(projekt)"
-                      ></i>
+                      >
+                        <i class="pi pi-trash" aria-hidden="true"></i>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -435,14 +421,21 @@ onMounted(loadProjekte)
   gap: 0.6rem;
 }
 
-.project-action-icon {
+.project-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #2563eb;
-  font-size: 1rem;
   transition: color 0.15s ease;
 }
 
-.project-action-icon:hover,
-.project-action-icon:focus-visible {
+.project-action-button:hover:not(:disabled),
+.project-action-button:focus-visible:not(:disabled) {
   color: #1d4ed8;
 }
 
@@ -450,12 +443,12 @@ onMounted(loadProjekte)
   color: #c9a0a0;
 }
 
-.project-action-icon-danger:hover,
-.project-action-icon-danger:focus-visible {
+.project-action-icon-danger:hover:not(:disabled),
+.project-action-icon-danger:focus-visible:not(:disabled) {
   color: #dc2626;
 }
 
-.project-action-icon:focus-visible {
+.project-action-button:focus-visible {
   border-radius: 0.2rem;
   outline: 2px solid #bfdbfe;
   outline-offset: 0.2rem;
@@ -463,6 +456,10 @@ onMounted(loadProjekte)
 
 .project-action-icon-danger:focus-visible {
   outline-color: #fecaca;
+}
+
+.project-action-button .pi {
+  font-size: 1rem;
 }
 
 .project-empty-table-text {

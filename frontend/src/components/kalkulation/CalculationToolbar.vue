@@ -71,7 +71,7 @@ const saveButtonTitle = computed(() => {
   }
 
   if (props.canSaveProject) {
-    return 'Offerte speichern'
+    return 'Projekt speichern'
   }
 
   return 'Bitte zuerst Kunde, Druckermarke, Druckermodell und Druckerposition wählen'
@@ -115,7 +115,7 @@ const saveButtonTitle = computed(() => {
           :disabled="!canEditConfigurationSelection"
           @change="emit('select-druckermarke', $event.target.value)"
         >
-          <option value="">Druckermarke wählen</option>
+          <option value="">Marke wählen</option>
           <option
             v-for="marke in druckermarkenMitExotischemModell"
             :key="marke"
@@ -141,7 +141,7 @@ const saveButtonTitle = computed(() => {
           <option
             :value="isExotischesModellSelected ? MANUAL_CALCULATION_MODEL : ''"
           >
-            {{ isExotischesModellSelected ? MANUAL_CALCULATION_MODEL : 'Druckermodell wählen' }}
+            {{ isExotischesModellSelected ? MANUAL_CALCULATION_MODEL : 'Modell wählen' }}
           </option>
           <option
             v-for="modell in druckermodelle"
