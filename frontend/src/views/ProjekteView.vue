@@ -185,6 +185,7 @@ onMounted(loadProjekte)
                       class="form-control control-field readonly-price"
                       readonly
                       tabindex="-1"
+                      aria-label="Projektname"
                     />
                   </td>
 
@@ -195,6 +196,7 @@ onMounted(loadProjekte)
                       class="form-control control-field readonly-price"
                       readonly
                       tabindex="-1"
+                      aria-label="Kunde"
                     />
                   </td>
 
@@ -205,6 +207,7 @@ onMounted(loadProjekte)
                       class="form-control control-field readonly-price"
                       readonly
                       tabindex="-1"
+                      aria-label="Verkäufer"
                     />
                   </td>
 
@@ -215,6 +218,7 @@ onMounted(loadProjekte)
                       class="form-control control-field text-end readonly-price"
                       readonly
                       tabindex="-1"
+                      aria-label="Positionen"
                     />
                   </td>
 
@@ -225,6 +229,7 @@ onMounted(loadProjekte)
                       class="form-control control-field text-end readonly-price"
                       readonly
                       tabindex="-1"
+                      aria-label="Nettopreis CHF"
                     />
                   </td>
 
@@ -260,17 +265,16 @@ onMounted(loadProjekte)
     <div
       v-if="projektToDelete"
       class="confirm-delete-backdrop"
-      role="presentation"
       @click.self="cancelDeleteProjekt"
     >
       <div
         class="confirm-delete-dialog"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="project-delete-title"
+        aria-label="Projekt löschen?"
       >
         <div class="confirm-delete-content">
-          <h5 id="project-delete-title" class="confirm-delete-title">
+          <h5 class="confirm-delete-title">
             Projekt löschen?
           </h5>
 

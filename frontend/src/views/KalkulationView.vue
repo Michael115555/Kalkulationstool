@@ -88,7 +88,7 @@ const {
             @save-project="saveProject"
           />
 
-          <template v-if="kundeId && druckermarke && (druckermodell || isExotischesModell)">
+          <template v-if="(kundeId || isExotischesModell) && druckermarke && (druckermodell || isExotischesModell)">
             <PositionsTable
               :positions="positions"
               :zubehoer-kategorien="positionsKategorien"

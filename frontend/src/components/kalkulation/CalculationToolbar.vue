@@ -50,10 +50,16 @@ const isExotischesModellSelected = computed(() =>
   props.druckermarke === EXOTIC_MODEL_OPTION
 )
 
+const hasSelectedKunde = computed(() => Boolean(props.kundeId))
+
 const druckermarkenMitExotischemModell = computed(() => {
   const marken = Array.isArray(props.druckermarken)
     ? props.druckermarken.filter(Boolean)
     : []
+
+  if (!hasSelectedKunde.value) {
+    return [EXOTIC_MODEL_OPTION]
+  }
 
   if (marken.includes(EXOTIC_MODEL_OPTION)) {
     return marken
@@ -77,14 +83,12 @@ const saveButtonTitle = computed(() => {
   return 'Bitte zuerst Kunde, Druckermarke, Druckermodell und Druckerposition wählen'
 })
 
-const hasSelectedKunde = computed(() => Boolean(props.kundeId))
-
 const druckermarkePlaceholder = computed(() =>
-  hasSelectedKunde.value ? 'Marke wählen' : 'Bitte zuerst Kunde wählen'
+  hasSelectedKunde.value ? 'Marke wählen' : 'Kunde wählen oder exotisch kalkulieren'
 )
 
 const isDruckermarkeLocked = computed(() =>
-  !props.canEditConfigurationSelection || !hasSelectedKunde.value
+  !props.canEditConfigurationSelection
 )
 
 const druckermodellPlaceholder = computed(() => {
@@ -109,7 +113,6 @@ const druckermodellPlaceholder = computed(() => {
 
 const isDruckermodellLocked = computed(() =>
   !props.canEditConfigurationSelection ||
-  !hasSelectedKunde.value ||
   !props.druckermarke ||
   isExotischesModellSelected.value
 )
@@ -118,13 +121,10 @@ const isDruckermodellLocked = computed(() =>
 <template>
   <div class="calculation-config-section">
     <div class="calculation-toolbar">
-      <div class="toolbar-field toolbar-field-customer">
-        <label for="calculation-kunde" class="toolbar-label">
-          Kunde:
-        </label>
+      <label class="toolbar-field toolbar-field-customer">
+        <span class="toolbar-label">Kunde:</span>
 
         <select
-          id="calculation-kunde"
           :value="kundeId ?? ''"
           class="form-select control-field toolbar-select"
           @change="emit('select-kunde', $event.target.value)"
@@ -138,16 +138,13 @@ const isDruckermodellLocked = computed(() =>
             {{ kunde.firmenname }}
           </option>
         </select>
-      </div>
+      </label>
 
-      <div class="toolbar-field toolbar-field-brand">
-        <label for="calculation-druckermarke" class="toolbar-label">
-          Druckermarke:
-        </label>
+      <label class="toolbar-field toolbar-field-brand">
+        <span class="toolbar-label">Druckermarke:</span>
 
         <input
           v-if="isDruckermarkeLocked"
-          id="calculation-druckermarke"
           type="text"
           class="form-control control-field toolbar-select pending-selection-field"
           :value="druckermarke || druckermarkePlaceholder"
@@ -159,7 +156,6 @@ const isDruckermodellLocked = computed(() =>
 
         <select
           v-else
-          id="calculation-druckermarke"
           :value="druckermarke"
           class="form-select control-field toolbar-select"
           :title="druckermarke || druckermarkePlaceholder"
@@ -174,16 +170,13 @@ const isDruckermodellLocked = computed(() =>
             {{ marke }}
           </option>
         </select>
-      </div>
+      </label>
 
-      <div class="toolbar-field toolbar-field-model">
-        <label for="calculation-druckermodell" class="toolbar-label">
-          Druckermodell:
-        </label>
+      <label class="toolbar-field toolbar-field-model">
+        <span class="toolbar-label">Druckermodell:</span>
 
         <input
           v-if="isDruckermodellLocked"
-          id="calculation-druckermodell"
           type="text"
           class="form-control control-field toolbar-select pending-selection-field"
           :value="druckermodell || druckermodellPlaceholder"
@@ -195,7 +188,6 @@ const isDruckermodellLocked = computed(() =>
 
         <select
           v-else
-          id="calculation-druckermodell"
           :value="druckermodell"
           class="form-select control-field toolbar-select"
           :title="druckermodell || druckermodellPlaceholder"
@@ -215,7 +207,7 @@ const isDruckermodellLocked = computed(() =>
             {{ modell }}
           </option>
         </select>
-      </div>
+      </label>
 
       <div class="toolbar-field toolbar-field-save">
         <button

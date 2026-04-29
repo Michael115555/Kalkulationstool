@@ -41,6 +41,7 @@
                       v-model="customer.name"
                       class="form-control control-field"
                       placeholder="Kundenname"
+                      aria-label="Kundenname"
                       @input="scheduleCustomerAutoSave(customer)"
                     />
                   </td>
@@ -49,6 +50,7 @@
                       v-model="customer.contactPerson"
                       class="form-control control-field"
                       placeholder="Ansprechperson"
+                      aria-label="Ansprechperson"
                       @input="scheduleCustomerAutoSave(customer)"
                     />
                   </td>
@@ -58,6 +60,7 @@
                       class="form-control control-field"
                       placeholder="E-Mail"
                       type="text"
+                      aria-label="E-Mail"
                       @input="scheduleCustomerAutoSave(customer)"
                     />
                   </td>
@@ -66,6 +69,7 @@
                       v-model="customer.phone"
                       class="form-control control-field"
                       placeholder="Telefon"
+                      aria-label="Telefon"
                       @input="scheduleCustomerAutoSave(customer)"
                     />
                   </td>
@@ -73,6 +77,7 @@
                     <select
                       v-model="customer.salespersonId"
                       class="form-select control-field"
+                      aria-label="Verkäufer"
                       @change="scheduleCustomerAutoSave(customer)"
                     >
                       <option value="">Verkäufer wählen</option>
@@ -89,6 +94,7 @@
                     <select
                       v-model="customer.contactType"
                       class="form-select control-field"
+                      aria-label="Kontaktart"
                       @change="scheduleCustomerAutoSave(customer)"
                     >
                       <option value="">Kontaktart wählen</option>
@@ -105,6 +111,7 @@
                     <select
                       v-model="customer.deliveryType"
                       class="form-select control-field"
+                      aria-label="Versandart"
                       @change="scheduleCustomerAutoSave(customer)"
                     >
                       <option value="">Versandart wählen</option>
@@ -177,17 +184,16 @@
     <div
       v-if="customerToDelete"
       class="confirm-delete-backdrop"
-      role="presentation"
       @click.self="cancelDeleteCustomer"
     >
       <div
         class="confirm-delete-dialog"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="customer-delete-title"
+        aria-label="Kunde löschen?"
       >
         <div class="confirm-delete-content">
-          <h5 id="customer-delete-title" class="confirm-delete-title">
+          <h5 class="confirm-delete-title">
             Kunde löschen?
           </h5>
 

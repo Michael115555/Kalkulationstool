@@ -10,6 +10,6 @@ import * as bootstrap from 'bootstrap'
 const app = createApp(App)
 
 app.use(router)
-app.mount('#app')
+app.mount(document.querySelector('.app-root'))
 
 window.bootstrap = bootstrap

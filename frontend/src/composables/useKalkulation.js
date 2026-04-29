@@ -138,7 +138,7 @@ export const useKalkulation = () => {
 
   const canEditPositions = computed(() =>
     Boolean(
-      kundeId.value &&
+      (kundeId.value || isExotischesModell.value) &&
         druckermarke.value &&
         (druckermodell.value || isExotischesModell.value)
     )
@@ -1083,7 +1083,7 @@ export const useKalkulation = () => {
     if (
       marke === druckermarke.value ||
       !canEditConfigurationSelection.value ||
-      !kundeId.value
+      (!kundeId.value && marke && marke !== EXOTIC_MODEL_OPTION)
     ) {
       return
     }
@@ -1159,7 +1159,7 @@ export const useKalkulation = () => {
     kundeId.value = nextKundeId
     catalogError.value = ''
 
-    if (!nextKundeId) {
+    if (!nextKundeId && !isExotischesModell.value) {
       druckermarke.value = ''
       druckermodell.value = ''
       variante.value = ''

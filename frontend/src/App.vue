@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 
 const navigationItems = [
@@ -6,29 +7,40 @@ const navigationItems = [
   { to: '/stammdaten', label: 'Kunden', icon: 'pi pi-users' },
   { to: '/projekte', label: 'Projekte', icon: 'pi pi-folder' }
 ]
+
+const isNavigationOpen = ref(false)
+
+const toggleNavigation = () => {
+  isNavigationOpen.value = !isNavigationOpen.value
+}
+
+const closeNavigation = () => {
+  isNavigationOpen.value = false
+}
 </script>
 
 <template>
   <div class="app-shell min-vh-100">
     <nav class="topbar navbar navbar-expand-lg">
       <div class="container-fluid topbar-container px-3 px-lg-4">
-        <a class="navbar-brand app-brand mb-0" href="#">
+        <RouterLink class="navbar-brand app-brand mb-0" to="/">
           Kalkulationstool
-        </a>
+        </RouterLink>
 
         <button
           class="navbar-toggler border-0 shadow-none px-1"
           type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#mainNavigation"
-          aria-controls="mainNavigation"
-          aria-expanded="false"
+          :aria-expanded="isNavigationOpen"
           aria-label="Navigation einblenden"
+          @click="toggleNavigation"
         >
           <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div id="mainNavigation" class="collapse navbar-collapse topbar-collapse">
+        <div
+          class="collapse navbar-collapse topbar-collapse"
+          :class="{ show: isNavigationOpen }"
+        >
           <div class="d-none d-lg-block topbar-side-spacer"></div>
 
           <ul class="nav app-nav mx-lg-auto mb-3 mb-lg-0">
@@ -41,6 +53,7 @@ const navigationItems = [
                 class="nav-link app-nav-link"
                 :to="item.to"
                 exact-active-class="active"
+                @click="closeNavigation"
               >
                 <i :class="['nav-icon', item.icon]" aria-hidden="true"></i>
                 {{ item.label }}
@@ -54,9 +67,9 @@ const navigationItems = [
       </div>
     </nav>
 
-    <div class="container-fluid app-content">
+    <main class="container-fluid app-content">
       <RouterView />
-    </div>
+    </main>
   </div>
 </template>
 

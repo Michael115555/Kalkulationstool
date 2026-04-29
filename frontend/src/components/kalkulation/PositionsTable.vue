@@ -133,6 +133,7 @@ const normalizeManualEinkaufspreis = (position) => {
               class="form-select control-field"
               :class="{ 'pending-selection-field': !canEditPositions }"
               :title="position.zubehoer || getKategoriePlaceholder()"
+              :aria-label="`Kategorie Position ${index + 1}`"
               :disabled="!canEditPositions"
               @change="updatePositionZubehoer(position)"
             >
@@ -165,6 +166,7 @@ const normalizeManualEinkaufspreis = (position) => {
               class="form-select control-field"
               :class="{ 'pending-selection-field': isBezeichnungLocked(position) }"
               :title="position.bezeichnung || getBezeichnungPlaceholder(position)"
+              :aria-label="`Bezeichnung Position ${index + 1}`"
               :disabled="isBezeichnungLocked(position)"
               @change="updatePositionProdukt(position)"
             >
@@ -188,6 +190,7 @@ const normalizeManualEinkaufspreis = (position) => {
               inputmode="numeric"
               class="form-control control-field text-end"
               placeholder="1"
+              :aria-label="`Menge Position ${index + 1}`"
               :disabled="!canEditPositions"
               @change="normalizeQuantity(position)"
               @blur="normalizeQuantity(position)"
@@ -201,6 +204,7 @@ const normalizeManualEinkaufspreis = (position) => {
               inputmode="decimal"
               class="form-control control-field text-end"
               placeholder="0.00"
+              :aria-label="`Verkaufspreis Position ${index + 1}`"
               :disabled="!canEditPositions"
               @blur="normalizePrice(position)"
             />
@@ -248,16 +252,15 @@ const normalizeManualEinkaufspreis = (position) => {
               aria-hidden="true"
             ></span>
 
-            <i
+            <button
               v-else
-              class="pi pi-trash delete-icon"
-              role="button"
-              tabindex="0"
-              aria-label="Position loeschen"
+              type="button"
+              class="delete-icon"
+              aria-label="Position löschen"
               @click="emit('remove-position', position.id)"
-              @keydown.enter.prevent="emit('remove-position', position.id)"
-              @keydown.space.prevent="emit('remove-position', position.id)"
-            ></i>
+            >
+              <i class="pi pi-trash" aria-hidden="true"></i>
+            </button>
           </td>
         </tr>
 

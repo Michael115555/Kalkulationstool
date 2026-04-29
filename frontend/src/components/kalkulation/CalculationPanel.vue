@@ -102,6 +102,7 @@ const selectedLieferungBetrag = computed(
                 class="form-control amount-input readonly-price calculated-price-input"
                 readonly
                 tabindex="-1"
+                aria-label="Einkaufspreis"
               />
             </div>
 
@@ -113,6 +114,7 @@ const selectedLieferungBetrag = computed(
                 class="form-control amount-input readonly-price calculated-price-input"
                 readonly
                 tabindex="-1"
+                aria-label="Verkaufspreis"
               />
             </div>
           </div>
@@ -125,6 +127,7 @@ const selectedLieferungBetrag = computed(
                 type="text"
                 inputmode="decimal"
                 class="form-control text-end"
+                aria-label="Eintauschrabatt in Prozent"
                 @blur="normalizePercent"
               />
               <span class="input-group-text">%</span>
@@ -137,6 +140,7 @@ const selectedLieferungBetrag = computed(
                 class="form-control amount-input readonly-price"
                 readonly
                 tabindex="-1"
+                aria-label="Eintauschrabatt in CHF"
               />
             </div>
           </div>
@@ -146,6 +150,7 @@ const selectedLieferungBetrag = computed(
             <select
               v-model="lieferungOption"
               class="form-select control-field"
+              aria-label="Lieferung gemäss Konditionen"
               @change="updateLieferungOption($event.target.value)"
             >
               <option
@@ -164,6 +169,7 @@ const selectedLieferungBetrag = computed(
                 class="form-control amount-input readonly-price"
                 readonly
                 tabindex="-1"
+                aria-label="Lieferbetrag in CHF"
               />
             </div>
           </div>
@@ -178,6 +184,7 @@ const selectedLieferungBetrag = computed(
                 step="1"
                 inputmode="numeric"
                 class="form-control text-end"
+                aria-label="Restwert Monate"
                 @change="normalizeRestwertMonate"
                 @blur="normalizeRestwertMonate"
               />
@@ -190,6 +197,7 @@ const selectedLieferungBetrag = computed(
                 type="text"
                 inputmode="decimal"
                 class="form-control amount-input"
+                aria-label="Restwert in CHF"
                 @blur="normalizeRestwertBetrag"
               />
             </div>
@@ -204,6 +212,7 @@ const selectedLieferungBetrag = computed(
               class="form-control amount-input readonly-price net-price-input"
               readonly
               tabindex="-1"
+              aria-label="Nettopreis"
             />
           </div>
         </div>
