@@ -137,7 +137,11 @@ export const useKalkulation = () => {
   const canEditConfigurationSelection = computed(() => !isCatalogLoading.value)
 
   const canEditPositions = computed(() =>
-    Boolean(druckermarke.value && (druckermodell.value || isExotischesModell.value))
+    Boolean(
+      kundeId.value &&
+        druckermarke.value &&
+        (druckermodell.value || isExotischesModell.value)
+    )
   )
 
   const varianten = computed(() =>
@@ -1076,7 +1080,11 @@ export const useKalkulation = () => {
   }
 
   const selectDruckermarke = (marke) => {
-    if (marke === druckermarke.value || !canEditConfigurationSelection.value) {
+    if (
+      marke === druckermarke.value ||
+      !canEditConfigurationSelection.value ||
+      !kundeId.value
+    ) {
       return
     }
 
@@ -1150,6 +1158,15 @@ export const useKalkulation = () => {
     saveActiveConfigurationVariant()
     kundeId.value = nextKundeId
     catalogError.value = ''
+
+    if (!nextKundeId) {
+      druckermarke.value = ''
+      druckermodell.value = ''
+      variante.value = ''
+      positions.value = []
+      naechsteId.value = 1
+      return
+    }
 
     const activeConfigurationVariant = getActiveConfigurationVariant()
 

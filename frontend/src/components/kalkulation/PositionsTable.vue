@@ -60,7 +60,31 @@ const isDruckerPosition = (position) =>
   position.istDrucker || position.zubehoer === 'Drucker'
 
 const isRequiredDruckerPosition = (position, index) =>
-  !props.isExotischesModell && index === 0 && isDruckerPosition(position)
+  index === 0 && isDruckerPosition(position)
+
+const getKategoriePlaceholder = () =>
+  props.canEditPositions ? 'Kategorie wählen' : 'Bitte zuerst Druckermodell wählen'
+
+const getBezeichnungPlaceholder = (position) => {
+  if (!props.canEditPositions) {
+    return 'Bitte zuerst Druckermodell wählen'
+  }
+
+  if (!position.zubehoer) {
+    return 'Bitte zuerst Kategorie wählen'
+  }
+
+  if (props.isExotischesModell) {
+    return position.zubehoer === 'Drucker'
+      ? 'Druckerbezeichnung eingeben'
+      : 'Bezeichnung eingeben'
+  }
+
+  return 'Bezeichnung wählen'
+}
+
+const isBezeichnungLocked = (position) =>
+  !props.canEditPositions || !position.zubehoer
 
 const normalizeManualEinkaufspreis = (position) => {
   position.einkaufsPreis = props.formatAmount(position.einkaufsPreis)
@@ -96,7 +120,7 @@ const normalizeManualEinkaufspreis = (position) => {
             <input
               v-if="isRequiredDruckerPosition(position, index)"
               type="text"
-              class="form-control control-field readonly-price required-position-field"
+              class="form-control control-field required-position-field"
               value="Drucker"
               readonly
               tabindex="-1"
@@ -107,11 +131,12 @@ const normalizeManualEinkaufspreis = (position) => {
               v-else
               v-model="position.zubehoer"
               class="form-select control-field"
-              :title="position.zubehoer"
+              :class="{ 'pending-selection-field': !canEditPositions }"
+              :title="position.zubehoer || getKategoriePlaceholder()"
               :disabled="!canEditPositions"
               @change="updatePositionZubehoer(position)"
             >
-              <option value="">Kategorie wählen</option>
+              <option value="">{{ getKategoriePlaceholder() }}</option>
               <option
                 v-for="zubehoer in zubehoerKategorien"
                 :key="zubehoer"
@@ -128,7 +153,7 @@ const normalizeManualEinkaufspreis = (position) => {
               v-model="position.bezeichnung"
               type="text"
               class="form-control control-field"
-              placeholder="Bezeichnung eingeben"
+              :placeholder="getBezeichnungPlaceholder(position)"
               :title="position.bezeichnung"
               :disabled="!canEditPositions"
               aria-label="Bezeichnung"
@@ -138,11 +163,12 @@ const normalizeManualEinkaufspreis = (position) => {
               v-else
               v-model="position.bezeichnung"
               class="form-select control-field"
-              :title="position.bezeichnung"
-              :disabled="!canEditPositions || !position.zubehoer"
+              :class="{ 'pending-selection-field': isBezeichnungLocked(position) }"
+              :title="position.bezeichnung || getBezeichnungPlaceholder(position)"
+              :disabled="isBezeichnungLocked(position)"
               @change="updatePositionProdukt(position)"
             >
-              <option value="" disabled>Bezeichnung wählen</option>
+              <option value="" disabled>{{ getBezeichnungPlaceholder(position) }}</option>
               <option
                 v-for="produkt in getProdukteByZubehoer(position.zubehoer)"
                 :key="produkt.id ?? produkt.bezeichnung"

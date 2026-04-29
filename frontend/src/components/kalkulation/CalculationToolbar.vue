@@ -76,6 +76,43 @@ const saveButtonTitle = computed(() => {
 
   return 'Bitte zuerst Kunde, Druckermarke, Druckermodell und Druckerposition wählen'
 })
+
+const hasSelectedKunde = computed(() => Boolean(props.kundeId))
+
+const druckermarkePlaceholder = computed(() =>
+  hasSelectedKunde.value ? 'Marke wählen' : 'Bitte zuerst Kunde wählen'
+)
+
+const isDruckermarkeLocked = computed(() =>
+  !props.canEditConfigurationSelection || !hasSelectedKunde.value
+)
+
+const druckermodellPlaceholder = computed(() => {
+  if (isExotischesModellSelected.value) {
+    return MANUAL_CALCULATION_MODEL
+  }
+
+  if (!props.canEditConfigurationSelection) {
+    return 'Daten werden geladen'
+  }
+
+  if (!hasSelectedKunde.value) {
+    return 'Bitte zuerst Kunde wählen'
+  }
+
+  if (!props.druckermarke) {
+    return 'Bitte zuerst Marke wählen'
+  }
+
+  return 'Modell wählen'
+})
+
+const isDruckermodellLocked = computed(() =>
+  !props.canEditConfigurationSelection ||
+  !hasSelectedKunde.value ||
+  !props.druckermarke ||
+  isExotischesModellSelected.value
+)
 </script>
 
 <template>
@@ -108,14 +145,27 @@ const saveButtonTitle = computed(() => {
           Druckermarke:
         </label>
 
+        <input
+          v-if="isDruckermarkeLocked"
+          id="calculation-druckermarke"
+          type="text"
+          class="form-control control-field toolbar-select pending-selection-field"
+          :value="druckermarke || druckermarkePlaceholder"
+          :title="druckermarke || druckermarkePlaceholder"
+          readonly
+          tabindex="-1"
+          aria-label="Druckermarke"
+        />
+
         <select
+          v-else
           id="calculation-druckermarke"
           :value="druckermarke"
           class="form-select control-field toolbar-select"
-          :disabled="!canEditConfigurationSelection"
+          :title="druckermarke || druckermarkePlaceholder"
           @change="emit('select-druckermarke', $event.target.value)"
         >
-          <option value="">Marke wählen</option>
+          <option value="">{{ druckermarkePlaceholder }}</option>
           <option
             v-for="marke in druckermarkenMitExotischemModell"
             :key="marke"
@@ -131,17 +181,30 @@ const saveButtonTitle = computed(() => {
           Druckermodell:
         </label>
 
+        <input
+          v-if="isDruckermodellLocked"
+          id="calculation-druckermodell"
+          type="text"
+          class="form-control control-field toolbar-select pending-selection-field"
+          :value="druckermodell || druckermodellPlaceholder"
+          :title="druckermodell || druckermodellPlaceholder"
+          readonly
+          tabindex="-1"
+          aria-label="Druckermodell"
+        />
+
         <select
+          v-else
           id="calculation-druckermodell"
           :value="druckermodell"
           class="form-select control-field toolbar-select"
-          :disabled="!canEditConfigurationSelection || !druckermarke || isExotischesModellSelected"
+          :title="druckermodell || druckermodellPlaceholder"
           @change="emit('select-druckermodell', $event.target.value)"
         >
           <option
             :value="isExotischesModellSelected ? MANUAL_CALCULATION_MODEL : ''"
           >
-            {{ isExotischesModellSelected ? MANUAL_CALCULATION_MODEL : 'Modell wählen' }}
+            {{ druckermodellPlaceholder }}
           </option>
           <option
             v-for="modell in druckermodelle"

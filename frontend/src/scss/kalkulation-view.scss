@@ -109,54 +109,6 @@
   cursor: not-allowed;
 }
 
-.calculation-empty-offer {
-  display: flex;
-  flex: 1 1 auto;
-  align-items: flex-start;
-  justify-content: center;
-  min-height: 12rem;
-  padding: 1.55rem 0 0;
-  text-align: left;
-}
-
-.calculation-empty-content {
-  display: inline-grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 0.5rem;
-  width: auto;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.calculation-empty-icon {
-  color: var(--kt-color-text-light);
-  font-size: 1rem;
-}
-
-.calculation-empty-copy {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.calculation-empty-title {
-  color: var(--kt-color-text-primary);
-  font-size: var(--kt-font-size-sm);
-  font-weight: 600;
-  line-height: var(--kt-line-height-tight);
-}
-
-.calculation-empty-text {
-  color: var(--kt-color-text-tertiary);
-  font-size: var(--kt-font-size-sm);
-  font-weight: 500;
-  line-height: var(--kt-line-height-tight);
-}
-
 .position-toolbar {
   min-height: 2.5rem;
   margin: var(--kt-spacing-xl) 0 0.65rem;
@@ -232,6 +184,18 @@
   background-color: var(--kt-color-bg-light);
   color: var(--kt-color-text-tertiary);
   cursor: default;
+  opacity: 1;
+}
+
+.pending-selection-field,
+.pending-selection-field:disabled,
+.pending-selection-field[readonly],
+.empty-position-row .pending-selection-field,
+.empty-position-row .pending-selection-field:disabled {
+  border-color: var(--kt-color-border);
+  background-color: var(--kt-color-bg-white);
+  color: var(--kt-color-text-tertiary);
+  cursor: not-allowed;
   opacity: 1;
 }
 
@@ -351,7 +315,17 @@
 }
 
 .required-position-field {
+  border-color: var(--kt-color-border);
+  background-color: var(--kt-color-bg-white);
+  color: var(--kt-color-text-primary);
   cursor: default;
+  opacity: 1;
+}
+
+.empty-position-row .required-position-field {
+  border-color: var(--kt-color-border);
+  background-color: var(--kt-color-bg-white);
+  color: var(--kt-color-text-primary);
 }
 
 .position-required-spacer {

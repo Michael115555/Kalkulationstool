@@ -88,7 +88,7 @@ const {
             @save-project="saveProject"
           />
 
-          <template v-if="druckermarke && (druckermodell || isExotischesModell)">
+          <template v-if="kundeId && druckermarke && (druckermodell || isExotischesModell)">
             <PositionsTable
               :positions="positions"
               :zubehoer-kategorien="positionsKategorien"
@@ -129,15 +129,6 @@ const {
             />
           </template>
 
-          <div v-else class="calculation-empty-offer">
-            <div class="calculation-empty-content">
-              <i class="pi pi-print calculation-empty-icon" aria-hidden="true"></i>
-              <div class="calculation-empty-copy">
-                <span class="calculation-empty-title">Auswahl starten:</span>
-                <span class="calculation-empty-text">Kunde, Marke und Modell wählen.</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
