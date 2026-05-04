@@ -6,9 +6,19 @@
 }
 
 .calculation-config-section {
+  position: relative;
   width: 100%;
-  padding: var(--kt-spacing-xl) 0 var(--kt-spacing-3xl);
-  border-bottom: 1px solid var(--kt-color-border);
+  padding: 2rem 0;
+}
+
+.calculation-config-section::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: #edf0f5;
 }
 
 .calculation-toolbar {
@@ -62,6 +72,9 @@
   width: 100%;
   min-width: 0;
   min-height: 2.75rem;
+  padding-top: 0.58rem;
+  padding-bottom: 0.58rem;
+  line-height: 1.25;
 }
 
 .toolbar-save-button {
@@ -72,7 +85,7 @@
   width: auto;
   min-width: 10.5rem;
   min-height: 2.75rem;
-  padding: var(--kt-spacing-sm) 1.15rem;
+  padding: 0.58rem 1.15rem;
   border: 1px solid var(--kt-color-primary);
   border-radius: var(--kt-border-radius-sm);
   background: var(--kt-color-primary);
@@ -111,7 +124,7 @@
 
 .position-toolbar {
   min-height: 2.5rem;
-  margin: var(--kt-spacing-xl) 0 0.65rem;
+  margin: 1rem 0 0.7rem;
 }
 
 .positions-heading {
@@ -139,9 +152,10 @@
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
-  min-height: 2rem;
-  padding: 0;
+  min-height: 2.25rem;
+  padding: 0 0.55rem;
   border: 0;
+  border-radius: 0.25rem;
   background: transparent;
   color: var(--kt-color-primary);
   font-size: var(--kt-font-size-md);
@@ -156,6 +170,7 @@
 
 .position-add-button:hover,
 .position-add-button:focus-visible {
+  background: var(--kt-color-bg-very-light);
   color: var(--kt-color-primary-dark);
 }
 
@@ -200,14 +215,20 @@
 }
 
 .table thead th {
-  background-color: var(--kt-color-bg-white);
+  background-color: #fbfcfe;
   color: var(--kt-color-text-primary);
   font-weight: 500;
-  border-bottom: 1px solid var(--kt-color-border-light);
+  border-bottom: 1px solid #e9edf3;
   vertical-align: middle;
   font-size: var(--kt-font-size-sm);
   line-height: var(--kt-line-height-tight);
   white-space: nowrap;
+}
+
+.position-toolbar + .table-responsive {
+  border: 1px solid #e4e7ec;
+  border-radius: var(--kt-border-radius-sm);
+  overflow-x: auto;
 }
 
 .table thead th.price-header {
@@ -221,6 +242,13 @@
 .positions-table {
   table-layout: fixed;
   width: 100%;
+  margin-bottom: 0;
+  border-style: hidden;
+  border-color: #e7ebf0;
+}
+
+.positions-table.table-bordered > :not(caption) > * > * {
+  border-color: #e7ebf0;
 }
 
 .positions-table th:nth-child(1),
@@ -262,11 +290,13 @@
 
 .table tbody td {
   background-color: #ffffff;
+  border-color: #e7ebf0;
 }
 
 .position-add-table-row td {
-  padding: 0.78rem 1.45rem;
-  border-top: 0;
+  padding: 0.68rem 1.45rem;
+  border-top: 1px solid #eef1f6;
+  background: #fbfcfe;
 }
 
 .position-add-content {
@@ -280,7 +310,9 @@
 .position-add-content::after {
   content: '';
   flex: 1 1 0;
-  border-top: 1px dashed #a9bef8;
+  max-width: 38rem;
+  border-top: 1px solid #dbe5ff;
+  opacity: 0.85;
 }
 
 .delete-icon {
@@ -343,9 +375,13 @@
 }
 
 .calculation-panel {
-  margin-top: 1.85rem;
-  padding-top: 1.6rem;
-  border-top: 1px solid var(--kt-color-border);
+  position: relative;
+  margin-top: 1.25rem;
+  padding-top: 1.05rem;
+}
+
+.calculation-panel::before {
+  display: none;
 }
 
 .calculation-layout {
@@ -359,8 +395,8 @@
   min-width: 0;
   padding: 1.15rem;
   border: 1px solid var(--kt-color-border);
-  border-radius: var(--kt-spacing-sm);
-  background: #ffffff;
+  border-radius: var(--kt-border-radius-sm);
+  background: var(--kt-color-bg-white);
 }
 
 .calculation-card-heading {
@@ -512,7 +548,7 @@
   gap: 0.3rem 0.85rem;
   min-height: 4.05rem;
   padding: 0.6rem 0.85rem;
-  border: 1px solid var(--kt-color-border);
+  border: 1px solid #e4e7ec;
   border-radius: var(--kt-spacing-sm);
   background: #ffffff;
 }

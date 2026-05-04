@@ -603,7 +603,7 @@ onBeforeUnmount(() => {
 
 .customer-toolbar {
   min-height: 2.5rem;
-  margin: 1.25rem 0 0.65rem;
+  margin: 1.25rem 0 0.75rem;
 }
 
 .customers-heading {
@@ -611,7 +611,7 @@ onBeforeUnmount(() => {
   align-items: center;
   min-height: 2.35rem;
   margin: 0;
-  color: #101828;
+  color: var(--kt-color-text-primary);
   font-size: var(--kt-font-size-lg);
   font-weight: 600;
   letter-spacing: 0;
@@ -619,19 +619,23 @@ onBeforeUnmount(() => {
 }
 
 .customers-table-responsive {
-  overflow-x: hidden;
+  border: 1px solid #e4e7ec;
+  border-radius: var(--kt-border-radius-sm);
+  overflow-x: auto;
 }
 
 .customers-table {
   width: 100%;
   min-width: 0;
+  margin-bottom: 0;
+  border-style: hidden;
   table-layout: fixed;
 }
 
 .customers-table thead th {
-  background-color: #fdfefe;
-  border-bottom: 1px solid #e7ebf0;
-  color: #101828;
+  background-color: #fbfcfe;
+  border-bottom: 1px solid #e9edf3;
+  color: var(--kt-color-text-primary);
   font-size: var(--kt-font-size-sm);
   font-weight: 500;
   line-height: var(--kt-line-height-tight);
@@ -641,6 +645,11 @@ onBeforeUnmount(() => {
 
 .customers-table tbody td {
   background-color: #ffffff;
+  border-color: #e7ebf0;
+}
+
+.customers-table.table-bordered > :not(caption) > * > * {
+  border-color: #e7ebf0;
 }
 
 .customers-table tbody tr.customer-active-row td {
@@ -797,8 +806,9 @@ onBeforeUnmount(() => {
 }
 
 .customer-add-table-row td {
-  padding: 0.78rem 1.45rem;
-  border-top: 0;
+  padding: 0.68rem 1.45rem;
+  border-top: 1px solid #eef1f6;
+  background: #fbfcfe;
 }
 
 .customer-add-content {
@@ -812,7 +822,9 @@ onBeforeUnmount(() => {
 .customer-add-content::after {
   content: '';
   flex: 1 1 0;
-  border-top: 1px dashed #a9bef8;
+  max-width: 38rem;
+  border-top: 1px solid #dbe5ff;
+  opacity: 0.85;
 }
 
 .customer-add-button {
@@ -820,11 +832,12 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
-  min-height: 2rem;
-  padding: 0;
+  min-height: 2.25rem;
+  padding: 0 0.55rem;
   border: 0;
+  border-radius: 0.25rem;
   background: transparent;
-  color: #2563eb;
+  color: var(--kt-color-primary);
   font-size: var(--kt-font-size-md);
   font-weight: 500;
   line-height: var(--kt-line-height-tight);
@@ -837,7 +850,8 @@ onBeforeUnmount(() => {
 
 .customer-add-button:hover,
 .customer-add-button:focus-visible {
-  color: #1d4ed8;
+  background: var(--kt-color-bg-very-light);
+  color: var(--kt-color-primary-dark);
 }
 
 .customer-add-button:focus-visible {
@@ -875,7 +889,7 @@ onBeforeUnmount(() => {
 
 .confirm-delete-title {
   margin: 0 0 0.3rem;
-  color: #101828;
+  color: var(--kt-color-text-primary);
   font-size: 1.05rem;
   font-weight: 700;
   line-height: 1.25;

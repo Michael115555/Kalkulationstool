@@ -75,7 +75,7 @@ const closeNavigation = () => {
 
 <style scoped>
 .app-content {
-  padding: 1rem 0 0;
+  padding: 0;
 }
 
 .topbar {

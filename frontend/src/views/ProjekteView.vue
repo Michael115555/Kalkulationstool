@@ -315,7 +315,7 @@ onMounted(loadProjekte)
 
 .projekte-toolbar {
   min-height: 2.5rem;
-  margin: 1.25rem 0 0.65rem;
+  margin: 1.25rem 0 0.75rem;
 }
 
 .projekte-heading {
@@ -323,7 +323,7 @@ onMounted(loadProjekte)
   align-items: center;
   min-height: 2.35rem;
   margin: 0;
-  color: #101828;
+  color: var(--kt-color-text-primary);
   font-size: var(--kt-font-size-lg);
   font-weight: 600;
   letter-spacing: 0;
@@ -331,19 +331,23 @@ onMounted(loadProjekte)
 }
 
 .projekte-table-responsive {
-  overflow-x: hidden;
+  border: 1px solid #e4e7ec;
+  border-radius: var(--kt-border-radius-sm);
+  overflow-x: auto;
 }
 
 .projekte-table {
   width: 100%;
   min-width: 0;
+  margin-bottom: 0;
+  border-style: hidden;
   table-layout: fixed;
 }
 
 .projekte-table thead th {
-  background-color: #fdfefe;
-  border-bottom: 1px solid #e7ebf0;
-  color: #101828;
+  background-color: #fbfcfe;
+  border-bottom: 1px solid #e9edf3;
+  color: var(--kt-color-text-primary);
   font-size: var(--kt-font-size-sm);
   font-weight: 500;
   line-height: var(--kt-line-height-tight);
@@ -353,6 +357,11 @@ onMounted(loadProjekte)
 
 .projekte-table tbody td {
   background-color: #ffffff;
+  border-color: #e7ebf0;
+}
+
+.projekte-table.table-bordered > :not(caption) > * > * {
+  border-color: #e7ebf0;
 }
 
 .projekte-table th,
@@ -505,7 +514,7 @@ onMounted(loadProjekte)
 
 .confirm-delete-title {
   margin: 0 0 0.3rem;
-  color: #101828;
+  color: var(--kt-color-text-primary);
   font-size: 1.05rem;
   font-weight: 700;
   line-height: 1.25;
