@@ -587,6 +587,12 @@ onMounted(loadCustomers)
 onBeforeUnmount(() => {
   autoSaveTimers.forEach((timer) => window.clearTimeout(timer))
   autoSaveTimers.clear()
+
+  customers.value
+    .filter((customer) => canSaveCustomer(customer))
+    .forEach((customer) => {
+      saveCustomer(customer)
+    })
 })
 </script>
 

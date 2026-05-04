@@ -9,18 +9,14 @@ const {
   validateKonfigurationPayload,
   ApiError
 } = require('./validators')
-const { getCatalogCache, setCatalogCache, invalidateCatalogCache } = require('./catalogCache')
+const { getCatalogCache, setCatalogCache } = require('./catalogCache')
 
 const prisma = new PrismaClient()
 const port = Number(process.env.PORT || 3001)
+const MAX_JSON_BODY_BYTES = 1024 * 1024
 
 const amountFromDb = (value) => Number(value ?? 0) / 100
 const amountToDb = (value) => Math.round(Number(value ?? 0) * 100)
-const optionalString = (value) => {
-  const text = String(value ?? '').trim()
-
-  return text || null
-}
 
 const sendJson = (response, statusCode, payload) => {
   response.writeHead(statusCode, {
@@ -35,11 +31,26 @@ const sendJson = (response, statusCode, payload) => {
 const readJsonBody = (request) =>
   new Promise((resolve, reject) => {
     let body = ''
+    let bodyBytes = 0
+    let hasRejected = false
 
     request.on('data', (chunk) => {
+      bodyBytes += chunk.length
+
+      if (bodyBytes > MAX_JSON_BODY_BYTES) {
+        hasRejected = true
+        reject(new ApiError('Request Body ist zu gross', 413))
+        request.destroy()
+        return
+      }
+
       body += chunk
     })
     request.on('end', () => {
+      if (hasRejected) {
+        return
+      }
+
       if (!body.trim()) {
         resolve({})
         return
@@ -48,10 +59,14 @@ const readJsonBody = (request) =>
       try {
         resolve(JSON.parse(body))
       } catch (error) {
+        reject(new ApiError('Ungueltiges JSON im Request Body', 400))
+      }
+    })
+    request.on('error', (error) => {
+      if (!hasRejected) {
         reject(error)
       }
     })
-    request.on('error', reject)
   })
 
 const getKatalog = async () => {
@@ -291,6 +306,15 @@ const getVerkaeufer = async () => {
   return benutzer.map(serializeVerkaeufer)
 }
 
+const parseSnapshot = (konfiguration) => {
+  try {
+    return JSON.parse(konfiguration.snapshotJson)
+  } catch (error) {
+    console.warn(`Konfiguration ${konfiguration.id} enthaelt ungueltiges Snapshot JSON`)
+    return {}
+  }
+}
+
 const serializeKonfiguration = (konfiguration) => ({
   id: konfiguration.id,
   name: konfiguration.name,
@@ -299,11 +323,35 @@ const serializeKonfiguration = (konfiguration) => ({
   druckerVarianteId: konfiguration.druckerVarianteId,
   total: amountFromDb(konfiguration.total),
   calculation: {
-    ...JSON.parse(konfiguration.snapshotJson),
+    ...parseSnapshot(konfiguration),
     kundeId: konfiguration.kundeId ?? null
   },
   aktualisiertAm: konfiguration.aktualisiertAm
 })
+
+const serializeProjektSummary = (konfiguration) => {
+  const calculation = parseSnapshot(konfiguration)
+  const positions = Array.isArray(calculation.positions) ? calculation.positions : []
+
+  return {
+    id: konfiguration.id,
+    name: konfiguration.name,
+    kundeId: konfiguration.kundeId,
+    druckermodellId: konfiguration.druckermodellId,
+    druckerVarianteId: konfiguration.druckerVarianteId,
+    total: amountFromDb(konfiguration.total),
+    positionsCount: positions.filter((position) => position.zubehoer || position.bezeichnung)
+      .length,
+    calculation: {
+      kundeId: konfiguration.kundeId ?? null,
+      druckermodell: calculation.druckermodell ?? '',
+      variante: calculation.variante ?? '',
+      kundeName: calculation.kundeName ?? null,
+      verkaeuferId: calculation.verkaeuferId ?? null
+    },
+    aktualisiertAm: konfiguration.aktualisiertAm
+  }
+}
 
 const getKonfigurationen = async () => {
   const konfigurationen = await prisma.konfiguration.findMany({
@@ -311,6 +359,14 @@ const getKonfigurationen = async () => {
   })
 
   return konfigurationen.map(serializeKonfiguration)
+}
+
+const getProjekte = async () => {
+  const konfigurationen = await prisma.konfiguration.findMany({
+    orderBy: [{ druckermodellId: 'asc' }, { erstelltAm: 'asc' }]
+  })
+
+  return konfigurationen.map(serializeProjektSummary)
 }
 
 const createKonfiguration = async (payload) => {
@@ -380,6 +436,11 @@ const handleRequest = async (request, response) => {
 
     if (request.method === 'GET' && url.pathname === '/api/verkaeufer') {
       sendJson(response, 200, await getVerkaeufer())
+      return
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/projekte') {
+      sendJson(response, 200, await getProjekte())
       return
     }
 

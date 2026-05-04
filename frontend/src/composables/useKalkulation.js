@@ -1437,9 +1437,10 @@ export const useKalkulation = () => {
     catalogError.value = ''
 
     try {
-      const [loadedKatalog, loadedKunden] = await Promise.all([
+      const [loadedKatalog, loadedKunden, savedConfigurations] = await Promise.all([
         api.getKatalog(),
-        api.getKunden()
+        api.getKunden(),
+        api.getKonfigurationen()
       ])
 
       katalog.value = loadedKatalog
@@ -1449,7 +1450,6 @@ export const useKalkulation = () => {
         throw new Error('Keine Druckermodelle in der Datenbank gefunden')
       }
 
-      const savedConfigurations = await api.getKonfigurationen()
       configurationVariants.value = savedConfigurations
         .map(mapConfigurationFromApi)
         .filter(isConfigurationComplete)

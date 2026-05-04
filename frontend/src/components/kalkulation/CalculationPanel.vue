@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import CurrencyReadonlyField from './CurrencyReadonlyField.vue'
 
 const eintauschRabattProzent = defineModel('eintauschRabattProzent', {
   type: [String, Number],
@@ -82,6 +83,13 @@ const selectedLieferungBetrag = computed(
     props.lieferungOptionen.find((option) => option.value === lieferungOption.value)
       ?.betrag ?? props.lieferungBetrag
 )
+
+const selectedLieferungOption = computed({
+  get: () => lieferungOption.value,
+  set: (optionValue) => {
+    props.updateLieferungOption(optionValue)
+  }
+})
 </script>
 
 <template>
@@ -94,29 +102,19 @@ const selectedLieferungBetrag = computed(
           <div class="calculation-form-row price-comparison-row">
             <div class="calculation-form-label">Einkaufspreis / Verkaufspreis</div>
 
-            <div class="input-group currency-group">
-              <span class="input-group-text">CHF</span>
-              <input
-                :value="formatAmount(einkaufspreis)"
-                type="text"
-                class="form-control amount-input readonly-price calculated-price-input"
-                readonly
-                tabindex="-1"
-                aria-label="Einkaufspreis"
-              />
-            </div>
+            <CurrencyReadonlyField
+              :amount="einkaufspreis"
+              :format-amount="formatAmount"
+              aria-label="Einkaufspreis"
+              input-class="calculated-price-input"
+            />
 
-            <div class="input-group currency-group">
-              <span class="input-group-text">CHF</span>
-              <input
-                :value="formatAmount(verkaufspreis)"
-                type="text"
-                class="form-control amount-input readonly-price calculated-price-input"
-                readonly
-                tabindex="-1"
-                aria-label="Verkaufspreis"
-              />
-            </div>
+            <CurrencyReadonlyField
+              :amount="verkaufspreis"
+              :format-amount="formatAmount"
+              aria-label="Verkaufspreis"
+              input-class="calculated-price-input"
+            />
           </div>
 
           <div class="calculation-form-row">
@@ -132,26 +130,19 @@ const selectedLieferungBetrag = computed(
               />
               <span class="input-group-text">%</span>
             </div>
-            <div class="input-group currency-group">
-              <span class="input-group-text">CHF</span>
-              <input
-                :value="formatAmount(eintauschRabattBetrag)"
-                type="text"
-                class="form-control amount-input readonly-price"
-                readonly
-                tabindex="-1"
-                aria-label="Eintauschrabatt in CHF"
-              />
-            </div>
+            <CurrencyReadonlyField
+              :amount="eintauschRabattBetrag"
+              :format-amount="formatAmount"
+              aria-label="Eintauschrabatt in CHF"
+            />
           </div>
 
           <div class="calculation-form-row">
             <div class="calculation-form-label">Lieferung gemäss Konditionen</div>
             <select
-              v-model="lieferungOption"
+              v-model="selectedLieferungOption"
               class="form-select control-field"
               aria-label="Lieferung gemäss Konditionen"
-              @change="updateLieferungOption($event.target.value)"
             >
               <option
                 v-for="option in lieferungOptionen"
@@ -161,17 +152,11 @@ const selectedLieferungBetrag = computed(
                 {{ option.label }}
               </option>
             </select>
-            <div class="input-group currency-group">
-              <span class="input-group-text">CHF</span>
-              <input
-                :value="formatAmount(selectedLieferungBetrag)"
-                type="text"
-                class="form-control amount-input readonly-price"
-                readonly
-                tabindex="-1"
-                aria-label="Lieferbetrag in CHF"
-              />
-            </div>
+            <CurrencyReadonlyField
+              :amount="selectedLieferungBetrag"
+              :format-amount="formatAmount"
+              aria-label="Lieferbetrag in CHF"
+            />
           </div>
 
           <div class="calculation-form-row">

@@ -73,9 +73,11 @@ const getProjektVerkaeufer = (projekt) => {
 }
 
 const getPositionenCount = (projekt) =>
+  projekt.positionsCount ??
   projekt.calculation?.positions?.filter(
     (position) => position.zubehoer || position.bezeichnung
-  ).length ?? 0
+  ).length ??
+  0
 
 const loadProjekte = async () => {
   isLoading.value = true
@@ -87,7 +89,7 @@ const loadProjekte = async () => {
       loadedKunden,
       loadedVerkaeufer
     ] = await Promise.all([
-      api.getKonfigurationen(),
+      api.getProjekte(),
       api.getKunden(),
       api.getVerkaeufer()
     ])

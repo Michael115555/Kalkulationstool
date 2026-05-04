@@ -43,6 +43,7 @@ export const createKalkulationApi = (
         method: 'DELETE'
       }),
     getKonfigurationen: () => requestJson('/api/konfigurationen'),
+    getProjekte: () => requestJson('/api/projekte'),
     createKonfiguration: (payload) =>
       requestJson('/api/konfigurationen', {
         method: 'POST',
