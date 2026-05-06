@@ -2,9 +2,13 @@
   "devDependencies": {
     "concurrently": "^9.2.1"
   },
-    "scripts": {
+  "scripts": {
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "npm run dev --prefix backend",
-    "start:all": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\""
+    "start:all": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "test:frontend": "npm test --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend",
+    "validate:backend": "npm run prisma:validate --prefix backend",
+    "check": "npm run test:frontend && npm run build:frontend && npm run validate:backend"
   }
 }

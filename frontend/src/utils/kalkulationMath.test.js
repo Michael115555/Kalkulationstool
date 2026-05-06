@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { normalizeNumber } from './numberFormat'
+import { formatAmount, normalizeNumber } from './numberFormat'
 import {
   calculateLineTotal,
   calculateNetPrice,
@@ -50,5 +50,12 @@ describe('kalkulationMath', () => {
     })
 
     expect(result).toBe(0)
+  })
+})
+
+describe('numberFormat', () => {
+  test('normalisiert und formatiert Schweizer Beträge', () => {
+    expect(normalizeNumber("1’250.50")).toBe(1250.5)
+    expect(formatAmount(1250.5)).toBe("1’250.50")
   })
 })

@@ -260,6 +260,7 @@ const isDeletingCustomer = ref(false)
 const activeCustomerId = ref(getRememberedSelectedCustomerId())
 const autoSaveTimers = new Map()
 const AUTO_SAVE_DELAY = 550
+let isCustomerViewMounted = false
 
 function createId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -413,7 +414,7 @@ function clearCustomerAutoSave(customer) {
 function scheduleCustomerAutoSave(customer) {
   clearCustomerAutoSave(customer)
 
-  if (!customer.name.trim()) {
+  if (!isCustomerViewMounted || !customer.name.trim()) {
     return
   }
 
@@ -424,6 +425,22 @@ function scheduleCustomerAutoSave(customer) {
       saveCustomer(customer)
     }, AUTO_SAVE_DELAY)
   )
+}
+
+function queueFollowUpCustomerSave(customer) {
+  if (!customer.hasPendingSave && !isCustomerDirty(customer)) {
+    return
+  }
+
+  if (isCustomerViewMounted) {
+    scheduleCustomerAutoSave(customer)
+    return
+  }
+
+  if (customer.hasPendingSave) {
+    customer.hasPendingSave = false
+    saveCustomer(customer)
+  }
 }
 
 function saveCustomerNow(customer) {
@@ -492,10 +509,7 @@ async function saveCustomer(customer) {
     customerError.value = `Kunde konnte nicht gespeichert werden: ${error.message}`
   } finally {
     customer.isSaving = false
-
-    if (customer.hasPendingSave || isCustomerDirty(customer)) {
-      scheduleCustomerAutoSave(customer)
-    }
+    queueFollowUpCustomerSave(customer)
   }
 }
 
@@ -582,9 +596,14 @@ async function loadCustomers() {
   }
 }
 
-onMounted(loadCustomers)
+onMounted(() => {
+  isCustomerViewMounted = true
+  loadCustomers()
+})
 
 onBeforeUnmount(() => {
+  isCustomerViewMounted = false
+
   autoSaveTimers.forEach((timer) => window.clearTimeout(timer))
   autoSaveTimers.clear()
 

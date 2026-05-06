@@ -5,8 +5,10 @@ export const normalizeNumber = (value) => {
 
 export const formatDecimal = (value) => normalizeNumber(value).toFixed(2)
 
+const swissAmountFormatter = new Intl.NumberFormat('de-CH', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+})
+
 export const formatAmount = (value) =>
-  new Intl.NumberFormat('de-CH', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(normalizeNumber(value))
+  swissAmountFormatter.format(normalizeNumber(value))

@@ -1,5 +1,10 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { createKalkulationApi } from '../services/kalkulationApi'
+import {
+  calculateLineTotal,
+  calculateNetPrice,
+  calculateSalesTotal
+} from '../utils/kalkulationMath'
 import { formatAmount, formatDecimal, normalizeNumber } from '../utils/numberFormat'
 
 const EXOTIC_MODEL_OPTION = 'Exotisches Modell'
@@ -96,6 +101,7 @@ export const useKalkulation = () => {
   })
 
   const selectedDruckermodell = computed(() =>
+    druckermodelleDerMarke.value.find((modell) => modell.name === druckermodell.value) ??
     katalog.value.druckermodelle.find((modell) => modell.name === druckermodell.value)
   )
 
@@ -236,19 +242,26 @@ export const useKalkulation = () => {
       .sort((a, b) => a - b)
   )
 
-  const getDruckermodellByName = (name) =>
-    katalog.value.druckermodelle.find((modell) => modell.name === name)
+  const getDruckermodellByName = (name, herstellerName = druckermarke.value) => {
+    const modelle = katalog.value.druckermodelle.filter((modell) => modell.name === name)
+
+    if (!modelle.length) {
+      return undefined
+    }
+
+    return modelle.find((modell) => getHerstellerName(modell) === herstellerName) ?? modelle[0]
+  }
 
   const getDruckermodellById = (id) =>
     katalog.value.druckermodelle.find((modell) => modell.id === Number(id))
 
-  const getVarianteByName = (modellName, variantenName) =>
-    getDruckermodellByName(modellName)?.varianten.find(
+  const getVarianteByName = (modellName, variantenName, herstellerName = druckermarke.value) =>
+    getDruckermodellByName(modellName, herstellerName)?.varianten.find(
       (eintrag) => eintrag.bezeichnung === variantenName
     )
 
-  const getDruckerVarianteId = (modellName, variantenName) =>
-    getVarianteByName(modellName, variantenName)?.id ?? null
+  const getDruckerVarianteId = (modellName, variantenName, herstellerName = druckermarke.value) =>
+    getVarianteByName(modellName, variantenName, herstellerName)?.id ?? null
 
   const getDefaultLieferungOption = () => lieferungOptionen.value[0]?.value ?? ''
 
@@ -289,14 +302,15 @@ export const useKalkulation = () => {
 
   const createDruckerPosition = (
     modell = druckermodell.value,
-    variantenName = variante.value
+    variantenName = variante.value,
+    herstellerName = druckermarke.value
   ) => {
-    const druckerVariante = getVarianteByName(modell, variantenName)
+    const druckerVariante = getVarianteByName(modell, variantenName, herstellerName)
 
     return {
       id: 1,
       istDrucker: true,
-      druckermodellId: getDruckermodellByName(modell)?.id ?? null,
+      druckermodellId: getDruckermodellByName(modell, herstellerName)?.id ?? null,
       druckerVarianteId: druckerVariante?.id ?? null,
       zubehoer: 'Drucker',
       bezeichnung: druckerVariante?.bezeichnung ?? '',
@@ -388,7 +402,7 @@ export const useKalkulation = () => {
       (produkt) => produkt.bezeichnung === bezeichnung
     )
 
-  const normalizePositionSnapshot = (position, modellName, variantenName) => {
+  const normalizePositionSnapshot = (position, modellName, variantenName, herstellerName) => {
     if (isExotischesModell.value) {
       const zubehoer = normalizeKategorieName(position?.zubehoer ?? '')
       const isDrucker = zubehoer === 'Drucker'
@@ -411,7 +425,7 @@ export const useKalkulation = () => {
 
     if (position?.istDrucker) {
       return {
-        ...createDruckerPosition(modellName, variantenName),
+        ...createDruckerPosition(modellName, variantenName, herstellerName),
         ...position,
         id: position.id ?? 1,
         istDrucker: true,
@@ -508,7 +522,7 @@ export const useKalkulation = () => {
     const fallbackModell = katalog.value.druckermodelle[0]
     const modell =
       getDruckermodellById(snapshot?.druckermodellId) ??
-      getDruckermodellByName(snapshot?.druckermodell) ??
+      getDruckermodellByName(snapshot?.druckermodell, snapshot?.druckermarke) ??
       fallbackModell
 
     const modellName = modell?.name ?? ''
@@ -521,7 +535,12 @@ export const useKalkulation = () => {
     const option = snapshot?.lieferungOption || getDefaultLieferungOption()
     const normalizedPositions = Array.isArray(snapshot?.positions)
       ? snapshot.positions.map((position) =>
-          normalizePositionSnapshot(position, modellName, variantenName)
+          normalizePositionSnapshot(
+            position,
+            modellName,
+            variantenName,
+            snapshot?.druckermarke
+          )
         )
       : createDefaultPositions()
 
@@ -531,7 +550,11 @@ export const useKalkulation = () => {
         snapshot?.druckermarke ??
         getHerstellerName(modell),
       druckermodellId: modell?.id ?? null,
-      druckerVarianteId: getDruckerVarianteId(modellName, variantenName),
+      druckerVarianteId: getDruckerVarianteId(
+        modellName,
+        variantenName,
+        snapshot?.druckermarke
+      ),
       druckermodell: modellName,
       variante: variantenName,
       eintauschRabattProzent: snapshot?.eintauschRabattProzent ?? '0.00',
@@ -547,26 +570,19 @@ export const useKalkulation = () => {
   }
 
   const getSnapshotGesamtpreis = (snapshot) =>
-    snapshot.positions.reduce(
-      (summe, position) =>
-        summe + normalizeNumber(position.menge) * normalizeNumber(position.vp),
-      0
-    )
+    calculateSalesTotal(snapshot.positions, normalizeNumber)
 
   const getSnapshotNettopreis = (snapshot) => {
     const verkaufspreisSnapshot = getSnapshotGesamtpreis(snapshot)
-    const eintauschRabattSnapshot =
-      verkaufspreisSnapshot * (normalizeNumber(snapshot.eintauschRabattProzent) / 100)
-    const restwertSnapshot =
-      normalizeNumber(snapshot.restwertMonate) * normalizeNumber(snapshot.restwertBetrag)
 
-    return Math.max(
-      0,
-      verkaufspreisSnapshot -
-        eintauschRabattSnapshot +
-        normalizeNumber(snapshot.lieferungBetrag) +
-        restwertSnapshot
-    )
+    return calculateNetPrice({
+      verkaufspreis: verkaufspreisSnapshot,
+      eintauschRabattProzent: snapshot.eintauschRabattProzent,
+      lieferungBetrag: snapshot.lieferungBetrag,
+      restwertMonate: snapshot.restwertMonate,
+      restwertBetrag: snapshot.restwertBetrag,
+      normalizeNumber
+    })
   }
 
   const mapConfigurationFromApi = (configurationVariant) => {
@@ -717,8 +733,7 @@ export const useKalkulation = () => {
     return mapConfigurationFromApi(savedConfigurationVariant)
   }
 
-  const getGesamtpreis = (position) =>
-    normalizeNumber(position.menge) * normalizeNumber(position.vp)
+  const getGesamtpreis = (position) => calculateLineTotal(position, normalizeNumber)
 
   const updatePositionZubehoer = (position) => {
     const isDrucker = position.zubehoer === 'Drucker'
@@ -827,10 +842,7 @@ export const useKalkulation = () => {
     getEinkaufspreis(position) === 0
 
   const verkaufspreis = computed(() =>
-    positions.value.reduce(
-      (summe, position) => summe + getGesamtpreis(position),
-      0
-    )
+    calculateSalesTotal(positions.value, normalizeNumber)
   )
 
   const einkaufspreis = computed(() =>
@@ -845,18 +857,15 @@ export const useKalkulation = () => {
     verkaufspreis.value * (normalizeNumber(eintauschRabattProzent.value) / 100)
   )
 
-  const restwertGesamt = computed(() =>
-    normalizeNumber(restwertMonate.value) * normalizeNumber(restwertBetrag.value)
-  )
-
   const nettopreis = computed(() =>
-    Math.max(
-      0,
-      verkaufspreis.value -
-        eintauschRabattBetrag.value +
-        normalizeNumber(lieferungBetrag.value) +
-        restwertGesamt.value
-    )
+    calculateNetPrice({
+      verkaufspreis: verkaufspreis.value,
+      eintauschRabattProzent: eintauschRabattProzent.value,
+      lieferungBetrag: lieferungBetrag.value,
+      restwertMonate: restwertMonate.value,
+      restwertBetrag: restwertBetrag.value,
+      normalizeNumber
+    })
   )
 
   const mietbasis = computed(() => Math.max(0, nettopreis.value))
