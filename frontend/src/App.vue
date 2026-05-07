@@ -1,6 +1,6 @@
 <script setup>
-import { nextTick, onMounted, ref } from 'vue'
-import { RouterLink, RouterView } from 'vue-router'
+import { onMounted, ref } from 'vue'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { createKalkulationApi } from './services/kalkulationApi'
 
 const navigationItems = [
@@ -10,6 +10,7 @@ const navigationItems = [
 ]
 
 const api = createKalkulationApi()
+const route = useRoute()
 const isNavigationOpen = ref(false)
 const isInitialLoading = ref(true)
 
@@ -21,8 +22,10 @@ const closeNavigation = () => {
   isNavigationOpen.value = false
 }
 
+const getRouteDataName = () => route.name ?? 'kalkulation'
+
 const prefetchRouteData = (routeName) => {
-  api.prefetchRouteData(routeName)
+  return api.prefetchRouteData(routeName)
 }
 
 const prefetchSecondaryViews = () => {
@@ -30,12 +33,16 @@ const prefetchSecondaryViews = () => {
   api.prefetchRouteData('projekte')
 }
 
-onMounted(async () => {
-  await nextTick()
-
-  window.setTimeout(() => {
+const loadInitialRouteData = async () => {
+  try {
+    await prefetchRouteData(getRouteDataName())
+  } finally {
     isInitialLoading.value = false
-  }, 650)
+  }
+}
+
+onMounted(async () => {
+  await loadInitialRouteData()
 
   if ('requestIdleCallback' in window) {
     window.requestIdleCallback(prefetchSecondaryViews, { timeout: 1200 })
