@@ -114,6 +114,23 @@ const loadProjekte = async () => {
   }
 }
 
+const hydrateProjekteFromCache = () => {
+  const cachedData = api.getCachedRouteData('projekte')
+
+  if (!cachedData) {
+    return false
+  }
+
+  projekte.value = cachedData.projekte
+  kunden.value = cachedData.kunden
+  verkaeufer.value = cachedData.verkaeufer
+  hasLoadedProjekte.value = true
+  isLoading.value = false
+  errorMessage.value = ''
+
+  return true
+}
+
 const projektToDelete = ref(null)
 const isDeletingProjekt = ref(false)
 
@@ -152,7 +169,13 @@ const confirmDeleteProjekt = async () => {
   }
 }
 
-onMounted(loadProjekte)
+const hasHydratedProjekte = hydrateProjekteFromCache()
+
+onMounted(() => {
+  if (!hasHydratedProjekte) {
+    loadProjekte()
+  }
+})
 
 onBeforeUnmount(() => {
   window.clearTimeout(loadingIndicatorTimer)
@@ -324,7 +347,6 @@ onBeforeUnmount(() => {
 </template>
 <style scoped>
 .projekte-page-card-body {
-  min-height: 13rem;
   padding: 0 1rem 1.5rem;
 }
 

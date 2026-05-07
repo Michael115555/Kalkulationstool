@@ -1441,6 +1441,47 @@ export const useKalkulation = () => {
     positions.value = positions.value.filter((position) => position.id !== id)
   }
 
+  const applyInitialData = (loadedKatalog, loadedKunden, savedConfigurations) => {
+    katalog.value = loadedKatalog
+    kunden.value = loadedKunden
+
+    if (!katalog.value.druckermodelle.length) {
+      throw new Error('Keine Druckermodelle in der Datenbank gefunden')
+    }
+
+    configurationVariants.value = savedConfigurations
+      .map(mapConfigurationFromApi)
+      .filter(isConfigurationComplete)
+
+    kundeId.value = null
+    projectName.value = ''
+    activeConfigurationVariantId.value = null
+    isNewConfigurationDraft.value = false
+    druckermarke.value = ''
+    clearCalculationSelection()
+
+    isInitialDataLoaded = true
+  }
+
+  const hydrateInitialDataFromCache = () => {
+    const cachedData = api.getCachedRouteData('kalkulation')
+
+    if (!cachedData) {
+      return false
+    }
+
+    try {
+      applyInitialData(cachedData.katalog, cachedData.kunden, cachedData.konfigurationen)
+      catalogError.value = ''
+    } catch (error) {
+      catalogError.value = `Datenbank konnte nicht geladen werden: ${error.message}`
+    } finally {
+      isCatalogLoading.value = false
+    }
+
+    return true
+  }
+
   const loadInitialData = async () => {
     isCatalogLoading.value = true
     catalogError.value = ''
@@ -1452,25 +1493,7 @@ export const useKalkulation = () => {
         api.getKonfigurationen()
       ])
 
-      katalog.value = loadedKatalog
-      kunden.value = loadedKunden
-
-      if (!katalog.value.druckermodelle.length) {
-        throw new Error('Keine Druckermodelle in der Datenbank gefunden')
-      }
-
-      configurationVariants.value = savedConfigurations
-        .map(mapConfigurationFromApi)
-        .filter(isConfigurationComplete)
-
-      kundeId.value = null
-      projectName.value = ''
-      activeConfigurationVariantId.value = null
-      isNewConfigurationDraft.value = false
-      druckermarke.value = ''
-      clearCalculationSelection()
-
-      isInitialDataLoaded = true
+      applyInitialData(loadedKatalog, loadedKunden, savedConfigurations)
     } catch (error) {
       catalogError.value = `Datenbank konnte nicht geladen werden: ${error.message}`
     } finally {
@@ -1512,7 +1535,13 @@ export const useKalkulation = () => {
     { deep: true }
   )
 
-  onMounted(loadInitialData)
+  const hasHydratedInitialData = hydrateInitialDataFromCache()
+
+  onMounted(() => {
+    if (!hasHydratedInitialData) {
+      loadInitialData()
+    }
+  })
 
   onBeforeUnmount(() => {
     window.clearTimeout(saveTimer)

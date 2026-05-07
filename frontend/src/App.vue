@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { createKalkulationApi } from './services/kalkulationApi'
 
@@ -12,7 +12,7 @@ const navigationItems = [
 const api = createKalkulationApi()
 const route = useRoute()
 const isNavigationOpen = ref(false)
-const isInitialLoading = ref(true)
+const isContentReady = ref(false)
 
 const toggleNavigation = () => {
   isNavigationOpen.value = !isNavigationOpen.value
@@ -33,15 +33,29 @@ const prefetchSecondaryViews = () => {
   api.prefetchRouteData('projekte')
 }
 
+const waitForPaint = () =>
+  new Promise((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(resolve)
+    })
+  })
+
+const removeInitialCover = async () => {
+  await nextTick()
+  await waitForPaint()
+  document.getElementById('app-initial-cover')?.remove()
+}
+
 const loadInitialRouteData = async () => {
   try {
     await prefetchRouteData(getRouteDataName())
   } finally {
-    isInitialLoading.value = false
+    isContentReady.value = true
   }
 }
 
 onMounted(async () => {
+  await removeInitialCover()
   await loadInitialRouteData()
 
   if ('requestIdleCallback' in window) {
@@ -55,24 +69,6 @@ onMounted(async () => {
 
 <template>
   <div class="app-shell min-vh-100">
-    <Transition name="app-loader">
-      <div
-        v-if="isInitialLoading"
-        class="app-loading-overlay"
-        aria-live="polite"
-        aria-label="Kalkulationstool wird geladen"
-      >
-        <div class="app-loading-content" role="status">
-          <span class="app-loading-title">Kalkulationstool</span>
-          <span class="app-loading-dots" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
-          </span>
-        </div>
-      </div>
-    </Transition>
-
     <nav class="topbar navbar navbar-expand-lg">
       <div class="container-fluid topbar-container px-3 px-lg-4">
         <RouterLink class="navbar-brand app-brand mb-0" to="/">
@@ -123,97 +119,28 @@ onMounted(async () => {
     </nav>
 
     <main class="container-fluid app-content">
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <Transition name="app-content-fade">
+          <component :is="Component" v-if="isContentReady" />
+        </Transition>
+      </RouterView>
     </main>
   </div>
 </template>
 
 <style scoped>
 .app-content {
+  min-height: calc(100vh - 4rem);
   padding: 0;
-}
-
-.app-loading-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1080;
-  display: grid;
-  place-items: center;
   background: #ffffff;
 }
 
-.app-loading-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.85rem;
-  color: #101828;
+.app-content-fade-enter-active {
+  transition: opacity 0.18s ease;
 }
 
-.app-loading-title {
-  font-size: var(--kt-font-size-lg);
-  font-weight: 600;
-  line-height: var(--kt-line-height-tight);
-}
-
-.app-loading-dots {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.42rem;
-  min-height: 0.75rem;
-}
-
-.app-loading-dots span {
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: #2563eb;
-  opacity: 0.25;
-  animation: app-loading-dot 1.15s ease-in-out infinite;
-}
-
-.app-loading-dots span:nth-child(2) {
-  animation-delay: 0.16s;
-}
-
-.app-loading-dots span:nth-child(3) {
-  animation-delay: 0.32s;
-}
-
-.app-loader-enter-active,
-.app-loader-leave-active {
-  transition: opacity 0.22s ease;
-}
-
-.app-loader-enter-from,
-.app-loader-leave-to {
+.app-content-fade-enter-from {
   opacity: 0;
-}
-
-@keyframes app-loading-dot {
-  0%,
-  80%,
-  100% {
-    opacity: 0.25;
-    transform: scale(0.88);
-  }
-
-  40% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-loading-dots span {
-    animation: none;
-    opacity: 0.7;
-  }
-
-  .app-loader-enter-active,
-  .app-loader-leave-active {
-    transition: none;
-  }
 }
 
 .topbar {

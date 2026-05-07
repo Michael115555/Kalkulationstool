@@ -8,6 +8,9 @@ export const createKalkulationApi = (
 ) => {
   const getCacheKey = (path, method = 'GET') => `${baseUrl} ${method} ${path}`
 
+  const getCachedResponse = (path, method = 'GET') =>
+    responseCache.get(getCacheKey(path, method))
+
   const clearCache = (paths) => {
     paths.forEach((path) => {
       responseCache.delete(getCacheKey(path))
@@ -135,6 +138,34 @@ export const createKalkulationApi = (
         clearProjectCache()
         return result
       }),
+    getCachedRouteData: (routeName) => {
+      if (routeName === 'stammdaten') {
+        const kunden = getCachedResponse('/api/kunden')
+        const verkaeufer = getCachedResponse('/api/verkaeufer')
+
+        return kunden && verkaeufer
+          ? { kunden, verkaeufer }
+          : null
+      }
+
+      if (routeName === 'projekte') {
+        const projekte = getCachedResponse('/api/projekte')
+        const kunden = getCachedResponse('/api/kunden')
+        const verkaeufer = getCachedResponse('/api/verkaeufer')
+
+        return projekte && kunden && verkaeufer
+          ? { projekte, kunden, verkaeufer }
+          : null
+      }
+
+      const katalog = getCachedResponse('/api/katalog')
+      const kunden = getCachedResponse('/api/kunden')
+      const konfigurationen = getCachedResponse('/api/konfigurationen')
+
+      return katalog && kunden && konfigurationen
+        ? { katalog, kunden, konfigurationen }
+        : null
+    },
     prefetchRouteData: (routeName) => {
       if (routeName === 'stammdaten') {
         return prefetchPaths(['/api/kunden', '/api/verkaeufer'])

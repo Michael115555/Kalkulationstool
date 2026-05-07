@@ -326,6 +326,18 @@ function createCustomerSnapshot(customer) {
   }
 }
 
+function createCustomerInputSnapshot(customer) {
+  return {
+    name: customer.name,
+    contactPerson: customer.contactPerson,
+    email: customer.email,
+    phone: customer.phone,
+    salespersonId: customer.salespersonId || '',
+    contactType: customer.contactType || '',
+    deliveryType: customer.deliveryType || ''
+  }
+}
+
 function createCustomerPayload(customer) {
   return {
     firmenname: customer.name.trim(),
@@ -463,15 +475,30 @@ function createCustomerSnapshotFromApi(customer) {
   }
 }
 
-function applySavedCustomer(customer, savedCustomer, savedSnapshot) {
-  const hasLocalChanges =
-    JSON.stringify(createCustomerSnapshot(customer)) !== JSON.stringify(savedSnapshot)
+function createCustomerInputSnapshotFromApi(customer) {
+  return {
+    name: customer.firmenname ?? '',
+    contactPerson: customer.kontaktname ?? '',
+    email: customer.email ?? '',
+    phone: customer.telefon ?? '',
+    salespersonId: customer.verkaeuferId ?? '',
+    contactType: customer.kontaktart ?? '',
+    deliveryType: customer.versandart ?? ''
+  }
+}
+
+function applySavedCustomer(customer, savedCustomer, savedInputSnapshot) {
+  const hasLocalInputChanges =
+    JSON.stringify(createCustomerInputSnapshot(customer)) !== JSON.stringify(savedInputSnapshot)
+  const savedApiInputSnapshot = createCustomerInputSnapshotFromApi(savedCustomer)
+  const serverNormalizedInput =
+    JSON.stringify(savedApiInputSnapshot) !== JSON.stringify(savedInputSnapshot)
 
   customer.persistedId = savedCustomer.id
   customer.isNew = false
+  customer.original = createCustomerSnapshotFromApi(savedCustomer)
 
-  if (hasLocalChanges) {
-    customer.original = createCustomerSnapshotFromApi(savedCustomer)
+  if (hasLocalInputChanges || serverNormalizedInput) {
     return
   }
 
@@ -482,7 +509,6 @@ function applySavedCustomer(customer, savedCustomer, savedSnapshot) {
   customer.salespersonId = savedCustomer.verkaeuferId ?? ''
   customer.contactType = savedCustomer.kontaktart ?? ''
   customer.deliveryType = savedCustomer.versandart ?? ''
-  customer.original = createCustomerSnapshot(customer)
 }
 
 async function saveCustomer(customer) {
@@ -500,12 +526,12 @@ async function saveCustomer(customer) {
   customerError.value = ''
 
   try {
-    const savedSnapshot = createCustomerSnapshot(customer)
+    const savedInputSnapshot = createCustomerInputSnapshot(customer)
     const savedCustomer = customer.isNew
       ? await api.createKunde(createCustomerPayload(customer))
       : await api.updateKunde(customer.persistedId, createCustomerPayload(customer))
 
-    applySavedCustomer(customer, savedCustomer, savedSnapshot)
+    applySavedCustomer(customer, savedCustomer, savedInputSnapshot)
     rememberSelectedCustomerId(savedCustomer.id)
     activeCustomerId.value = Number(savedCustomer.id)
   } catch (error) {
@@ -607,9 +633,34 @@ async function loadCustomers() {
   }
 }
 
+function hydrateCustomersFromCache() {
+  const cachedData = api.getCachedRouteData('stammdaten')
+
+  if (!cachedData) {
+    return false
+  }
+
+  customers.value = cachedData.kunden.map(mapApiCustomer)
+  salespeople.value = cachedData.verkaeufer
+  hasLoadedCustomers.value = true
+  isLoadingCustomers.value = false
+  customerError.value = ''
+
+  if (!customers.value.length) {
+    customers.value.push(createDraftCustomer())
+  }
+
+  return true
+}
+
+const hasHydratedCustomers = hydrateCustomersFromCache()
+
 onMounted(() => {
   isCustomerViewMounted = true
-  loadCustomers()
+
+  if (!hasHydratedCustomers) {
+    loadCustomers()
+  }
 })
 
 onBeforeUnmount(() => {
@@ -629,7 +680,6 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .customer-page-card-body {
-  min-height: 13rem;
   padding: 0 1rem 1.5rem;
 }
 

@@ -63,7 +63,7 @@ const {
 <template>
   <section class="kalkulation-view">
     <div class="col-12">
-      <div class="card shadow-sm border-0">
+      <div class="card border-0">
         <div class="card-body calculation-page-card-body">
           <div v-if="isCatalogLoading" class="alert alert-info mt-3 mb-0">
             Daten werden aus der Datenbank geladen...
