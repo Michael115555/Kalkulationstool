@@ -1,15 +1,18 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { createKalkulationApi } from '../services/kalkulationApi'
 import { formatAmount } from '../utils/numberFormat'
 
 const api = createKalkulationApi()
+const LOADING_INDICATOR_DELAY = 140
 
-const isLoading = ref(true)
+const isLoading = ref(false)
+const hasLoadedProjekte = ref(false)
 const errorMessage = ref('')
 const projekte = ref([])
 const kunden = ref([])
 const verkaeufer = ref([])
+let loadingIndicatorTimer = null
 
 const sortedProjekte = computed(() =>
   [...projekte.value].sort((a, b) =>
@@ -80,7 +83,12 @@ const getPositionenCount = (projekt) =>
   0
 
 const loadProjekte = async () => {
-  isLoading.value = true
+  window.clearTimeout(loadingIndicatorTimer)
+  loadingIndicatorTimer = window.setTimeout(() => {
+    if (!hasLoadedProjekte.value) {
+      isLoading.value = true
+    }
+  }, LOADING_INDICATOR_DELAY)
   errorMessage.value = ''
 
   try {
@@ -97,9 +105,11 @@ const loadProjekte = async () => {
     projekte.value = loadedProjekte
     kunden.value = loadedKunden
     verkaeufer.value = loadedVerkaeufer
+    hasLoadedProjekte.value = true
   } catch (error) {
     errorMessage.value = `Projekte konnten nicht geladen werden: ${error.message}`
   } finally {
+    window.clearTimeout(loadingIndicatorTimer)
     isLoading.value = false
   }
 }
@@ -143,6 +153,10 @@ const confirmDeleteProjekt = async () => {
 }
 
 onMounted(loadProjekte)
+
+onBeforeUnmount(() => {
+  window.clearTimeout(loadingIndicatorTimer)
+})
 </script>
 
 <template>
@@ -154,7 +168,7 @@ onMounted(loadProjekte)
             <h4 class="projekte-heading mb-0">Projekte</h4>
           </div>
 
-          <div v-if="isLoading" class="alert alert-info mt-3 mb-0">
+          <div v-if="isLoading && !hasLoadedProjekte" class="alert alert-info mt-3 mb-0">
             Projekte werden geladen...
           </div>
 
@@ -162,7 +176,7 @@ onMounted(loadProjekte)
             {{ errorMessage }}
           </div>
 
-          <div v-if="!isLoading && !errorMessage" class="table-responsive projekte-table-responsive">
+          <div v-if="hasLoadedProjekte && !errorMessage" class="table-responsive projekte-table-responsive">
             <table class="table align-middle mb-0 table-bordered projekte-table">
               <thead>
                 <tr>
@@ -310,6 +324,7 @@ onMounted(loadProjekte)
 </template>
 <style scoped>
 .projekte-page-card-body {
+  min-height: 13rem;
   padding: 0 1rem 1.5rem;
 }
 

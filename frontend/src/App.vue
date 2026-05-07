@@ -1,14 +1,17 @@
 <script setup>
-import { ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
+import { createKalkulationApi } from './services/kalkulationApi'
 
 const navigationItems = [
-  { to: '/', label: 'Kalkulation', icon: 'pi pi-calculator' },
-  { to: '/stammdaten', label: 'Kunden', icon: 'pi pi-users' },
-  { to: '/projekte', label: 'Projekte', icon: 'pi pi-folder' }
+  { to: '/', name: 'kalkulation', label: 'Kalkulation', icon: 'pi pi-calculator' },
+  { to: '/stammdaten', name: 'stammdaten', label: 'Kunden', icon: 'pi pi-users' },
+  { to: '/projekte', name: 'projekte', label: 'Projekte', icon: 'pi pi-folder' }
 ]
 
+const api = createKalkulationApi()
 const isNavigationOpen = ref(false)
+const isInitialLoading = ref(true)
 
 const toggleNavigation = () => {
   isNavigationOpen.value = !isNavigationOpen.value
@@ -17,10 +20,52 @@ const toggleNavigation = () => {
 const closeNavigation = () => {
   isNavigationOpen.value = false
 }
+
+const prefetchRouteData = (routeName) => {
+  api.prefetchRouteData(routeName)
+}
+
+const prefetchSecondaryViews = () => {
+  api.prefetchRouteData('stammdaten')
+  api.prefetchRouteData('projekte')
+}
+
+onMounted(async () => {
+  await nextTick()
+
+  window.setTimeout(() => {
+    isInitialLoading.value = false
+  }, 650)
+
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(prefetchSecondaryViews, { timeout: 1200 })
+    return
+  }
+
+  window.setTimeout(prefetchSecondaryViews, 300)
+})
 </script>
 
 <template>
   <div class="app-shell min-vh-100">
+    <Transition name="app-loader">
+      <div
+        v-if="isInitialLoading"
+        class="app-loading-overlay"
+        aria-live="polite"
+        aria-label="Kalkulationstool wird geladen"
+      >
+        <div class="app-loading-content" role="status">
+          <span class="app-loading-title">Kalkulationstool</span>
+          <span class="app-loading-dots" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </div>
+      </div>
+    </Transition>
+
     <nav class="topbar navbar navbar-expand-lg">
       <div class="container-fluid topbar-container px-3 px-lg-4">
         <RouterLink class="navbar-brand app-brand mb-0" to="/">
@@ -53,6 +98,9 @@ const closeNavigation = () => {
                 class="nav-link app-nav-link"
                 :to="item.to"
                 exact-active-class="active"
+                @focus="prefetchRouteData(item.name)"
+                @pointerenter="prefetchRouteData(item.name)"
+                @touchstart.passive="prefetchRouteData(item.name)"
                 @click="closeNavigation"
               >
                 <i :class="['nav-icon', item.icon]" aria-hidden="true"></i>
@@ -76,6 +124,89 @@ const closeNavigation = () => {
 <style scoped>
 .app-content {
   padding: 0;
+}
+
+.app-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+}
+
+.app-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  color: #101828;
+}
+
+.app-loading-title {
+  font-size: var(--kt-font-size-lg);
+  font-weight: 600;
+  line-height: var(--kt-line-height-tight);
+}
+
+.app-loading-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-height: 0.75rem;
+}
+
+.app-loading-dots span {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #2563eb;
+  opacity: 0.25;
+  animation: app-loading-dot 1.15s ease-in-out infinite;
+}
+
+.app-loading-dots span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.app-loading-dots span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+.app-loader-enter-active,
+.app-loader-leave-active {
+  transition: opacity 0.22s ease;
+}
+
+.app-loader-enter-from,
+.app-loader-leave-to {
+  opacity: 0;
+}
+
+@keyframes app-loading-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.88);
+  }
+
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-loading-dots span {
+    animation: none;
+    opacity: 0.7;
+  }
+
+  .app-loader-enter-active,
+  .app-loader-leave-active {
+    transition: none;
+  }
 }
 
 .topbar {

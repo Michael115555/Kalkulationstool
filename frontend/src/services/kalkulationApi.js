@@ -1,9 +1,42 @@
 const DEFAULT_API_BASE_URL = 'http://localhost:3001'
 
+const responseCache = new Map()
+const pendingRequests = new Map()
+
 export const createKalkulationApi = (
   baseUrl = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL
 ) => {
+  const getCacheKey = (path, method = 'GET') => `${baseUrl} ${method} ${path}`
+
+  const clearCache = (paths) => {
+    paths.forEach((path) => {
+      responseCache.delete(getCacheKey(path))
+      pendingRequests.delete(getCacheKey(path))
+    })
+  }
+
+  const clearCustomerCache = () => {
+    clearCache(['/api/kunden', '/api/projekte', '/api/konfigurationen'])
+  }
+
+  const clearProjectCache = () => {
+    clearCache(['/api/projekte', '/api/konfigurationen'])
+  }
+
   const requestJson = async (path, options = {}) => {
+    const method = (options.method ?? 'GET').toUpperCase()
+    const cacheKey = getCacheKey(path, method)
+
+    if (method === 'GET') {
+      if (responseCache.has(cacheKey)) {
+        return responseCache.get(cacheKey)
+      }
+
+      if (pendingRequests.has(cacheKey)) {
+        return pendingRequests.get(cacheKey)
+      }
+    }
+
     const response = await fetch(`${baseUrl}${path}`, {
       headers: {
         'Content-Type': 'application/json',
@@ -21,42 +54,97 @@ export const createKalkulationApi = (
       return null
     }
 
-    return response.json()
+    const payload = await response.json()
+
+    if (method === 'GET') {
+      responseCache.set(cacheKey, payload)
+    }
+
+    return payload
   }
 
+  const cachedRequestJson = (path, options = {}) => {
+    const method = (options.method ?? 'GET').toUpperCase()
+
+    if (method !== 'GET') {
+      return requestJson(path, options)
+    }
+
+    const cacheKey = getCacheKey(path, method)
+    const request = requestJson(path, options).finally(() => {
+      pendingRequests.delete(cacheKey)
+    })
+
+    pendingRequests.set(cacheKey, request)
+
+    return request
+  }
+
+  const prefetchPaths = (paths) =>
+    Promise.allSettled(paths.map((path) => cachedRequestJson(path)))
+
   return {
-    getKatalog: () => requestJson('/api/katalog'),
-    getKunden: () => requestJson('/api/kunden'),
-    getVerkaeufer: () => requestJson('/api/verkaeufer'),
+    getKatalog: () => cachedRequestJson('/api/katalog'),
+    getKunden: () => cachedRequestJson('/api/kunden'),
+    getVerkaeufer: () => cachedRequestJson('/api/verkaeufer'),
     createKunde: (payload) =>
       requestJson('/api/kunden', {
         method: 'POST',
         body: JSON.stringify(payload)
+      }).then((kunde) => {
+        clearCustomerCache()
+        return kunde
       }),
     updateKunde: (id, payload) =>
       requestJson(`/api/kunden/${id}`, {
         method: 'PUT',
         body: JSON.stringify(payload)
+      }).then((kunde) => {
+        clearCustomerCache()
+        return kunde
       }),
     deleteKunde: (id) =>
       requestJson(`/api/kunden/${id}`, {
         method: 'DELETE'
+      }).then((result) => {
+        clearCustomerCache()
+        return result
       }),
-    getKonfigurationen: () => requestJson('/api/konfigurationen'),
-    getProjekte: () => requestJson('/api/projekte'),
+    getKonfigurationen: () => cachedRequestJson('/api/konfigurationen'),
+    getProjekte: () => cachedRequestJson('/api/projekte'),
     createKonfiguration: (payload) =>
       requestJson('/api/konfigurationen', {
         method: 'POST',
         body: JSON.stringify(payload)
+      }).then((konfiguration) => {
+        clearProjectCache()
+        return konfiguration
       }),
     updateKonfiguration: (id, payload) =>
       requestJson(`/api/konfigurationen/${id}`, {
         method: 'PUT',
         body: JSON.stringify(payload)
+      }).then((konfiguration) => {
+        clearProjectCache()
+        return konfiguration
       }),
     deleteKonfiguration: (id) =>
       requestJson(`/api/konfigurationen/${id}`, {
         method: 'DELETE'
-      })
+      }).then((result) => {
+        clearProjectCache()
+        return result
+      }),
+    prefetchRouteData: (routeName) => {
+      if (routeName === 'stammdaten') {
+        return prefetchPaths(['/api/kunden', '/api/verkaeufer'])
+      }
+
+      if (routeName === 'projekte') {
+        return prefetchPaths(['/api/projekte', '/api/kunden', '/api/verkaeufer'])
+      }
+
+      return prefetchPaths(['/api/katalog', '/api/kunden', '/api/konfigurationen'])
+    }
   }
 }

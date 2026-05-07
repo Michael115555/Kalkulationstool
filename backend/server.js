@@ -189,6 +189,14 @@ const getKatalog = async () => {
   return katalog
 }
 
+const getHealth = async () => {
+  await prisma.$queryRaw`SELECT 1`
+
+  return {
+    ok: true
+  }
+}
+
 const serializeKunde = (kunde) => ({
   id: kunde.id,
   firmenname: kunde.firmenname,
@@ -424,6 +432,11 @@ const handleRequest = async (request, response) => {
   }
 
   try {
+    if (request.method === 'GET' && url.pathname === '/api/health') {
+      sendJson(response, 200, await getHealth())
+      return
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/katalog') {
       sendJson(response, 200, await getKatalog())
       return

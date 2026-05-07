@@ -7,14 +7,14 @@
             <h4 class="customers-heading mb-0">Kunden</h4>
           </div>
 
-          <div v-if="isLoadingCustomers" class="alert alert-info mb-3">
+          <div v-if="isLoadingCustomers && !hasLoadedCustomers" class="alert alert-info mb-3">
             Kunden werden aus der Datenbank geladen...
           </div>
           <div v-if="customerError" class="alert alert-danger mb-3">
             {{ customerError }}
           </div>
 
-          <div class="table-responsive customers-table-responsive">
+          <div v-if="hasLoadedCustomers || customers.length" class="table-responsive customers-table-responsive">
             <table class="table align-middle mb-0 table-bordered customers-table">
               <thead>
                 <tr>
@@ -236,6 +236,7 @@ import {
 } from '../utils/selectedCustomer'
 
 const api = createKalkulationApi()
+const LOADING_INDICATOR_DELAY = 140
 
 const contactTypes = [
   'Telefon',
@@ -254,10 +255,12 @@ const deliveryTypes = [
 const customers = ref([])
 const salespeople = ref([])
 const isLoadingCustomers = ref(false)
+const hasLoadedCustomers = ref(false)
 const customerError = ref('')
 const customerToDelete = ref(null)
 const isDeletingCustomer = ref(false)
 const activeCustomerId = ref(getRememberedSelectedCustomerId())
+let loadingIndicatorTimer = null
 const autoSaveTimers = new Map()
 const AUTO_SAVE_DELAY = 550
 let isCustomerViewMounted = false
@@ -573,7 +576,12 @@ function removeDraftCustomer(customer) {
 }
 
 async function loadCustomers() {
-  isLoadingCustomers.value = true
+  window.clearTimeout(loadingIndicatorTimer)
+  loadingIndicatorTimer = window.setTimeout(() => {
+    if (!hasLoadedCustomers.value) {
+      isLoadingCustomers.value = true
+    }
+  }, LOADING_INDICATOR_DELAY)
   customerError.value = ''
 
   try {
@@ -584,6 +592,7 @@ async function loadCustomers() {
 
     customers.value = loadedCustomers.map(mapApiCustomer)
     salespeople.value = loadedSalespeople
+    hasLoadedCustomers.value = true
 
     if (!customers.value.length) {
       customers.value.push(createDraftCustomer())
@@ -591,7 +600,9 @@ async function loadCustomers() {
   } catch (error) {
     customerError.value = `Kunden konnten nicht geladen werden: ${error.message}`
     customers.value = [createDraftCustomer()]
+    hasLoadedCustomers.value = true
   } finally {
+    window.clearTimeout(loadingIndicatorTimer)
     isLoadingCustomers.value = false
   }
 }
@@ -604,6 +615,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   isCustomerViewMounted = false
 
+  window.clearTimeout(loadingIndicatorTimer)
   autoSaveTimers.forEach((timer) => window.clearTimeout(timer))
   autoSaveTimers.clear()
 
@@ -617,6 +629,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .customer-page-card-body {
+  min-height: 13rem;
   padding: 0 1rem 1.5rem;
 }
 
