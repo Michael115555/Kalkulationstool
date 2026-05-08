@@ -65,6 +65,8 @@ const {
     <div class="col-12">
       <div class="card border-0">
         <div class="card-body calculation-page-card-body">
+          <h1 class="visually-hidden">Kalkulation</h1>
+
           <div v-if="isCatalogLoading" class="alert alert-info mt-3 mb-0">
             Daten werden aus der Datenbank geladen...
           </div>

@@ -69,7 +69,7 @@ onMounted(async () => {
 
 <template>
   <div class="app-shell min-vh-100">
-    <nav class="topbar navbar navbar-expand-lg">
+    <nav class="topbar navbar navbar-expand-lg" aria-label="Hauptnavigation">
       <div class="container-fluid topbar-container px-3 px-lg-4">
         <RouterLink class="navbar-brand app-brand mb-0" to="/">
           Kalkulationstool
@@ -118,7 +118,7 @@ onMounted(async () => {
       </div>
     </nav>
 
-    <main class="container-fluid app-content">
+    <main class="container-fluid app-content" aria-label="Hauptinhalt">
       <RouterView v-slot="{ Component }">
         <Transition name="app-content-fade">
           <component :is="Component" v-if="isContentReady" />

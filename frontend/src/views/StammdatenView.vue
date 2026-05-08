@@ -4,7 +4,7 @@
       <div class="card shadow-sm border-0">
         <div class="card-body customer-page-card-body">
           <div class="customer-toolbar">
-            <h4 class="customers-heading mb-0">Kunden</h4>
+            <h1 class="customers-heading mb-0">Kunden</h1>
           </div>
 
           <div v-if="isLoadingCustomers && !hasLoadedCustomers" class="alert alert-info mb-3">
@@ -209,9 +209,9 @@
         aria-label="Kunde löschen?"
       >
         <div class="confirm-delete-content">
-          <h5 class="confirm-delete-title">
+          <h2 class="confirm-delete-title">
             Kunde löschen?
-          </h5>
+          </h2>
 
           <p class="confirm-delete-text">
             Möchtest du „{{ customerToDelete.name || 'Ohne Kundennamen' }}“ wirklich löschen?

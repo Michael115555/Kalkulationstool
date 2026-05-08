@@ -188,7 +188,7 @@ onBeforeUnmount(() => {
       <div class="card shadow-sm border-0">
         <div class="card-body projekte-page-card-body">
           <div class="projekte-toolbar">
-            <h4 class="projekte-heading mb-0">Projekte</h4>
+            <h1 class="projekte-heading mb-0">Projekte</h1>
           </div>
 
           <div v-if="isLoading && !hasLoadedProjekte" class="alert alert-info mt-3 mb-0">
@@ -313,9 +313,9 @@ onBeforeUnmount(() => {
         aria-label="Projekt löschen?"
       >
         <div class="confirm-delete-content">
-          <h5 class="confirm-delete-title">
+          <h2 class="confirm-delete-title">
             Projekt löschen?
-          </h5>
+          </h2>
 
           <p class="confirm-delete-text">
             Möchtest du „{{ getProjektName(projektToDelete) }}“ wirklich löschen?

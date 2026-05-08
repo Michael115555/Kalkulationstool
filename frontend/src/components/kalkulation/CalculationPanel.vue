@@ -96,7 +96,7 @@ const selectedLieferungOption = computed({
   <div class="calculation-panel">
     <div class="calculation-layout">
       <div class="calculation-card calculation-card-main">
-        <h4 class="positions-heading calculation-card-heading">Kalkulation</h4>
+        <h2 class="positions-heading calculation-card-heading">Kalkulation</h2>
 
         <div class="calculation-form">
           <div class="calculation-form-row price-comparison-row">
@@ -204,7 +204,7 @@ const selectedLieferungOption = computed({
       </div>
 
       <div class="calculation-card rent-section">
-        <h4 class="positions-heading calculation-card-heading">Mietoptionen</h4>
+        <h2 class="positions-heading calculation-card-heading">Mietoptionen</h2>
 
         <div class="rent-options">
           <div

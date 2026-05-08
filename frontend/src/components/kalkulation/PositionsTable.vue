@@ -93,7 +93,7 @@ const normalizeManualEinkaufspreis = (position) => {
 
 <template>
   <div class="position-toolbar">
-    <h4 class="positions-heading mb-0">Positionen</h4>
+    <h2 class="positions-heading mb-0">Positionen</h2>
   </div>
 
   <div class="table-responsive">
