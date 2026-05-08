@@ -762,7 +762,7 @@ onBeforeUnmount(() => {
 
 .customers-table {
   width: 100%;
-  min-width: 88rem;
+  min-width: 84rem;
   margin-bottom: 0;
   border-style: hidden;
   table-layout: fixed;
@@ -811,17 +811,17 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(3),
 .customers-table td:nth-child(3) {
-  width: 18%;
+  width: 18.5%;
 }
 
 .customers-table th:nth-child(4),
 .customers-table td:nth-child(4) {
-  width: 15%;
+  width: 12.5%;
 }
 
 .customers-table th:nth-child(5),
 .customers-table td:nth-child(5) {
-  width: 11%;
+  width: 11.5%;
 }
 
 .customers-table th:nth-child(6),
@@ -831,7 +831,7 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(7),
 .customers-table td:nth-child(7) {
-  width: 14%;
+  width: 15%;
 }
 
 .customers-table th:nth-child(8),
