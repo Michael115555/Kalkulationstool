@@ -816,7 +816,7 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(4),
 .customers-table td:nth-child(4) {
-  width: 12.5%;
+  width: 14.5%;
 }
 
 .customers-table th:nth-child(5),
@@ -826,12 +826,12 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(6),
 .customers-table td:nth-child(6) {
-  width: 10.5%;
+  width: 10%;
 }
 
 .customers-table th:nth-child(7),
 .customers-table td:nth-child(7) {
-  width: 15%;
+  width: 13.5%;
 }
 
 .customers-table th:nth-child(8),
@@ -874,6 +874,13 @@ onBeforeUnmount(() => {
 
 .phone-control-field {
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.contact-control-field.is-invalid {
+  padding-right: 1.55rem;
+  background-position: right 0.4rem center;
+  background-size: 0.85rem 0.85rem;
 }
 
 .contact-control-field::-webkit-contacts-auto-fill-button,
