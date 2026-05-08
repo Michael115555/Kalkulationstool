@@ -375,7 +375,7 @@ onBeforeUnmount(() => {
 
 .projekte-table {
   width: 100%;
-  min-width: 0;
+  min-width: 72rem;
   margin-bottom: 0;
   border-style: hidden;
   table-layout: fixed;
@@ -410,12 +410,12 @@ onBeforeUnmount(() => {
 
 .projekte-table th:nth-child(1),
 .projekte-table td:nth-child(1) {
-  width: 36%;
+  width: 38%;
 }
 
 .projekte-table th:nth-child(2),
 .projekte-table td:nth-child(2) {
-  width: 20%;
+  width: 21%;
 }
 
 .projekte-table th:nth-child(3),
@@ -425,7 +425,7 @@ onBeforeUnmount(() => {
 
 .projekte-table th:nth-child(4),
 .projekte-table td:nth-child(4) {
-  width: 9%;
+  width: 7%;
 }
 
 .projekte-table th:nth-child(5),
@@ -435,9 +435,9 @@ onBeforeUnmount(() => {
 
 .projekte-table th:nth-child(6),
 .projekte-table td:nth-child(6) {
-  width: 6%;
-  min-width: 4.8rem;
-  max-width: 5.2rem;
+  width: 4.25rem;
+  min-width: 4.25rem;
+  max-width: 4.25rem;
   text-align: center;
 }
 

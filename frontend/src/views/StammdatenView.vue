@@ -57,20 +57,36 @@
                   <td>
                     <input
                       v-model="customer.email"
-                      class="form-control control-field"
+                      :class="['form-control', 'control-field', 'contact-control-field', { 'is-invalid': isCustomerEmailInvalid(customer) }]"
                       placeholder="E-Mail"
                       type="text"
+                      inputmode="email"
+                      autocomplete="new-password"
+                      autocorrect="off"
+                      autocapitalize="off"
+                      spellcheck="false"
                       aria-label="E-Mail"
+                      :aria-invalid="isCustomerEmailInvalid(customer) ? 'true' : 'false'"
+                      :title="isCustomerEmailInvalid(customer) ? EMAIL_FORMAT_ERROR : ''"
                       @input="scheduleCustomerAutoSave(customer)"
                     />
                   </td>
                   <td>
                     <input
                       v-model="customer.phone"
-                      class="form-control control-field"
-                      placeholder="Telefon"
+                      :class="['form-control', 'control-field', 'contact-control-field', 'phone-control-field', { 'is-invalid': isCustomerPhoneInvalid(customer) }]"
+                      type="text"
+                      inputmode="tel"
+                      autocomplete="new-password"
+                      autocorrect="off"
+                      autocapitalize="off"
+                      spellcheck="false"
+                      :placeholder="SWISS_PHONE_FORMAT"
                       aria-label="Telefon"
+                      :aria-invalid="isCustomerPhoneInvalid(customer) ? 'true' : 'false'"
+                      :title="isCustomerPhoneInvalid(customer) ? SWISS_PHONE_FORMAT_ERROR : ''"
                       @input="scheduleCustomerAutoSave(customer)"
+                      @blur="normalizeCustomerPhone(customer)"
                     />
                   </td>
                   <td>
@@ -127,7 +143,7 @@
                   <td class="text-center align-middle">
                     <div class="customer-action-buttons">
                       <span
-                        v-if="!customer.isSaving && !canSaveCustomer(customer)"
+                        v-if="!customer.isSaving && !isCustomerDirty(customer)"
                         class="customer-save-state is-saved"
                         :title="getCustomerSaveButtonTitle(customer)"
                         aria-label="Kunde gespeichert"
@@ -234,6 +250,15 @@ import {
   getRememberedSelectedCustomerId,
   rememberSelectedCustomerId
 } from '../utils/selectedCustomer'
+import {
+  EMAIL_FORMAT_ERROR,
+  getCustomerValidationError,
+  isEmailFormatValid,
+  isSwissPhoneFormatValid,
+  normalizeSwissPhone,
+  SWISS_PHONE_FORMAT,
+  SWISS_PHONE_FORMAT_ERROR
+} from '../utils/customerValidation'
 
 const api = createKalkulationApi()
 const LOADING_INDICATOR_DELAY = 140
@@ -343,7 +368,7 @@ function createCustomerPayload(customer) {
     firmenname: customer.name.trim(),
     kontaktname: customer.contactPerson.trim() || null,
     email: customer.email.trim() || null,
-    telefon: customer.phone.trim() || null,
+    telefon: normalizeSwissPhone(customer.phone) || null,
     kontaktart: customer.contactType || null,
     versandart: customer.deliveryType || null,
     verkaeuferId: customer.salespersonId || null
@@ -359,7 +384,25 @@ function isCustomerDirty(customer) {
 }
 
 function canSaveCustomer(customer) {
-  return Boolean(customer.name.trim() && isCustomerDirty(customer))
+  return Boolean(
+    customer.name.trim() &&
+      isCustomerDirty(customer) &&
+      !getCustomerValidationError(customer)
+  )
+}
+
+function isCustomerEmailInvalid(customer) {
+  return Boolean(String(customer.email ?? '').trim() && !isEmailFormatValid(customer.email))
+}
+
+function isCustomerPhoneInvalid(customer) {
+  return Boolean(String(customer.phone ?? '').trim() && !isSwissPhoneFormatValid(customer.phone))
+}
+
+function normalizeCustomerPhone(customer) {
+  if (isSwissPhoneFormatValid(customer.phone)) {
+    customer.phone = normalizeSwissPhone(customer.phone)
+  }
 }
 
 function addCustomer() {
@@ -388,6 +431,12 @@ function getCustomerSaveButtonTitle(customer) {
 
   if (customer.isNew && !customer.name.trim()) {
     return 'Kundenname eingeben, um zu speichern'
+  }
+
+  const validationError = getCustomerValidationError(customer)
+
+  if (validationError) {
+    return validationError
   }
 
   if (customer.hasPendingSave || isCustomerDirty(customer)) {
@@ -463,6 +512,10 @@ function saveCustomerNow(customer) {
   saveCustomer(customer)
 }
 
+function normalizeCustomerBeforeSave(customer) {
+  normalizeCustomerPhone(customer)
+}
+
 function createCustomerSnapshotFromApi(customer) {
   return {
     name: (customer.firmenname ?? '').trim(),
@@ -526,6 +579,7 @@ async function saveCustomer(customer) {
   customerError.value = ''
 
   try {
+    normalizeCustomerBeforeSave(customer)
     const savedInputSnapshot = createCustomerInputSnapshot(customer)
     const savedCustomer = customer.isNew
       ? await api.createKunde(createCustomerPayload(customer))
@@ -708,7 +762,7 @@ onBeforeUnmount(() => {
 
 .customers-table {
   width: 100%;
-  min-width: 0;
+  min-width: 88rem;
   margin-bottom: 0;
   border-style: hidden;
   table-layout: fixed;
@@ -752,39 +806,39 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(2),
 .customers-table td:nth-child(2) {
-  width: 13.5%;
+  width: 13%;
 }
 
 .customers-table th:nth-child(3),
 .customers-table td:nth-child(3) {
-  width: 17%;
+  width: 18%;
 }
 
 .customers-table th:nth-child(4),
 .customers-table td:nth-child(4) {
-  width: 12%;
+  width: 15%;
 }
 
 .customers-table th:nth-child(5),
 .customers-table td:nth-child(5) {
-  width: 12%;
+  width: 11%;
 }
 
 .customers-table th:nth-child(6),
 .customers-table td:nth-child(6) {
-  width: 12%;
+  width: 10.5%;
 }
 
 .customers-table th:nth-child(7),
 .customers-table td:nth-child(7) {
-  width: 12%;
+  width: 14%;
 }
 
 .customers-table th:nth-child(8),
 .customers-table td:nth-child(8) {
-  width: 7%;
+  width: 5rem;
   min-width: 5rem;
-  max-width: 5.4rem;
+  max-width: 5rem;
   text-align: center;
 }
 
@@ -813,11 +867,27 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.contact-control-field {
+  padding-right: 0.5rem;
+  padding-left: 0.5rem;
+}
+
+.phone-control-field {
+  font-variant-numeric: tabular-nums;
+}
+
+.contact-control-field::-webkit-contacts-auto-fill-button,
+.phone-control-field::-webkit-contacts-auto-fill-button {
+  display: none;
+  pointer-events: none;
+  visibility: hidden;
+}
+
 .customer-action-buttons {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
 .customer-row-button {
