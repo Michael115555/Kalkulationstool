@@ -156,6 +156,7 @@ const normalizeManualEinkaufspreis = (position) => {
               class="form-control control-field"
               :placeholder="getBezeichnungPlaceholder(position)"
               :title="position.bezeichnung"
+              maxlength="255"
               :disabled="!canEditPositions"
               aria-label="Bezeichnung"
             />

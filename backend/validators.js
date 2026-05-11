@@ -13,6 +13,13 @@ class ApiError extends Error {
   }
 }
 
+const MAX_CALCULATION_POSITIONS = 150
+
+const isPlainObject = (value) =>
+  value !== null &&
+  typeof value === 'object' &&
+  !Array.isArray(value)
+
 /**
  * Validiert, dass ein Wert ein gültiger Integer ist
  */
@@ -21,6 +28,20 @@ const validateInteger = (value, fieldName) => {
 
   if (!Number.isInteger(num) || num <= 0) {
     throw new ApiError(`${fieldName} muss eine positive Ganzzahl sein`, 400)
+  }
+
+  return num
+}
+
+const validateOptionalNonNegativeInteger = (value, fieldName) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const num = Number(value)
+
+  if (!Number.isInteger(num) || num < 0) {
+    throw new ApiError(`${fieldName} muss eine nicht negative Ganzzahl sein`, 400)
   }
 
   return num
@@ -69,6 +90,121 @@ const validateOptionalString = (value, fieldName, maxLength = 500) => {
   }
 
   return str || null
+}
+
+const validateSnapshotString = (value, fieldName, maxLength = 255) => {
+  const str = validateOptionalString(value, fieldName, maxLength)
+  return str ?? ''
+}
+
+const validateSnapshotAmount = (value, fieldName) => {
+  if (value === null || value === undefined || value === '') {
+    return value ?? null
+  }
+
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      throw new ApiError(`${fieldName} muss eine gültige Zahl sein`, 400)
+    }
+
+    return value
+  }
+
+  if (typeof value === 'string') {
+    return validateOptionalString(value, fieldName, 32) ?? ''
+  }
+
+  throw new ApiError(`${fieldName} muss eine gültige Zahl sein`, 400)
+}
+
+const validateCalculationPosition = (position, index) => {
+  if (!isPlainObject(position)) {
+    throw new ApiError(`Position ${index + 1} muss ein Objekt sein`, 400)
+  }
+
+  const zubehoerId = position.zubehoerId === null || position.zubehoerId === undefined
+    ? null
+    : validateInteger(position.zubehoerId, `Zubehör ID Position ${index + 1}`)
+
+  return {
+    id: validateOptionalInteger(position.id, `ID Position ${index + 1}`) ?? index + 1,
+    zubehoerId,
+    druckermodellId: validateOptionalInteger(
+      position.druckermodellId,
+      `Druckermodell ID Position ${index + 1}`
+    ),
+    druckerVarianteId: validateOptionalInteger(
+      position.druckerVarianteId,
+      `Drucker Variante ID Position ${index + 1}`
+    ),
+    istDrucker: Boolean(position.istDrucker),
+    zubehoer: validateSnapshotString(position.zubehoer, `Kategorie Position ${index + 1}`, 100),
+    bezeichnung: validateSnapshotString(
+      position.bezeichnung,
+      `Bezeichnung Position ${index + 1}`,
+      255
+    ),
+    menge: position.menge === null || position.menge === undefined || position.menge === ''
+      ? 1
+      : validateInteger(position.menge, `Menge Position ${index + 1}`),
+    vp: validateSnapshotAmount(position.vp, `Verkaufspreis Position ${index + 1}`),
+    einkaufsPreis: validateSnapshotAmount(
+      position.einkaufsPreis,
+      `Einkaufspreis Position ${index + 1}`
+    ),
+    epKategorie: validateSnapshotString(
+      position.epKategorie,
+      `EP Kategorie Position ${index + 1}`,
+      100
+    )
+  }
+}
+
+const validateCalculationSnapshot = (calculation) => {
+  if (!isPlainObject(calculation)) {
+    throw new ApiError('Calculation Daten müssen ein Objekt sein', 400)
+  }
+
+  if (
+    calculation.positions !== undefined &&
+    calculation.positions !== null &&
+    !Array.isArray(calculation.positions)
+  ) {
+    throw new ApiError('Positionen müssen eine Liste sein', 400)
+  }
+
+  const positions = Array.isArray(calculation.positions) ? calculation.positions : []
+
+  if (positions.length > MAX_CALCULATION_POSITIONS) {
+    throw new ApiError(
+      `Es sind maximal ${MAX_CALCULATION_POSITIONS} Positionen pro Kalkulation erlaubt`,
+      400
+    )
+  }
+
+  return {
+    kundeId: validateOptionalInteger(calculation.kundeId, 'Kunde ID'),
+    druckermarke: validateSnapshotString(calculation.druckermarke, 'Druckermarke', 255),
+    druckermodellId: validateOptionalInteger(calculation.druckermodellId, 'Druckermodell ID'),
+    druckerVarianteId: validateOptionalInteger(
+      calculation.druckerVarianteId,
+      'Drucker Variante ID'
+    ),
+    druckermodell: validateSnapshotString(calculation.druckermodell, 'Druckermodell', 255),
+    variante: validateSnapshotString(calculation.variante, 'Variante', 255),
+    eintauschRabattProzent: validateSnapshotAmount(
+      calculation.eintauschRabattProzent,
+      'Eintauschrabatt'
+    ),
+    lieferungOption: validateSnapshotString(calculation.lieferungOption, 'Lieferoption', 100),
+    lieferungBetrag: validateSnapshotAmount(calculation.lieferungBetrag, 'Lieferbetrag'),
+    restwertMonate:
+      validateOptionalNonNegativeInteger(calculation.restwertMonate, 'Restwert Monate') ?? 0,
+    restwertBetrag: validateSnapshotAmount(calculation.restwertBetrag, 'Restwert Betrag'),
+    positions: positions.map(validateCalculationPosition),
+    naechsteId: validateOptionalInteger(calculation.naechsteId, 'Nächste Position ID')
+      ?? Math.max(2, positions.length + 1)
+  }
 }
 
 /**
@@ -190,9 +326,7 @@ const validateKonfigurationPayload = (payload = {}) => {
     throw new ApiError('Total muss eine nicht negative Zahl sein', 400)
   }
 
-  if (!payload.calculation || typeof payload.calculation !== 'object') {
-    throw new ApiError('Calculation Daten sind erforderlich', 400)
-  }
+  const calculation = validateCalculationSnapshot(payload.calculation)
 
   return {
     name,
@@ -200,7 +334,7 @@ const validateKonfigurationPayload = (payload = {}) => {
     druckermodellId,
     druckerVarianteId,
     total,
-    calculation: payload.calculation
+    calculation
   }
 }
 
@@ -211,7 +345,9 @@ module.exports = {
   normalizeSwissPhone,
   validateSwissPhone,
   validateOptionalInteger,
+  validateOptionalNonNegativeInteger,
   validateOptionalString,
+  validateCalculationSnapshot,
   validateKundePayload,
   validateKonfigurationPayload,
   ApiError

@@ -41,6 +41,7 @@
                       v-model="customer.name"
                       class="form-control control-field"
                       placeholder="Kundenname"
+                      maxlength="255"
                       aria-label="Kundenname"
                       @input="scheduleCustomerAutoSave(customer)"
                     />
@@ -50,6 +51,7 @@
                       v-model="customer.contactPerson"
                       class="form-control control-field"
                       placeholder="Ansprechperson"
+                      maxlength="255"
                       aria-label="Ansprechperson"
                       @input="scheduleCustomerAutoSave(customer)"
                     />
@@ -61,6 +63,7 @@
                       placeholder="E-Mail"
                       type="text"
                       inputmode="email"
+                      maxlength="255"
                       autocomplete="new-password"
                       autocorrect="off"
                       autocapitalize="off"
@@ -77,6 +80,7 @@
                       :class="['form-control', 'control-field', 'contact-control-field', 'phone-control-field', { 'is-invalid': isCustomerPhoneInvalid(customer) }]"
                       type="text"
                       inputmode="tel"
+                      maxlength="32"
                       autocomplete="new-password"
                       autocorrect="off"
                       autocapitalize="off"
