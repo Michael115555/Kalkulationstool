@@ -32,3 +32,43 @@ export function calculateNetPrice({
       restwert
   )
 }
+
+export function calculateServiceFeePerMonth({
+  inklusiveKopienSW,
+  inklusiveKopienColor,
+  preisZusatzPrintSW,
+  preisZusatzPrintColor,
+  normalizeNumber
+}) {
+  const swBetrag =
+    normalizeNumber(inklusiveKopienSW) * normalizeNumber(preisZusatzPrintSW)
+  const colorBetrag =
+    normalizeNumber(inklusiveKopienColor) * normalizeNumber(preisZusatzPrintColor)
+
+  return (swBetrag + colorBetrag) / 100
+}
+
+export function calculateCombinedScanFee({
+  monatsmiete,
+  inklusiveKopienSW,
+  inklusiveKopienColor,
+  preisZusatzPrintSW,
+  preisZusatzPrintColor,
+  normalizeNumber
+}) {
+  const kopienSW = normalizeNumber(inklusiveKopienSW)
+  const kopienColor = normalizeNumber(inklusiveKopienColor)
+  const alleInklusiveKopien = kopienSW + kopienColor
+
+  if (alleInklusiveKopien <= 0) {
+    return 0
+  }
+
+  const gewichtetePrintkosten =
+    (kopienSW * normalizeNumber(preisZusatzPrintSW) +
+      kopienColor * normalizeNumber(preisZusatzPrintColor)) /
+    alleInklusiveKopien /
+    100
+
+  return normalizeNumber(monatsmiete) / alleInklusiveKopien + gewichtetePrintkosten
+}

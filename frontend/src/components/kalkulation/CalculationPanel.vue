@@ -18,6 +18,34 @@ const restwertBetrag = defineModel('restwertBetrag', {
   type: [String, Number],
   required: true
 })
+const inklusiveKopienSW = defineModel('inklusiveKopienSW', {
+  type: [String, Number],
+  required: true
+})
+const inklusiveKopienColor = defineModel('inklusiveKopienColor', {
+  type: [String, Number],
+  required: true
+})
+const preisZusatzPrintSW = defineModel('preisZusatzPrintSW', {
+  type: [String, Number],
+  required: true
+})
+const preisZusatzPrintColor = defineModel('preisZusatzPrintColor', {
+  type: [String, Number],
+  required: true
+})
+const flatratePauschalBetrag = defineModel('flatratePauschalBetrag', {
+  type: [String, Number],
+  required: true
+})
+const scanpauschaleMietMonate = defineModel('scanpauschaleMietMonate', {
+  type: [String, Number],
+  required: true
+})
+const scanpauschaleAuswahl = defineModel('scanpauschaleAuswahl', {
+  type: String,
+  required: true
+})
 
 const props = defineProps({
   verkaufspreis: {
@@ -44,6 +72,14 @@ const props = defineProps({
     type: Number,
     required: true
   },
+  servicePauschaleMonat: {
+    type: Number,
+    required: true
+  },
+  scanpauschaleBerechnet: {
+    type: Number,
+    required: true
+  },
   mietoptionen: {
     type: Array,
     required: true
@@ -65,6 +101,34 @@ const props = defineProps({
     required: true
   },
   normalizeRestwertBetrag: {
+    type: Function,
+    required: true
+  },
+  normalizeInklusiveKopienSW: {
+    type: Function,
+    required: true
+  },
+  normalizeInklusiveKopienColor: {
+    type: Function,
+    required: true
+  },
+  normalizePreisZusatzPrintSW: {
+    type: Function,
+    required: true
+  },
+  normalizePreisZusatzPrintColor: {
+    type: Function,
+    required: true
+  },
+  normalizeFlatratePauschalBetrag: {
+    type: Function,
+    required: true
+  },
+  normalizeScanpauschaleMietMonate: {
+    type: Function,
+    required: true
+  },
+  normalizeScanpauschaleAuswahl: {
     type: Function,
     required: true
   },
@@ -200,6 +264,7 @@ const selectedLieferungOption = computed({
               aria-label="Nettopreis"
             />
           </div>
+
         </div>
       </div>
 
@@ -222,6 +287,162 @@ const selectedLieferungOption = computed({
             </span>
             <span class="rent-basis">Basis: CHF {{ formatAmount(mietbasis) }}</span>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="calculation-card service-conditions-card">
+      <div class="service-conditions">
+        <div class="conditions-grid">
+          <section class="conditions-group">
+            <h3 class="conditions-group-title">Servicekonditionen</h3>
+
+            <div class="conditions-table">
+              <div class="conditions-row conditions-header-row">
+                <div></div>
+                <div>Servicepauschale/Mt.</div>
+                <div>inkl. Kopien s/w</div>
+                <div>inkl. Kopien color</div>
+              </div>
+
+              <div class="conditions-row">
+                <div class="conditions-label">Servicekonditionen</div>
+                <CurrencyReadonlyField
+                  :amount="servicePauschaleMonat"
+                  :format-amount="formatAmount"
+                  aria-label="Servicepauschale pro Monat"
+                />
+                <input
+                  v-model.number="inklusiveKopienSW"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputmode="numeric"
+                  class="form-control text-end service-number-input"
+                  aria-label="Inklusive Kopien schwarz-weiss"
+                  @change="normalizeInklusiveKopienSW"
+                  @blur="normalizeInklusiveKopienSW"
+                />
+                <input
+                  v-model.number="inklusiveKopienColor"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputmode="numeric"
+                  class="form-control text-end service-number-input"
+                  aria-label="Inklusive Kopien color"
+                  @change="normalizeInklusiveKopienColor"
+                  @blur="normalizeInklusiveKopienColor"
+                />
+              </div>
+
+              <div class="conditions-row">
+                <div class="conditions-label">jeder weitere Print</div>
+                <div></div>
+                <div class="input-group rappen-group">
+                  <span class="input-group-text">Rp.</span>
+                  <input
+                    v-model="preisZusatzPrintSW"
+                    type="text"
+                    inputmode="decimal"
+                    class="form-control text-end"
+                    aria-label="Preis pro weiteren Print schwarz-weiss in Rappen"
+                    @blur="normalizePreisZusatzPrintSW"
+                  />
+                </div>
+                <div class="input-group rappen-group">
+                  <span class="input-group-text">Rp.</span>
+                  <input
+                    v-model="preisZusatzPrintColor"
+                    type="text"
+                    inputmode="decimal"
+                    class="form-control text-end"
+                    aria-label="Preis pro weiteren Print color in Rappen"
+                    @blur="normalizePreisZusatzPrintColor"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="conditions-group">
+            <h3 class="conditions-group-title">Variante Flatrate</h3>
+
+            <div class="conditions-table">
+              <div class="conditions-row conditions-header-row">
+                <div></div>
+                <div></div>
+                <div>Servicepauschale</div>
+                <div>Betrag</div>
+              </div>
+
+              <div class="conditions-row">
+                <div class="conditions-label">
+                  Flatrate Vertrag über den gesamten Gerätepark
+                </div>
+                <div></div>
+                <div class="conditions-value-label">pauschal</div>
+                <div class="input-group currency-group">
+                  <span class="input-group-text">CHF</span>
+                  <input
+                    v-model="flatratePauschalBetrag"
+                    type="text"
+                    inputmode="decimal"
+                    class="form-control amount-input"
+                    aria-label="Pauschalbetrag Flatrate"
+                    @blur="normalizeFlatratePauschalBetrag"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="conditions-group">
+            <h3 class="conditions-group-title">Scanpauschale</h3>
+
+            <div class="conditions-table">
+              <div class="conditions-row conditions-header-row">
+                <div></div>
+                <div>Monatsmiete</div>
+                <div>Berechnet</div>
+                <div>Betrag</div>
+              </div>
+
+              <div class="conditions-row">
+                <div class="conditions-label">
+                  Pauschalbetrag für Scanningaufträge
+                </div>
+                <select
+                  v-model.number="scanpauschaleMietMonate"
+                  class="form-select control-field"
+                  aria-label="Mietlaufzeit für Scanpauschale"
+                  @change="normalizeScanpauschaleMietMonate"
+                >
+                  <option
+                    v-for="monate in mietoptionen"
+                    :key="monate"
+                    :value="monate"
+                  >
+                    Miete {{ monate }} Mt. / CHF {{ formatAmount(getMietbetrag(monate)) }}
+                  </option>
+                </select>
+                <CurrencyReadonlyField
+                  :amount="scanpauschaleBerechnet"
+                  :format-amount="formatAmount"
+                  aria-label="Berechnete Scanpauschale"
+                />
+                <select
+                  v-model="scanpauschaleAuswahl"
+                  class="form-select control-field scan-fee-select"
+                  aria-label="Scanpauschale Betrag"
+                  @change="normalizeScanpauschaleAuswahl"
+                >
+                  <option value="15">Fr. 15.00</option>
+                  <option value="inkl">inkl.</option>
+                </select>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </div>

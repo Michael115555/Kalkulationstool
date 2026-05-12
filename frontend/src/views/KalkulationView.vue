@@ -53,6 +53,22 @@ const {
   normalizeRestwertMonate,
   restwertBetrag,
   normalizeRestwertBetrag,
+  inklusiveKopienSW,
+  normalizeInklusiveKopienSW,
+  inklusiveKopienColor,
+  normalizeInklusiveKopienColor,
+  preisZusatzPrintSW,
+  normalizePreisZusatzPrintSW,
+  preisZusatzPrintColor,
+  normalizePreisZusatzPrintColor,
+  flatratePauschalBetrag,
+  normalizeFlatratePauschalBetrag,
+  servicePauschaleMonat,
+  scanpauschaleMietMonate,
+  normalizeScanpauschaleMietMonate,
+  scanpauschaleAuswahl,
+  normalizeScanpauschaleAuswahl,
+  scanpauschaleBerechnet,
   nettopreis,
   mietoptionen,
   getMietbetrag,
@@ -114,18 +130,34 @@ const {
               v-model:lieferung-option="lieferungOption"
               v-model:restwert-monate="restwertMonate"
               v-model:restwert-betrag="restwertBetrag"
+              v-model:inklusive-kopien-s-w="inklusiveKopienSW"
+              v-model:inklusive-kopien-color="inklusiveKopienColor"
+              v-model:preis-zusatz-print-s-w="preisZusatzPrintSW"
+              v-model:preis-zusatz-print-color="preisZusatzPrintColor"
+              v-model:flatrate-pauschal-betrag="flatratePauschalBetrag"
+              v-model:scanpauschale-miet-monate="scanpauschaleMietMonate"
+              v-model:scanpauschale-auswahl="scanpauschaleAuswahl"
               :verkaufspreis="verkaufspreis"
               :einkaufspreis="einkaufspreis"
               :eintausch-rabatt-betrag="eintauschRabattBetrag"
               :lieferung-optionen="lieferungOptionen"
               :lieferung-betrag="lieferungBetrag"
               :nettopreis="nettopreis"
+              :service-pauschale-monat="servicePauschaleMonat"
+              :scanpauschale-berechnet="scanpauschaleBerechnet"
               :mietoptionen="mietoptionen"
               :mietbasis="mietbasis"
               :normalize-percent="normalizePercent"
               :update-lieferung-option="updateLieferungOption"
               :normalize-restwert-monate="normalizeRestwertMonate"
               :normalize-restwert-betrag="normalizeRestwertBetrag"
+              :normalize-inklusive-kopien-s-w="normalizeInklusiveKopienSW"
+              :normalize-inklusive-kopien-color="normalizeInklusiveKopienColor"
+              :normalize-preis-zusatz-print-s-w="normalizePreisZusatzPrintSW"
+              :normalize-preis-zusatz-print-color="normalizePreisZusatzPrintColor"
+              :normalize-flatrate-pauschal-betrag="normalizeFlatratePauschalBetrag"
+              :normalize-scanpauschale-miet-monate="normalizeScanpauschaleMietMonate"
+              :normalize-scanpauschale-auswahl="normalizeScanpauschaleAuswahl"
               :get-mietbetrag="getMietbetrag"
               :format-amount="formatAmount"
             />

@@ -201,6 +201,32 @@ const validateCalculationSnapshot = (calculation) => {
     restwertMonate:
       validateOptionalNonNegativeInteger(calculation.restwertMonate, 'Restwert Monate') ?? 0,
     restwertBetrag: validateSnapshotAmount(calculation.restwertBetrag, 'Restwert Betrag'),
+    inklusiveKopienSW:
+      validateOptionalNonNegativeInteger(calculation.inklusiveKopienSW, 'Inklusive Kopien s/w') ?? 0,
+    inklusiveKopienColor:
+      validateOptionalNonNegativeInteger(calculation.inklusiveKopienColor, 'Inklusive Kopien color') ?? 0,
+    preisZusatzPrintSW: validateSnapshotAmount(
+      calculation.preisZusatzPrintSW,
+      'Preis Zusatzprint s/w'
+    ),
+    preisZusatzPrintColor: validateSnapshotAmount(
+      calculation.preisZusatzPrintColor,
+      'Preis Zusatzprint color'
+    ),
+    flatratePauschalBetrag: validateSnapshotAmount(
+      calculation.flatratePauschalBetrag,
+      'Flatrate Pauschalbetrag'
+    ),
+    scanpauschaleMietMonate:
+      validateOptionalNonNegativeInteger(
+        calculation.scanpauschaleMietMonate,
+        'Scanpauschale Mietmonate'
+      ) ?? 0,
+    scanpauschaleAuswahl: validateSnapshotString(
+      calculation.scanpauschaleAuswahl,
+      'Scanpauschale Auswahl',
+      32
+    ),
     positions: positions.map(validateCalculationPosition),
     naechsteId: validateOptionalInteger(calculation.naechsteId, 'Nächste Position ID')
       ?? Math.max(2, positions.length + 1)

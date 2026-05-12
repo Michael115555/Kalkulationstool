@@ -524,6 +524,156 @@
   box-shadow: none;
 }
 
+.service-conditions {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.service-conditions-card {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 1.15rem;
+}
+
+.conditions-grid {
+  display: grid;
+  gap: 0;
+}
+
+.conditions-group {
+  min-width: 0;
+}
+
+.conditions-group:not(:last-child) {
+  margin-bottom: 1.85rem;
+}
+
+.conditions-group + .conditions-group {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.conditions-group-title {
+  display: flex;
+  align-items: center;
+  min-height: 2.2rem;
+  margin: 0 0 0.65rem;
+  color: var(--kt-color-text-primary);
+  font-size: var(--kt-font-size-lg);
+  font-weight: 600;
+  line-height: 2.2rem;
+  letter-spacing: 0;
+}
+
+.conditions-table {
+  display: grid;
+  gap: 0;
+}
+
+.conditions-row {
+  display: grid;
+  grid-template-columns: minmax(24rem, 1.35fr) repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 1.1rem;
+  min-height: 3.05rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--kt-color-border-light);
+  background: transparent;
+}
+
+.conditions-table .conditions-row:last-child {
+  border-bottom: 1px solid var(--kt-color-border-light);
+}
+
+.conditions-header-row {
+  min-height: 2rem;
+  padding-top: 0;
+  background: transparent;
+  color: var(--kt-color-text-primary);
+  font-size: var(--kt-font-size-md);
+  font-weight: 600;
+}
+
+.conditions-row > * {
+  min-width: 0;
+}
+
+.conditions-row > :not(.form-control):not(.form-select):not(.input-group):not(.currency-group) {
+  padding: 0;
+}
+
+.conditions-row > .form-control,
+.conditions-row > .form-select,
+.conditions-row > .currency-group,
+.conditions-row > .input-group {
+  width: 100%;
+  margin: 0;
+}
+
+.conditions-label,
+.conditions-value-label {
+  min-width: 0;
+  color: var(--kt-color-text-primary);
+  font-size: var(--kt-font-size-md);
+  font-weight: 500;
+  line-height: var(--kt-line-height-tight);
+}
+
+.conditions-value-label {
+  color: var(--kt-color-text-secondary);
+  text-align: right;
+}
+
+.conditions-row .form-control,
+.conditions-row .form-select,
+.conditions-row .currency-group,
+.conditions-row .input-group {
+  width: 100%;
+}
+
+.conditions-row .input-group {
+  flex-wrap: nowrap;
+}
+
+.conditions-row .input-group > .form-control {
+  width: 1%;
+  min-width: 0;
+}
+
+.conditions-row .form-control,
+.conditions-row .form-select,
+.conditions-row .amount-input {
+  min-height: 2.35rem;
+  font-size: var(--kt-font-size-md);
+}
+
+.conditions-row > .form-control,
+.conditions-row > .form-select,
+.conditions-row > .currency-group,
+.conditions-row > .input-group {
+  width: 100%;
+  margin: 0;
+}
+
+.rappen-group .form-control {
+  min-height: 2.35rem;
+  font-size: var(--kt-font-size-md);
+}
+
+.rappen-group .input-group-text {
+  min-width: 4.25rem;
+  justify-content: center;
+  color: var(--kt-color-text-secondary);
+  font-size: var(--kt-font-size-md);
+  background: var(--kt-color-bg-light);
+}
+
+.scan-fee-select {
+  min-height: 2.35rem;
+  font-size: var(--kt-font-size-md);
+}
+
 .calculated-price-input {
   font-weight: 600;
 }
@@ -645,6 +795,21 @@
   .calculation-form-row {
     grid-template-columns: 1fr;
     row-gap: 0.55rem;
+  }
+
+  .conditions-row {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+    min-height: 0;
+    padding: 0.75rem 0;
+  }
+
+  .conditions-header-row {
+    display: none;
+  }
+
+  .conditions-value-label {
+    text-align: left;
   }
 
   .kalkulation-view .net-row {

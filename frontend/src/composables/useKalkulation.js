@@ -1,8 +1,10 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { createKalkulationApi } from '../services/kalkulationApi'
 import {
+  calculateCombinedScanFee,
   calculateLineTotal,
   calculateNetPrice,
+  calculateServiceFeePerMonth,
   calculateSalesTotal
 } from '../utils/kalkulationMath'
 import { formatAmount, formatDecimal, normalizeNumber } from '../utils/numberFormat'
@@ -50,6 +52,13 @@ export const useKalkulation = () => {
   const lieferungBetrag = ref(formatAmount(0))
   const restwertMonate = ref(0)
   const restwertBetrag = ref(formatAmount(0))
+  const inklusiveKopienSW = ref(0)
+  const inklusiveKopienColor = ref(0)
+  const preisZusatzPrintSW = ref('0.00')
+  const preisZusatzPrintColor = ref('0.00')
+  const flatratePauschalBetrag = ref(formatAmount(0))
+  const scanpauschaleMietMonate = ref('')
+  const scanpauschaleAuswahl = ref('inkl')
   const positions = ref([])
 
   const selectedKunde = computed(() =>
@@ -241,6 +250,8 @@ export const useKalkulation = () => {
       .map(Number)
       .sort((a, b) => a - b)
   )
+
+  const getDefaultScanpauschaleMietMonate = () => mietoptionen.value[0] ?? ''
 
   const getDruckermodellByName = (name, herstellerName = druckermarke.value) => {
     const modelle = katalog.value.druckermodelle.filter((modell) => modell.name === name)
@@ -475,6 +486,13 @@ export const useKalkulation = () => {
       lieferungBetrag: lieferungBetrag.value,
       restwertMonate: restwertMonate.value,
       restwertBetrag: restwertBetrag.value,
+      inklusiveKopienSW: inklusiveKopienSW.value,
+      inklusiveKopienColor: inklusiveKopienColor.value,
+      preisZusatzPrintSW: preisZusatzPrintSW.value,
+      preisZusatzPrintColor: preisZusatzPrintColor.value,
+      flatratePauschalBetrag: flatratePauschalBetrag.value,
+      scanpauschaleMietMonate: scanpauschaleMietMonate.value,
+      scanpauschaleAuswahl: scanpauschaleAuswahl.value,
       positions: clonePositions(positions.value),
       naechsteId: naechsteId.value
     }
@@ -499,6 +517,13 @@ export const useKalkulation = () => {
       lieferungBetrag: formatAmount(getLieferungBetrag(option)),
       restwertMonate: 0,
       restwertBetrag: formatAmount(0),
+      inklusiveKopienSW: 0,
+      inklusiveKopienColor: 0,
+      preisZusatzPrintSW: '0.00',
+      preisZusatzPrintColor: '0.00',
+      flatratePauschalBetrag: formatAmount(0),
+      scanpauschaleMietMonate: getDefaultScanpauschaleMietMonate(),
+      scanpauschaleAuswahl: 'inkl',
       positions: createDefaultPositions(),
       naechsteId: 2
     }
@@ -513,6 +538,13 @@ export const useKalkulation = () => {
     lieferungBetrag.value = formatAmount(getLieferungBetrag(lieferungOption.value))
     restwertMonate.value = 0
     restwertBetrag.value = formatAmount(0)
+    inklusiveKopienSW.value = 0
+    inklusiveKopienColor.value = 0
+    preisZusatzPrintSW.value = '0.00'
+    preisZusatzPrintColor.value = '0.00'
+    flatratePauschalBetrag.value = formatAmount(0)
+    scanpauschaleMietMonate.value = getDefaultScanpauschaleMietMonate()
+    scanpauschaleAuswahl.value = 'inkl'
     positions.value = []
     naechsteId.value = 1
     isLoadingConfigurationVariant = false
@@ -562,6 +594,14 @@ export const useKalkulation = () => {
       lieferungBetrag: formatAmount(getLieferungBetrag(option)),
       restwertMonate: snapshot?.restwertMonate ?? 0,
       restwertBetrag: snapshot?.restwertBetrag ?? formatAmount(0),
+      inklusiveKopienSW: snapshot?.inklusiveKopienSW ?? 0,
+      inklusiveKopienColor: snapshot?.inklusiveKopienColor ?? 0,
+      preisZusatzPrintSW: snapshot?.preisZusatzPrintSW ?? '0.00',
+      preisZusatzPrintColor: snapshot?.preisZusatzPrintColor ?? '0.00',
+      flatratePauschalBetrag: snapshot?.flatratePauschalBetrag ?? formatAmount(0),
+      scanpauschaleMietMonate:
+        snapshot?.scanpauschaleMietMonate ?? getDefaultScanpauschaleMietMonate(),
+      scanpauschaleAuswahl: snapshot?.scanpauschaleAuswahl ?? 'inkl',
       positions: normalizedPositions,
       naechsteId:
         snapshot?.naechsteId ??
@@ -704,6 +744,13 @@ export const useKalkulation = () => {
     lieferungBetrag.value = snapshot.lieferungBetrag
     restwertMonate.value = snapshot.restwertMonate
     restwertBetrag.value = snapshot.restwertBetrag
+    inklusiveKopienSW.value = snapshot.inklusiveKopienSW
+    inklusiveKopienColor.value = snapshot.inklusiveKopienColor
+    preisZusatzPrintSW.value = snapshot.preisZusatzPrintSW
+    preisZusatzPrintColor.value = snapshot.preisZusatzPrintColor
+    flatratePauschalBetrag.value = snapshot.flatratePauschalBetrag
+    scanpauschaleMietMonate.value = snapshot.scanpauschaleMietMonate
+    scanpauschaleAuswahl.value = snapshot.scanpauschaleAuswahl
     positions.value = clonePositions(snapshot.positions)
     naechsteId.value = snapshot.naechsteId
     isLoadingConfigurationVariant = false
@@ -835,6 +882,46 @@ export const useKalkulation = () => {
     restwertMonate.value = Math.max(0, monate)
   }
 
+  const normalizeInklusiveKopienSW = () => {
+    const kopien = Math.trunc(normalizeNumber(inklusiveKopienSW.value))
+    inklusiveKopienSW.value = Math.max(0, kopien)
+  }
+
+  const normalizeInklusiveKopienColor = () => {
+    const kopien = Math.trunc(normalizeNumber(inklusiveKopienColor.value))
+    inklusiveKopienColor.value = Math.max(0, kopien)
+  }
+
+  const normalizePreisZusatzPrintSW = () => {
+    preisZusatzPrintSW.value = formatDecimal(
+      Math.max(0, normalizeNumber(preisZusatzPrintSW.value))
+    )
+  }
+
+  const normalizePreisZusatzPrintColor = () => {
+    preisZusatzPrintColor.value = formatDecimal(
+      Math.max(0, normalizeNumber(preisZusatzPrintColor.value))
+    )
+  }
+
+  const normalizeFlatratePauschalBetrag = () => {
+    flatratePauschalBetrag.value = formatAmount(
+      Math.max(0, normalizeNumber(flatratePauschalBetrag.value))
+    )
+  }
+
+  const normalizeScanpauschaleMietMonate = () => {
+    const monate = Math.trunc(normalizeNumber(scanpauschaleMietMonate.value))
+    scanpauschaleMietMonate.value = mietoptionen.value.includes(monate)
+      ? monate
+      : getDefaultScanpauschaleMietMonate()
+  }
+
+  const normalizeScanpauschaleAuswahl = () => {
+    scanpauschaleAuswahl.value =
+      scanpauschaleAuswahl.value === '15' ? '15' : 'inkl'
+  }
+
   const isEmptyPosition = (position) =>
     !position.zubehoer &&
     !position.bezeichnung &&
@@ -868,6 +955,16 @@ export const useKalkulation = () => {
     })
   )
 
+  const servicePauschaleMonat = computed(() =>
+    calculateServiceFeePerMonth({
+      inklusiveKopienSW: inklusiveKopienSW.value,
+      inklusiveKopienColor: inklusiveKopienColor.value,
+      preisZusatzPrintSW: preisZusatzPrintSW.value,
+      preisZusatzPrintColor: preisZusatzPrintColor.value,
+      normalizeNumber
+    })
+  )
+
   const mietbasis = computed(() => Math.max(0, nettopreis.value))
 
   const getMietbetrag = (monate) => {
@@ -879,6 +976,21 @@ export const useKalkulation = () => {
 
     return Math.round(mietbasis.value / mietansatz)
   }
+
+  const scanpauschaleMonatsmiete = computed(() =>
+    scanpauschaleMietMonate.value ? getMietbetrag(scanpauschaleMietMonate.value) : 0
+  )
+
+  const scanpauschaleBerechnet = computed(() =>
+    calculateCombinedScanFee({
+      monatsmiete: scanpauschaleMonatsmiete.value,
+      inklusiveKopienSW: inklusiveKopienSW.value,
+      inklusiveKopienColor: inklusiveKopienColor.value,
+      preisZusatzPrintSW: preisZusatzPrintSW.value,
+      preisZusatzPrintColor: preisZusatzPrintColor.value,
+      normalizeNumber
+    })
+  )
 
   const hasValidPosition = computed(() =>
     positions.value.some((position) => {
@@ -1526,6 +1638,13 @@ export const useKalkulation = () => {
       lieferungBetrag,
       restwertMonate,
       restwertBetrag,
+      inklusiveKopienSW,
+      inklusiveKopienColor,
+      preisZusatzPrintSW,
+      preisZusatzPrintColor,
+      flatratePauschalBetrag,
+      scanpauschaleMietMonate,
+      scanpauschaleAuswahl,
       positions,
       nettopreis
     ],
@@ -1616,6 +1735,22 @@ export const useKalkulation = () => {
     normalizeRestwertMonate,
     restwertBetrag,
     normalizeRestwertBetrag,
+    inklusiveKopienSW,
+    normalizeInklusiveKopienSW,
+    inklusiveKopienColor,
+    normalizeInklusiveKopienColor,
+    preisZusatzPrintSW,
+    normalizePreisZusatzPrintSW,
+    preisZusatzPrintColor,
+    normalizePreisZusatzPrintColor,
+    flatratePauschalBetrag,
+    normalizeFlatratePauschalBetrag,
+    servicePauschaleMonat,
+    scanpauschaleMietMonate,
+    normalizeScanpauschaleMietMonate,
+    scanpauschaleAuswahl,
+    normalizeScanpauschaleAuswahl,
+    scanpauschaleBerechnet,
     nettopreis,
     mietoptionen,
     getMietbetrag,

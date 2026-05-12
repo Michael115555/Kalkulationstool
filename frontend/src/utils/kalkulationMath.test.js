@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'vitest'
 import { formatAmount, normalizeNumber } from './numberFormat'
 import {
+  calculateCombinedScanFee,
   calculateLineTotal,
   calculateNetPrice,
+  calculateServiceFeePerMonth,
   calculateSalesTotal
 } from './kalkulationMath'
 
@@ -46,6 +48,44 @@ describe('kalkulationMath', () => {
       lieferungBetrag: 0,
       restwertMonate: 0,
       restwertBetrag: 0,
+      normalizeNumber
+    })
+
+    expect(result).toBe(0)
+  })
+
+  test('berechnet Servicepauschale pro Monat aus Kopien und Rappenpreisen', () => {
+    const result = calculateServiceFeePerMonth({
+      inklusiveKopienSW: "2’000",
+      inklusiveKopienColor: "4’000",
+      preisZusatzPrintSW: '5.00',
+      preisZusatzPrintColor: '4.00',
+      normalizeNumber
+    })
+
+    expect(result).toBe(260)
+  })
+
+  test('berechnet kombinierte Scanpauschale als gewichteten Mischwert', () => {
+    const result = calculateCombinedScanFee({
+      monatsmiete: 215,
+      inklusiveKopienSW: 1000,
+      inklusiveKopienColor: 1000,
+      preisZusatzPrintSW: '5.00',
+      preisZusatzPrintColor: '4.00',
+      normalizeNumber
+    })
+
+    expect(result).toBe(0.1525)
+  })
+
+  test('berechnet keine Scanpauschale ohne inkludierte Kopien', () => {
+    const result = calculateCombinedScanFee({
+      monatsmiete: 215,
+      inklusiveKopienSW: 0,
+      inklusiveKopienColor: 0,
+      preisZusatzPrintSW: '5.00',
+      preisZusatzPrintColor: '4.00',
       normalizeNumber
     })
 
