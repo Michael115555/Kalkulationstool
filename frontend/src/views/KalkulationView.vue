@@ -28,6 +28,7 @@ const {
   canEditPositions,
 
   positions,
+  konditionenA3Mfp,
   isEmptyPosition,
   updatePositionZubehoer,
   updatePositionProdukt,
@@ -69,6 +70,8 @@ const {
   scanpauschaleAuswahl,
   normalizeScanpauschaleAuswahl,
   scanpauschaleBerechnet,
+  recyclingGebuehrSwico,
+  npkAbschlussgebuehr,
   nettopreis,
   mietoptionen,
   getMietbetrag,
@@ -147,6 +150,9 @@ const {
               :scanpauschale-berechnet="scanpauschaleBerechnet"
               :mietoptionen="mietoptionen"
               :mietbasis="mietbasis"
+              :konditionen-a3-mfp="konditionenA3Mfp"
+              :recycling-gebuehr-swico="recyclingGebuehrSwico"
+              :npk-abschlussgebuehr="npkAbschlussgebuehr"
               :normalize-percent="normalizePercent"
               :update-lieferung-option="updateLieferungOption"
               :normalize-restwert-monate="normalizeRestwertMonate"

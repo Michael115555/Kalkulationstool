@@ -14,6 +14,7 @@ class ApiError extends Error {
 }
 
 const MAX_CALCULATION_POSITIONS = 150
+const MAX_CALCULATION_KONDITIONEN = 50
 
 const isPlainObject = (value) =>
   value !== null &&
@@ -160,6 +161,25 @@ const validateCalculationPosition = (position, index) => {
   }
 }
 
+const validateCalculationKondition = (kondition, index) => {
+  if (!isPlainObject(kondition)) {
+    throw new ApiError(`Kondition ${index + 1} muss ein Objekt sein`, 400)
+  }
+
+  const auswahl = validateSnapshotString(kondition.auswahl, `Auswahl Kondition ${index + 1}`, 32)
+  const normalizedAuswahl = auswahl || 'keine'
+
+  return {
+    key: validateSnapshotString(kondition.key, `Schlüssel Kondition ${index + 1}`, 100),
+    label: validateSnapshotString(kondition.label, `Bezeichnung Kondition ${index + 1}`, 255),
+    einheit: validateSnapshotString(kondition.einheit, `Einheit Kondition ${index + 1}`, 100),
+    betragText: validateSnapshotString(kondition.betragText, `Betrag Kondition ${index + 1}`, 32),
+    auswahl: normalizedAuswahl,
+    checked: Boolean(kondition.checked),
+    manuell: Boolean(kondition.manuell)
+  }
+}
+
 const validateCalculationSnapshot = (calculation) => {
   if (!isPlainObject(calculation)) {
     throw new ApiError('Calculation Daten müssen ein Objekt sein', 400)
@@ -173,11 +193,29 @@ const validateCalculationSnapshot = (calculation) => {
     throw new ApiError('Positionen müssen eine Liste sein', 400)
   }
 
+  if (
+    calculation.konditionenA3Mfp !== undefined &&
+    calculation.konditionenA3Mfp !== null &&
+    !Array.isArray(calculation.konditionenA3Mfp)
+  ) {
+    throw new ApiError('Konditionen A3 MFP müssen eine Liste sein', 400)
+  }
+
   const positions = Array.isArray(calculation.positions) ? calculation.positions : []
+  const konditionenA3Mfp = Array.isArray(calculation.konditionenA3Mfp)
+    ? calculation.konditionenA3Mfp
+    : []
 
   if (positions.length > MAX_CALCULATION_POSITIONS) {
     throw new ApiError(
       `Es sind maximal ${MAX_CALCULATION_POSITIONS} Positionen pro Kalkulation erlaubt`,
+      400
+    )
+  }
+
+  if (konditionenA3Mfp.length > MAX_CALCULATION_KONDITIONEN) {
+    throw new ApiError(
+      `Es sind maximal ${MAX_CALCULATION_KONDITIONEN} Konditionen pro Kalkulation erlaubt`,
       400
     )
   }
@@ -228,6 +266,12 @@ const validateCalculationSnapshot = (calculation) => {
       32
     ),
     positions: positions.map(validateCalculationPosition),
+    konditionenA3Mfp: konditionenA3Mfp.map(validateCalculationKondition),
+    konditionenA3MfpVersion:
+      validateOptionalNonNegativeInteger(
+        calculation.konditionenA3MfpVersion,
+        'Konditionen A3 MFP Version'
+      ) ?? 0,
     naechsteId: validateOptionalInteger(calculation.naechsteId, 'Nächste Position ID')
       ?? Math.max(2, positions.length + 1)
   }

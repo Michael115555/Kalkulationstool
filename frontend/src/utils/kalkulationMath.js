@@ -72,3 +72,29 @@ export function calculateCombinedScanFee({
 
   return normalizeNumber(monatsmiete) / alleInklusiveKopien + gewichtetePrintkosten
 }
+
+const VRG_TARIFE = [
+  { bisExklusiv: 100, gebuehr: 1.86 },
+  { bisExklusiv: 2500, gebuehr: 3.71 },
+  { bisExklusiv: 5000, gebuehr: 18.57 },
+  { bisExklusiv: 7500, gebuehr: 37.14 },
+  { bisExklusiv: 10000, gebuehr: 55.71 },
+  { bisExklusiv: 15000, gebuehr: 74.28 },
+  { bisExklusiv: 25000, gebuehr: 111.42 },
+  { bisExklusiv: 50000, gebuehr: 185.7 },
+  { bisExklusiv: 100000, gebuehr: 371.4 },
+  { bisExklusiv: 300000, gebuehr: 742.8 },
+  { bisExklusiv: Infinity, gebuehr: 742.8 }
+]
+
+export function calculateVrgFee(amount, normalizeNumber) {
+  const normalizedAmount = normalizeNumber(amount)
+
+  return VRG_TARIFE.find((tarif) => normalizedAmount < tarif.bisExklusiv)?.gebuehr ?? 0
+}
+
+export function calculateNpkClosingFee(rent48Months, rent60Months, normalizeNumber) {
+  return normalizeNumber(rent48Months) !== 0 || normalizeNumber(rent60Months) !== 0
+    ? 150
+    : 0
+}

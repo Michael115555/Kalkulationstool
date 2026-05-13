@@ -1,6 +1,34 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import CurrencyReadonlyField from './CurrencyReadonlyField.vue'
+
+const INCLUDED_DELIVERY_OPTION = 'inkl'
+const INCLUDED_DELIVERY_CONDITION_KEYS = new Set([
+  'bereitstellung_vorkonfiguration_justagen',
+  'lieferung_standort_kurzinstruktion'
+])
+const SELECTABLE_CONDITION_KEYS = new Set([
+  'lieferung_treppenlift',
+  'vorabklaerung_netzwerkinstallation',
+  'netzwerkintegration_max_2_stunden',
+  'fleetmanager_printfacts_erstinstallation',
+  'fleetmanager_printfacts_monat_geraet'
+])
+
+const CUSTOM_CONDITION_OPTIONS = {
+  fleetmanager_printfacts_erstinstallation: [
+    { value: 'betrag', label: 'Fr. 190.00' },
+    { value: 'preis_120', label: 'Fr. 120.00' },
+    { value: 'keine', label: 'keine' },
+    { value: 'inkl', label: 'inkl.' }
+  ],
+  fleetmanager_printfacts_monat_geraet: [
+    { value: 'preis_4', label: 'Fr. 4.00' },
+    { value: 'betrag', label: 'Fr. 2.00' },
+    { value: 'preis_1', label: 'Fr. 1.00' },
+    { value: 'inkl', label: 'inkl.' }
+  ]
+}
 
 const eintauschRabattProzent = defineModel('eintauschRabattProzent', {
   type: [String, Number],
@@ -88,6 +116,18 @@ const props = defineProps({
     type: Number,
     required: true
   },
+  konditionenA3Mfp: {
+    type: Array,
+    required: true
+  },
+  recyclingGebuehrSwico: {
+    type: Number,
+    required: true
+  },
+  npkAbschlussgebuehr: {
+    type: Number,
+    required: true
+  },
   normalizePercent: {
     type: Function,
     required: true
@@ -154,6 +194,84 @@ const selectedLieferungOption = computed({
     props.updateLieferungOption(optionValue)
   }
 })
+
+const isIncludedDeliveryCondition = (kondition) =>
+  lieferungOption.value === INCLUDED_DELIVERY_OPTION &&
+  INCLUDED_DELIVERY_CONDITION_KEYS.has(kondition.key)
+
+const hasKonditionBetrag = (kondition) => kondition.betragText && kondition.betragText !== '-'
+
+const getKonditionBetragLabel = (kondition) => `Fr. ${kondition.betragText}`
+
+const isSelectableCondition = (kondition) => SELECTABLE_CONDITION_KEYS.has(kondition.key)
+
+const getKonditionOptions = (kondition) =>
+  CUSTOM_CONDITION_OPTIONS[kondition.key] ?? [
+    { value: 'betrag', label: getKonditionBetragLabel(kondition) },
+    { value: 'keine', label: 'keine' },
+    { value: 'inkl', label: 'inkl.' }
+  ]
+
+const getDefaultKonditionAuswahl = (kondition) =>
+  getKonditionOptions(kondition).find((option) => option.value === 'betrag')?.value ??
+  getKonditionOptions(kondition)[0]?.value ??
+  'betrag'
+
+const updateKonditionChecked = (kondition) => {
+  if (isIncludedDeliveryCondition(kondition)) {
+    kondition.auswahl = 'inkl'
+    kondition.checked = false
+    kondition.manuell = false
+    return
+  }
+
+  kondition.manuell = true
+
+  if (!isSelectableCondition(kondition)) {
+    kondition.auswahl = kondition.checked ? 'betrag' : 'keine'
+    return
+  }
+
+  kondition.auswahl = kondition.checked
+    ? getDefaultKonditionAuswahl(kondition)
+    : 'keine'
+}
+
+const getStaticKonditionText = (kondition) => {
+  if (isIncludedDeliveryCondition(kondition)) {
+    return 'inkl.'
+  }
+
+  if (kondition.key === 'vorgezogene_recyclinggebuehr_swico') {
+    return getKonditionBetragLabel({
+      betragText: props.formatAmount(props.recyclingGebuehrSwico)
+    })
+  }
+
+  if (kondition.key === 'npk_abschlussgebuehr') {
+    return getKonditionBetragLabel({
+      betragText: props.formatAmount(props.npkAbschlussgebuehr)
+    })
+  }
+
+  if (!hasKonditionBetrag(kondition)) {
+    return '-'
+  }
+
+  return getKonditionBetragLabel(kondition)
+}
+
+const updateKonditionAuswahl = (kondition) => {
+  kondition.manuell = true
+  kondition.checked = kondition.auswahl !== 'keine'
+}
+
+const openDetailsPanel = ref('')
+
+const toggleDetailsPanel = (panelName) => {
+  openDetailsPanel.value = openDetailsPanel.value === panelName ? '' : panelName
+}
+
 </script>
 
 <template>
@@ -291,12 +409,20 @@ const selectedLieferungOption = computed({
       </div>
     </div>
 
-    <div class="calculation-card service-conditions-card">
+    <details
+      class="calculation-card collapsible-card service-conditions-card"
+      :open="openDetailsPanel === 'service'"
+    >
+      <summary
+        class="collapsible-card-summary"
+        @click.prevent="toggleDetailsPanel('service')"
+      >
+        <span class="collapsible-card-title">Servicekonditionen</span>
+      </summary>
+
       <div class="service-conditions">
         <div class="conditions-grid">
           <section class="conditions-group">
-            <h3 class="conditions-group-title">Servicekonditionen</h3>
-
             <div class="conditions-table">
               <div class="conditions-row conditions-header-row">
                 <div></div>
@@ -445,6 +571,70 @@ const selectedLieferungOption = computed({
           </section>
         </div>
       </div>
-    </div>
+    </details>
+
+    <details
+      class="calculation-card collapsible-card offer-conditions-card"
+      :open="openDetailsPanel === 'conditions'"
+    >
+      <summary
+        class="collapsible-card-summary"
+        @click.prevent="toggleDetailsPanel('conditions')"
+      >
+        <span class="collapsible-card-title">Konditionen A3 MFP</span>
+      </summary>
+
+      <div class="table-responsive">
+        <table class="table align-middle mb-0 offer-conditions-table">
+          <thead>
+            <tr>
+              <th scope="col" class="text-center">✓</th>
+              <th scope="col">Kondition</th>
+              <th scope="col">Einheit</th>
+              <th scope="col">Auswahl</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr
+              v-for="kondition in konditionenA3Mfp"
+              :key="kondition.key"
+              :class="{ 'offer-condition-selected': kondition.checked }"
+            >
+              <td class="text-center">
+                <input
+                  v-model="kondition.checked"
+                  class="form-check-input offer-condition-checkbox"
+                  type="checkbox"
+                  :disabled="isIncludedDeliveryCondition(kondition)"
+                  :aria-label="`${kondition.label} auswählen`"
+                  @change="updateKonditionChecked(kondition)"
+                />
+              </td>
+              <td>{{ kondition.label }}</td>
+              <td>{{ kondition.einheit }}</td>
+              <td class="offer-condition-value-cell">
+                <select
+                  v-if="isSelectableCondition(kondition)"
+                  v-model="kondition.auswahl"
+                  class="form-select control-field offer-condition-select"
+                  :aria-label="`${kondition.label} Auswahl`"
+                  @change="updateKonditionAuswahl(kondition)"
+                >
+                  <option
+                    v-for="option in getKonditionOptions(kondition)"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+                <span v-else>{{ getStaticKonditionText(kondition) }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
   </div>
 </template>

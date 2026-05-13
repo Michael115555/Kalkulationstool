@@ -4,8 +4,10 @@ import {
   calculateCombinedScanFee,
   calculateLineTotal,
   calculateNetPrice,
+  calculateNpkClosingFee,
   calculateServiceFeePerMonth,
-  calculateSalesTotal
+  calculateSalesTotal,
+  calculateVrgFee
 } from './kalkulationMath'
 
 describe('kalkulationMath', () => {
@@ -90,6 +92,20 @@ describe('kalkulationMath', () => {
     })
 
     expect(result).toBe(0)
+  })
+
+  test('berechnet VRG Gebühr nach Preisstaffel', () => {
+    expect(calculateVrgFee(99.95, normalizeNumber)).toBe(1.86)
+    expect(calculateVrgFee(100, normalizeNumber)).toBe(3.71)
+    expect(calculateVrgFee(24999.95, normalizeNumber)).toBe(111.42)
+    expect(calculateVrgFee(25000, normalizeNumber)).toBe(185.7)
+    expect(calculateVrgFee(300000, normalizeNumber)).toBe(742.8)
+  })
+
+  test('berechnet NPK Abschlussgebühr sobald eine Mietoption aktiv ist', () => {
+    expect(calculateNpkClosingFee(0, 0, normalizeNumber)).toBe(0)
+    expect(calculateNpkClosingFee(775, 0, normalizeNumber)).toBe(150)
+    expect(calculateNpkClosingFee(0, 651, normalizeNumber)).toBe(150)
   })
 })
 

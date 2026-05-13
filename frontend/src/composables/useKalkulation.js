@@ -4,13 +4,95 @@ import {
   calculateCombinedScanFee,
   calculateLineTotal,
   calculateNetPrice,
+  calculateNpkClosingFee,
   calculateServiceFeePerMonth,
-  calculateSalesTotal
+  calculateSalesTotal,
+  calculateVrgFee
 } from '../utils/kalkulationMath'
 import { formatAmount, formatDecimal, normalizeNumber } from '../utils/numberFormat'
 
 const EXOTIC_MODEL_OPTION = 'Exotisches Modell'
 const MANUAL_CALCULATION_MODEL = 'Manuelle Kalkulation'
+const KONDITIONEN_A3_MFP_SELECTION_VERSION = 5
+const INCLUDED_DELIVERY_OPTION = 'inkl'
+const INCLUDED_DELIVERY_CONDITION_KEYS = new Set([
+  'bereitstellung_vorkonfiguration_justagen',
+  'lieferung_standort_kurzinstruktion'
+])
+const KONDITIONEN_A3_MFP = [
+  {
+    key: 'bereitstellung_vorkonfiguration_justagen',
+    label: 'Bereitstellung, Vorkonfiguration und Justagen',
+    einheit: 'pauschal',
+    betragText: '390.00'
+  },
+  {
+    key: 'lieferung_standort_kurzinstruktion',
+    label: 'Lieferung zum Standort inkl. Kurzinstruktion',
+    einheit: 'pauschal',
+    betragText: '400.00'
+  },
+  {
+    key: 'lieferung_treppenlift',
+    label: 'Lieferung zusätzlich mit Treppenlift',
+    einheit: 'pauschal',
+    betragText: '150.00'
+  },
+  {
+    key: 'vorabklaerung_netzwerkinstallation',
+    label: 'Vorabklärung Netzwerkinstallation',
+    einheit: 'pauschal',
+    betragText: '150.00'
+  },
+  {
+    key: 'netzwerkintegration_max_2_stunden',
+    label: 'Netzwerkintegration max. 2 Stunden',
+    einheit: 'pauschal',
+    betragText: '350.00'
+  },
+  {
+    key: 'zusaetzliche_dienstleistungen',
+    label: 'Zusätzliche Dienstleistungen',
+    einheit: 'Stundenansatz',
+    betragText: '190.00'
+  },
+  {
+    key: 'ruecknahme_demontage',
+    label: 'Rücknahme / Demontage',
+    einheit: 'pauschal',
+    betragText: '350.00'
+  },
+  {
+    key: 'datensicherheit_datenloeschung',
+    label: 'Datensicherheit/ Datenlöschung',
+    einheit: 'pauschal',
+    betragText: '190.00-490.00'
+  },
+  {
+    key: 'fleetmanager_printfacts_erstinstallation',
+    label: 'Fleetmanager Printfacts',
+    einheit: 'Erstinstallation',
+    betragText: '190.00'
+  },
+  {
+    key: 'fleetmanager_printfacts_monat_geraet',
+    label: 'Fleetmanager Printfacts',
+    einheit: 'pro Monat und Gerät',
+    betragText: '2.00'
+  },
+  {
+    key: 'vorgezogene_recyclinggebuehr_swico',
+    label: 'Vorgezogene Recyclinggebühr (Swico)',
+    einheit: '',
+    betragText: '185.70'
+  },
+  {
+    key: 'npk_abschlussgebuehr',
+    label: 'NPK Abschlussgebühr',
+    einheit: '',
+    betragText: '-'
+  }
+]
 
 export const useKalkulation = () => {
   const api = createKalkulationApi()
@@ -60,6 +142,7 @@ export const useKalkulation = () => {
   const scanpauschaleMietMonate = ref('')
   const scanpauschaleAuswahl = ref('inkl')
   const positions = ref([])
+  const konditionenA3Mfp = ref([])
 
   const selectedKunde = computed(() =>
     kunden.value.find((kunde) => kunde.id === Number(kundeId.value))
@@ -378,9 +461,73 @@ export const useKalkulation = () => {
   const clonePositions = (positionen) =>
     positionen.map((position) => ({ ...position }))
 
+  const createDefaultKonditionenA3Mfp = () =>
+    KONDITIONEN_A3_MFP.map((kondition) => ({
+      ...kondition,
+      auswahl: kondition.betragText !== '-' ? 'betrag' : 'keine',
+      checked: false,
+      manuell: false
+    }))
+
+  const getKonditionAuswahl = (kondition) => {
+    if (kondition?.auswahl) {
+      return kondition.auswahl
+    }
+
+    return kondition?.checked ? 'betrag' : 'keine'
+  }
+
+  const normalizeKonditionenA3Mfp = (konditionen = [], shouldPreserveSelections = false) => {
+    const existingByKey = new Map(
+      (Array.isArray(konditionen) ? konditionen : [])
+        .filter((kondition) => kondition?.key)
+        .map((kondition) => [kondition.key, kondition])
+    )
+    const selectionByKey = new Map(
+      (shouldPreserveSelections && Array.isArray(konditionen) ? konditionen : [])
+        .filter((kondition) => kondition?.key && kondition.manuell === true)
+        .map((kondition) => [
+          kondition.key,
+          {
+            auswahl: getKonditionAuswahl(kondition),
+            checked: Boolean(kondition.checked)
+          }
+        ])
+    )
+
+    return KONDITIONEN_A3_MFP.map((kondition) => {
+      const defaultValue = kondition.betragText !== '-' ? 'betrag' : 'keine'
+      const auswahl = selectionByKey.get(kondition.key)?.auswahl ?? defaultValue
+
+      return {
+        ...kondition,
+        betragText: existingByKey.get(kondition.key)?.betragText ?? kondition.betragText,
+        auswahl,
+        checked:
+          Boolean(selectionByKey.get(kondition.key)?.checked) && auswahl !== 'keine',
+        manuell: selectionByKey.has(kondition.key)
+      }
+    })
+  }
+
+  const cloneKonditionenA3Mfp = (konditionen) =>
+    normalizeKonditionenA3Mfp(konditionen, true).map((kondition) => ({ ...kondition }))
+
+  const syncIncludedDeliveryConditions = (isIncluded = lieferungOption.value === INCLUDED_DELIVERY_OPTION) => {
+    konditionenA3Mfp.value.forEach((kondition) => {
+      if (INCLUDED_DELIVERY_CONDITION_KEYS.has(kondition.key)) {
+        kondition.auswahl = isIncluded ? 'inkl' : 'keine'
+        kondition.checked = false
+        kondition.manuell = false
+      }
+    })
+  }
+
   const cloneCalculationSnapshot = (snapshot) => ({
     ...snapshot,
-    positions: clonePositions(snapshot.positions ?? [])
+    positions: clonePositions(snapshot.positions ?? []),
+    konditionenA3Mfp: cloneKonditionenA3Mfp(snapshot.konditionenA3Mfp ?? []),
+    konditionenA3MfpVersion: KONDITIONEN_A3_MFP_SELECTION_VERSION
   })
 
   const getProdukteByZubehoer = (zubehoer) => {
@@ -494,6 +641,8 @@ export const useKalkulation = () => {
       scanpauschaleMietMonate: scanpauschaleMietMonate.value,
       scanpauschaleAuswahl: scanpauschaleAuswahl.value,
       positions: clonePositions(positions.value),
+      konditionenA3Mfp: cloneKonditionenA3Mfp(konditionenA3Mfp.value),
+      konditionenA3MfpVersion: KONDITIONEN_A3_MFP_SELECTION_VERSION,
       naechsteId: naechsteId.value
     }
   }
@@ -525,6 +674,8 @@ export const useKalkulation = () => {
       scanpauschaleMietMonate: getDefaultScanpauschaleMietMonate(),
       scanpauschaleAuswahl: 'inkl',
       positions: createDefaultPositions(),
+      konditionenA3Mfp: createDefaultKonditionenA3Mfp(),
+      konditionenA3MfpVersion: KONDITIONEN_A3_MFP_SELECTION_VERSION,
       naechsteId: 2
     }
   }
@@ -546,6 +697,7 @@ export const useKalkulation = () => {
     scanpauschaleMietMonate.value = getDefaultScanpauschaleMietMonate()
     scanpauschaleAuswahl.value = 'inkl'
     positions.value = []
+    konditionenA3Mfp.value = createDefaultKonditionenA3Mfp()
     naechsteId.value = 1
     isLoadingConfigurationVariant = false
   }
@@ -603,6 +755,11 @@ export const useKalkulation = () => {
         snapshot?.scanpauschaleMietMonate ?? getDefaultScanpauschaleMietMonate(),
       scanpauschaleAuswahl: snapshot?.scanpauschaleAuswahl ?? 'inkl',
       positions: normalizedPositions,
+      konditionenA3Mfp: normalizeKonditionenA3Mfp(
+        snapshot?.konditionenA3Mfp,
+        snapshot?.konditionenA3MfpVersion >= KONDITIONEN_A3_MFP_SELECTION_VERSION
+      ),
+      konditionenA3MfpVersion: KONDITIONEN_A3_MFP_SELECTION_VERSION,
       naechsteId:
         snapshot?.naechsteId ??
         Math.max(2, ...normalizedPositions.map((position) => Number(position.id) + 1))
@@ -752,6 +909,8 @@ export const useKalkulation = () => {
     scanpauschaleMietMonate.value = snapshot.scanpauschaleMietMonate
     scanpauschaleAuswahl.value = snapshot.scanpauschaleAuswahl
     positions.value = clonePositions(snapshot.positions)
+    konditionenA3Mfp.value = cloneKonditionenA3Mfp(snapshot.konditionenA3Mfp)
+    syncIncludedDeliveryConditions(snapshot.lieferungOption === INCLUDED_DELIVERY_OPTION)
     naechsteId.value = snapshot.naechsteId
     isLoadingConfigurationVariant = false
   }
@@ -871,6 +1030,7 @@ export const useKalkulation = () => {
   const updateLieferungOption = (optionValue = lieferungOption.value) => {
     lieferungOption.value = optionValue
     lieferungBetrag.value = formatAmount(getLieferungBetrag(optionValue))
+    syncIncludedDeliveryConditions(optionValue === INCLUDED_DELIVERY_OPTION)
   }
 
   const normalizeRestwertBetrag = () => {
@@ -991,6 +1151,42 @@ export const useKalkulation = () => {
       normalizeNumber
     })
   )
+
+  const recyclingGebuehrSwico = computed(() =>
+    calculateVrgFee(verkaufspreis.value, normalizeNumber)
+  )
+
+  const npkAbschlussgebuehr = computed(() =>
+    calculateNpkClosingFee(getMietbetrag(48), getMietbetrag(60), normalizeNumber)
+  )
+
+  const syncCalculatedConditionAmounts = () => {
+    konditionenA3Mfp.value.forEach((kondition) => {
+      if (kondition.key === 'vorgezogene_recyclinggebuehr_swico') {
+        const nextBetragText = formatAmount(recyclingGebuehrSwico.value)
+
+        if (kondition.betragText !== nextBetragText) {
+          kondition.betragText = nextBetragText
+        }
+
+        if (kondition.checked && kondition.auswahl === 'keine') {
+          kondition.auswahl = 'betrag'
+        }
+      }
+
+      if (kondition.key === 'npk_abschlussgebuehr') {
+        const nextBetragText = formatAmount(npkAbschlussgebuehr.value)
+
+        if (kondition.betragText !== nextBetragText) {
+          kondition.betragText = nextBetragText
+        }
+
+        if (kondition.checked && kondition.auswahl === 'keine') {
+          kondition.auswahl = 'betrag'
+        }
+      }
+    })
+  }
 
   const hasValidPosition = computed(() =>
     positions.value.some((position) => {
@@ -1625,8 +1821,18 @@ export const useKalkulation = () => {
       if (lieferungBetrag.value !== nextLieferungBetrag) {
         lieferungBetrag.value = nextLieferungBetrag
       }
+
+      syncIncludedDeliveryConditions(optionValue === INCLUDED_DELIVERY_OPTION)
     },
     { deep: true }
+  )
+
+  watch(
+    [recyclingGebuehrSwico, npkAbschlussgebuehr, konditionenA3Mfp],
+    () => {
+      syncCalculatedConditionAmounts()
+    },
+    { deep: true, immediate: true }
   )
 
   watch(
@@ -1646,6 +1852,7 @@ export const useKalkulation = () => {
       scanpauschaleMietMonate,
       scanpauschaleAuswahl,
       positions,
+      konditionenA3Mfp,
       nettopreis
     ],
     () => {
@@ -1708,6 +1915,7 @@ export const useKalkulation = () => {
     startNewConfiguration,
 
     positions,
+    konditionenA3Mfp,
     isEmptyPosition,
     updatePositionZubehoer,
     zubehoerKategorien,
@@ -1751,6 +1959,8 @@ export const useKalkulation = () => {
     scanpauschaleAuswahl,
     normalizeScanpauschaleAuswahl,
     scanpauschaleBerechnet,
+    recyclingGebuehrSwico,
+    npkAbschlussgebuehr,
     nettopreis,
     mietoptionen,
     getMietbetrag,
