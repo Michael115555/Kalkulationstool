@@ -15,17 +15,26 @@ class ApiError extends Error {
 
 const MAX_CALCULATION_POSITIONS = 150
 const MAX_CALCULATION_KONDITIONEN = 50
+const MAX_DISPLAY_SNAPSHOT_BYTES = 200_000
 
 const isPlainObject = (value) =>
   value !== null &&
   typeof value === 'object' &&
   !Array.isArray(value)
 
+const parseNumber = (value) => {
+  if (typeof value === 'string') {
+    return Number(value.trim().replace(/['’\s]/g, '').replace(',', '.'))
+  }
+
+  return Number(value)
+}
+
 /**
  * Validiert, dass ein Wert ein gültiger Integer ist
  */
 const validateInteger = (value, fieldName) => {
-  const num = Number(value)
+  const num = parseNumber(value)
 
   if (!Number.isInteger(num) || num <= 0) {
     throw new ApiError(`${fieldName} muss eine positive Ganzzahl sein`, 400)
@@ -39,7 +48,7 @@ const validateOptionalNonNegativeInteger = (value, fieldName) => {
     return null
   }
 
-  const num = Number(value)
+  const num = parseNumber(value)
 
   if (!Number.isInteger(num) || num < 0) {
     throw new ApiError(`${fieldName} muss eine nicht negative Ganzzahl sein`, 400)
@@ -116,6 +125,22 @@ const validateSnapshotAmount = (value, fieldName) => {
   }
 
   throw new ApiError(`${fieldName} muss eine gültige Zahl sein`, 400)
+}
+
+const validateDisplaySnapshot = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  if (!isPlainObject(value)) {
+    throw new ApiError('Display Snapshot muss ein Objekt sein', 400)
+  }
+
+  if (Buffer.byteLength(JSON.stringify(value), 'utf8') > MAX_DISPLAY_SNAPSHOT_BYTES) {
+    throw new ApiError('Display Snapshot ist zu gross', 400)
+  }
+
+  return value
 }
 
 const validateCalculationPosition = (position, index) => {
@@ -273,7 +298,8 @@ const validateCalculationSnapshot = (calculation) => {
         'Konditionen A3 MFP Version'
       ) ?? 0,
     naechsteId: validateOptionalInteger(calculation.naechsteId, 'Nächste Position ID')
-      ?? Math.max(2, positions.length + 1)
+      ?? Math.max(2, positions.length + 1),
+    displaySnapshot: validateDisplaySnapshot(calculation.displaySnapshot)
   }
 }
 

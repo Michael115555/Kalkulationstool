@@ -24,6 +24,20 @@ const INCLUDED_DELIVERY_CONDITION_KEYS = new Set([
   'bereitstellung_vorkonfiguration_justagen',
   'lieferung_standort_kurzinstruktion'
 ])
+const CUSTOM_CONDITION_OPTIONS = {
+  fleetmanager_printfacts_erstinstallation: [
+    { value: 'betrag', label: 'Fr. 190.00' },
+    { value: 'preis_120', label: 'Fr. 120.00' },
+    { value: 'keine', label: 'keine' },
+    { value: 'inkl', label: 'inkl.' }
+  ],
+  fleetmanager_printfacts_monat_geraet: [
+    { value: 'preis_4', label: 'Fr. 4.00' },
+    { value: 'betrag', label: 'Fr. 2.00' },
+    { value: 'preis_1', label: 'Fr. 1.00' },
+    { value: 'inkl', label: 'inkl.' }
+  ]
+}
 const KONDITIONEN_A3_MFP = [
   {
     key: 'bereitstellung_vorkonfiguration_justagen',
@@ -532,7 +546,8 @@ export const useKalkulation = () => {
     ...snapshot,
     positions: clonePositions(snapshot.positions ?? []),
     konditionenA3Mfp: cloneKonditionenA3Mfp(snapshot.konditionenA3Mfp ?? []),
-    konditionenA3MfpVersion: KONDITIONEN_A3_MFP_SELECTION_VERSION
+    konditionenA3MfpVersion: KONDITIONEN_A3_MFP_SELECTION_VERSION,
+    displaySnapshot: snapshot.displaySnapshot ?? null
   })
 
   const getProdukteByZubehoer = (zubehoer) => {
@@ -618,7 +633,7 @@ export const useKalkulation = () => {
     }
   }
 
-  const createCalculationSnapshot = () => {
+  const createCalculationSnapshot = (displayProjectName = projectName.value.trim()) => {
     const druckerPosition = selectedDruckerPosition.value
     const druckermodellId =
       druckerPosition?.druckermodellId ?? selectedDruckermodell.value?.id ?? null
@@ -648,7 +663,8 @@ export const useKalkulation = () => {
       positions: clonePositions(positions.value),
       konditionenA3Mfp: cloneKonditionenA3Mfp(konditionenA3Mfp.value),
       konditionenA3MfpVersion: KONDITIONEN_A3_MFP_SELECTION_VERSION,
-      naechsteId: naechsteId.value
+      naechsteId: naechsteId.value,
+      displaySnapshot: createDisplaySnapshot(displayProjectName)
     }
   }
 
@@ -681,7 +697,8 @@ export const useKalkulation = () => {
       positions: createDefaultPositions(),
       konditionenA3Mfp: createDefaultKonditionenA3Mfp(),
       konditionenA3MfpVersion: KONDITIONEN_A3_MFP_SELECTION_VERSION,
-      naechsteId: 2
+      naechsteId: 2,
+      displaySnapshot: null
     }
   }
 
@@ -767,7 +784,8 @@ export const useKalkulation = () => {
       konditionenA3MfpVersion: KONDITIONEN_A3_MFP_SELECTION_VERSION,
       naechsteId:
         snapshot?.naechsteId ??
-        Math.max(2, ...normalizedPositions.map((position) => Number(position.id) + 1))
+        Math.max(2, ...normalizedPositions.map((position) => Number(position.id) + 1)),
+      displaySnapshot: snapshot?.displaySnapshot ?? null
     }
   }
 
@@ -872,7 +890,9 @@ export const useKalkulation = () => {
       return
     }
 
-    activeConfigurationVariant.calculation = createCalculationSnapshot()
+    activeConfigurationVariant.calculation = createCalculationSnapshot(
+      activeConfigurationVariant.name
+    )
     activeConfigurationVariant.kundeId = currentConfigurationKundeId.value
     activeConfigurationVariant.druckermodellId = activeConfigurationVariant.calculation.druckermodellId
     activeConfigurationVariant.druckerVarianteId = activeConfigurationVariant.calculation.druckerVarianteId
@@ -927,7 +947,8 @@ export const useKalkulation = () => {
   ) => {
     const calculationWithKunde = {
       ...calculation,
-      kundeId: currentConfigurationKundeId.value
+      kundeId: currentConfigurationKundeId.value,
+      displaySnapshot: createDisplaySnapshot(name)
     }
 
     const payload = {
@@ -1193,6 +1214,219 @@ export const useKalkulation = () => {
     })
   }
 
+  const createDisplayField = (key, label, value, rawValue = value) => ({
+    key,
+    label,
+    value: String(value ?? ''),
+    rawValue
+  })
+
+  const formatCurrencyValue = (value) => `CHF ${formatAmount(value)}`
+
+  const getVerkaeuferName = () => {
+    const verkaeufer = selectedKunde.value?.verkaeufer
+
+    if (!verkaeufer) {
+      return ''
+    }
+
+    return [verkaeufer.vorname, verkaeufer.nachname].filter(Boolean).join(' ')
+  }
+
+  const getLieferungOptionLabel = () =>
+    lieferungOptionen.value.find((option) => option.value === lieferungOption.value)?.label ??
+    lieferungOption.value
+
+  const getKonditionBetragLabel = (kondition) =>
+    kondition.betragText && kondition.betragText !== '-'
+      ? `Fr. ${kondition.betragText}`
+      : '-'
+
+  const getKonditionOptionsForDisplay = (kondition) =>
+    CUSTOM_CONDITION_OPTIONS[kondition.key] ?? [
+      { value: 'betrag', label: getKonditionBetragLabel(kondition) },
+      { value: 'keine', label: 'keine' },
+      { value: 'inkl', label: 'inkl.' }
+    ]
+
+  const getKonditionAuswahlLabel = (kondition) => {
+    if (
+      lieferungOption.value === INCLUDED_DELIVERY_OPTION &&
+      INCLUDED_DELIVERY_CONDITION_KEYS.has(kondition.key)
+    ) {
+      return 'inkl.'
+    }
+
+    const auswahl = getKonditionAuswahl(kondition)
+
+    return (
+      getKonditionOptionsForDisplay(kondition).find((option) => option.value === auswahl)
+        ?.label ??
+      auswahl ??
+      ''
+    )
+  }
+
+  const createDisplaySnapshot = (displayProjectName = projectName.value.trim()) => {
+    const varianteText = selectedDruckerPosition.value?.bezeichnung ?? variante.value
+    const fallbackProjectName = [druckermodell.value, varianteText].filter(Boolean).join(' ')
+    const projectDisplayName = displayProjectName || fallbackProjectName || 'Projekt'
+
+    return {
+      version: 1,
+      createdAt: new Date().toISOString(),
+      locale: 'de-CH',
+      currency: 'CHF',
+      project: {
+        title: 'Projekt',
+        fields: [
+          createDisplayField('projektname', 'Projektname', projectDisplayName),
+          createDisplayField('kunde', 'Kunde', selectedKunde.value?.firmenname ?? ''),
+          createDisplayField('verkaeufer', 'Verkäufer', getVerkaeuferName()),
+          createDisplayField('druckermarke', 'Druckermarke', druckermarke.value),
+          createDisplayField('druckermodell', 'Druckermodell', druckermodell.value),
+          createDisplayField('variante', 'Variante', varianteText)
+        ]
+      },
+      positions: {
+        title: 'Positionen',
+        columns: [
+          { key: 'kategorie', label: 'Kategorie' },
+          { key: 'bezeichnung', label: 'Bezeichnung' },
+          { key: 'menge', label: 'Menge' },
+          { key: 'vp', label: 'VP (CHF)' },
+          { key: 'ep', label: 'EP (CHF)' },
+          { key: 'total', label: 'Total (CHF)' }
+        ],
+        rows: positions.value.map((position, index) => ({
+          index: index + 1,
+          values: {
+            kategorie: position.zubehoer ?? '',
+            bezeichnung: position.bezeichnung ?? '',
+            menge: String(position.menge ?? ''),
+            vp: formatAmount(position.vp),
+            ep: formatAmount(getEinkaufspreis(position)),
+            total: formatAmount(getGesamtpreis(position))
+          },
+          rawValues: {
+            id: position.id,
+            zubehoerId: position.zubehoerId,
+            druckermodellId: position.druckermodellId,
+            druckerVarianteId: position.druckerVarianteId,
+            istDrucker: Boolean(position.istDrucker),
+            menge: normalizeNumber(position.menge),
+            vp: normalizeNumber(position.vp),
+            ep: getEinkaufspreis(position),
+            total: getGesamtpreis(position),
+            epKategorie: position.epKategorie ?? ''
+          }
+        }))
+      },
+      calculation: {
+        title: 'Kalkulation',
+        fields: [
+          createDisplayField(
+            'einkaufspreis',
+            'Einkaufspreis',
+            formatCurrencyValue(einkaufspreis.value),
+            einkaufspreis.value
+          ),
+          createDisplayField(
+            'verkaufspreis',
+            'Verkaufspreis',
+            formatCurrencyValue(verkaufspreis.value),
+            verkaufspreis.value
+          ),
+          createDisplayField(
+            'eintauschRabattProzent',
+            'Eintauschrabatt',
+            `${formatDecimal(eintauschRabattProzent.value)} %`,
+            normalizeNumber(eintauschRabattProzent.value)
+          ),
+          createDisplayField(
+            'eintauschRabattBetrag',
+            'Eintauschrabatt CHF',
+            formatCurrencyValue(eintauschRabattBetrag.value),
+            eintauschRabattBetrag.value
+          ),
+          createDisplayField('lieferungOption', 'Lieferung gemäss Konditionen', getLieferungOptionLabel(), lieferungOption.value),
+          createDisplayField(
+            'lieferungBetrag',
+            'Lieferbetrag',
+            formatCurrencyValue(lieferungBetrag.value),
+            normalizeNumber(lieferungBetrag.value)
+          ),
+          createDisplayField('restwertMonate', 'Restwert Monate', `${restwertMonate.value} Mt.`, normalizeNumber(restwertMonate.value)),
+          createDisplayField(
+            'restwertBetrag',
+            'Restwert',
+            formatCurrencyValue(restwertBetrag.value),
+            normalizeNumber(restwertBetrag.value)
+          ),
+          createDisplayField(
+            'nettopreis',
+            'Nettopreis',
+            formatCurrencyValue(nettopreis.value),
+            nettopreis.value
+          )
+        ]
+      },
+      rentOptions: {
+        title: 'Mietoptionen',
+        rows: mietoptionen.value.map((monate) => ({
+          monate,
+          label: `Miete ${monate} Monate`,
+          value: `${formatCurrencyValue(getMietbetrag(monate))} / Monat`,
+          basis: formatCurrencyValue(mietbasis.value),
+          rawValue: getMietbetrag(monate),
+          rawBasis: mietbasis.value
+        }))
+      },
+      serviceConditions: {
+        title: 'Servicekonditionen',
+        fields: [
+          createDisplayField(
+            'servicePauschaleMonat',
+            'Servicepauschale/Mt.',
+            formatCurrencyValue(servicePauschaleMonat.value),
+            servicePauschaleMonat.value
+          ),
+          createDisplayField('inklusiveKopienSW', 'inkl. Kopien s/w', formatInteger(inklusiveKopienSW.value), normalizeNumber(inklusiveKopienSW.value)),
+          createDisplayField('inklusiveKopienColor', 'inkl. Kopien color', formatInteger(inklusiveKopienColor.value), normalizeNumber(inklusiveKopienColor.value)),
+          createDisplayField('preisZusatzPrintSW', 'jeder weitere Print s/w', `Rp. ${formatDecimal(preisZusatzPrintSW.value)}`, normalizeNumber(preisZusatzPrintSW.value)),
+          createDisplayField('preisZusatzPrintColor', 'jeder weitere Print color', `Rp. ${formatDecimal(preisZusatzPrintColor.value)}`, normalizeNumber(preisZusatzPrintColor.value)),
+          createDisplayField('flatratePauschalBetrag', 'Flatrate Vertrag über den gesamten Gerätepark', formatCurrencyValue(flatratePauschalBetrag.value), normalizeNumber(flatratePauschalBetrag.value)),
+          createDisplayField('scanpauschaleMietMonate', 'Scanpauschale Monatsmiete', `Miete ${scanpauschaleMietMonate.value} Mt. / ${formatCurrencyValue(scanpauschaleMonatsmiete.value)}`, normalizeNumber(scanpauschaleMietMonate.value)),
+          createDisplayField('scanpauschaleBerechnet', 'Scanpauschale berechnet', formatCurrencyValue(scanpauschaleBerechnet.value), scanpauschaleBerechnet.value),
+          createDisplayField('scanpauschaleAuswahl', 'Scanpauschale Betrag', scanpauschaleAuswahl.value === '15' ? 'Fr. 15.00' : 'inkl.', scanpauschaleAuswahl.value)
+        ]
+      },
+      offerConditions: {
+        title: 'Konditionen A3 MFP',
+        rows: konditionenA3Mfp.value.map((kondition) => ({
+          key: kondition.key,
+          label: kondition.label,
+          einheit: kondition.einheit,
+          ausgewaehlt: Boolean(kondition.checked),
+          auswahl: kondition.auswahl,
+          auswahlLabel: getKonditionAuswahlLabel(kondition),
+          betrag: kondition.betragText,
+          betragLabel: getKonditionBetragLabel(kondition),
+          manuell: Boolean(kondition.manuell)
+        }))
+      },
+      calculatedValues: {
+        verkaufspreis: formatCurrencyValue(verkaufspreis.value),
+        einkaufspreis: formatCurrencyValue(einkaufspreis.value),
+        nettopreis: formatCurrencyValue(nettopreis.value),
+        servicePauschaleMonat: formatCurrencyValue(servicePauschaleMonat.value),
+        scanpauschaleBerechnet: formatCurrencyValue(scanpauschaleBerechnet.value),
+        recyclingGebuehrSwico: formatCurrencyValue(recyclingGebuehrSwico.value),
+        npkAbschlussgebuehr: formatCurrencyValue(npkAbschlussgebuehr.value)
+      }
+    }
+  }
+
   const hasValidPosition = computed(() =>
     positions.value.some((position) => {
       const hasBaseData =
@@ -1353,6 +1587,7 @@ export const useKalkulation = () => {
     }
 
     activeConfigurationVariant.name = cleanName
+    activeConfigurationVariant.calculation = createCalculationSnapshot(cleanName)
     queueSaveConfigurationVariant(activeConfigurationVariant)
   }
 
@@ -1498,7 +1733,9 @@ export const useKalkulation = () => {
       !isExotischesModell.value
     ) {
       activeConfigurationVariant.kundeId = nextKundeId
-      activeConfigurationVariant.calculation = createCalculationSnapshot()
+      activeConfigurationVariant.calculation = createCalculationSnapshot(
+        activeConfigurationVariant.name
+      )
       activeConfigurationVariant.calculation.kundeId = nextKundeId
       queueSaveConfigurationVariant(activeConfigurationVariant)
     }
@@ -1549,11 +1786,11 @@ export const useKalkulation = () => {
     }
 
     try {
-      const calculation = createCalculationSnapshot()
       const name = getUniqueConfigurationName(
         druckermodell.value,
         getProjectConfigurationBaseName()
       )
+      const calculation = createCalculationSnapshot(name)
 
       const configurationVariant = await createConfigurationVariantInDatabase(
         druckermodell.value,
@@ -1629,6 +1866,7 @@ export const useKalkulation = () => {
     }
 
     configurationVariant.name = name
+    configurationVariant.calculation = createCalculationSnapshot(name)
     projectName.value = name
     isRenameConfigurationPanelVisible.value = false
     editingConfigurationVariantName.value = ''
