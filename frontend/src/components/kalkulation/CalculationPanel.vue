@@ -232,9 +232,9 @@ const updateKonditionChecked = (kondition) => {
     return
   }
 
-  kondition.auswahl = kondition.checked
-    ? getDefaultKonditionAuswahl(kondition)
-    : 'keine'
+  if (kondition.checked && (!kondition.auswahl || kondition.auswahl === 'keine')) {
+    kondition.auswahl = getDefaultKonditionAuswahl(kondition)
+  }
 }
 
 const getStaticKonditionText = (kondition) => {
@@ -439,10 +439,8 @@ const toggleDetailsPanel = (panelName) => {
                   aria-label="Servicepauschale pro Monat"
                 />
                 <input
-                  v-model.number="inklusiveKopienSW"
-                  type="number"
-                  min="0"
-                  step="1"
+                  v-model="inklusiveKopienSW"
+                  type="text"
                   inputmode="numeric"
                   class="form-control text-end service-number-input"
                   aria-label="Inklusive Kopien schwarz-weiss"
@@ -450,10 +448,8 @@ const toggleDetailsPanel = (panelName) => {
                   @blur="normalizeInklusiveKopienSW"
                 />
                 <input
-                  v-model.number="inklusiveKopienColor"
-                  type="number"
-                  min="0"
-                  step="1"
+                  v-model="inklusiveKopienColor"
+                  type="text"
                   inputmode="numeric"
                   class="form-control text-end service-number-input"
                   aria-label="Inklusive Kopien color"

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { formatAmount, normalizeNumber } from './numberFormat'
+import { formatAmount, formatInteger, normalizeNumber } from './numberFormat'
 import {
   calculateCombinedScanFee,
   calculateLineTotal,
@@ -113,5 +113,14 @@ describe('numberFormat', () => {
   test('normalisiert und formatiert Schweizer Beträge', () => {
     expect(normalizeNumber("1’250.50")).toBe(1250.5)
     expect(formatAmount(1250.5)).toBe("1’250.50")
+  })
+
+  test('rundet Beträge kaufmännisch auf zwei Dezimalstellen', () => {
+    expect(formatAmount(0.545)).toBe('0.55')
+  })
+
+  test('formatiert ganze Zahlen mit Schweizer Tausendertrennzeichen', () => {
+    expect(formatInteger(20000)).toBe("20’000")
+    expect(normalizeNumber("20’000")).toBe(20000)
   })
 })

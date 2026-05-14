@@ -9,7 +9,12 @@ import {
   calculateSalesTotal,
   calculateVrgFee
 } from '../utils/kalkulationMath'
-import { formatAmount, formatDecimal, normalizeNumber } from '../utils/numberFormat'
+import {
+  formatAmount,
+  formatDecimal,
+  formatInteger,
+  normalizeNumber
+} from '../utils/numberFormat'
 
 const EXOTIC_MODEL_OPTION = 'Exotisches Modell'
 const MANUAL_CALCULATION_MODEL = 'Manuelle Kalkulation'
@@ -1044,12 +1049,12 @@ export const useKalkulation = () => {
 
   const normalizeInklusiveKopienSW = () => {
     const kopien = Math.trunc(normalizeNumber(inklusiveKopienSW.value))
-    inklusiveKopienSW.value = Math.max(0, kopien)
+    inklusiveKopienSW.value = formatInteger(Math.max(0, kopien))
   }
 
   const normalizeInklusiveKopienColor = () => {
     const kopien = Math.trunc(normalizeNumber(inklusiveKopienColor.value))
-    inklusiveKopienColor.value = Math.max(0, kopien)
+    inklusiveKopienColor.value = formatInteger(Math.max(0, kopien))
   }
 
   const normalizePreisZusatzPrintSW = () => {

@@ -10,5 +10,18 @@ const swissAmountFormatter = new Intl.NumberFormat('de-CH', {
   maximumFractionDigits: 2
 })
 
+const swissIntegerFormatter = new Intl.NumberFormat('de-CH', {
+  maximumFractionDigits: 0
+})
+
+const roundToDecimals = (value, decimals) => {
+  const factor = 10 ** decimals
+
+  return Math.round((normalizeNumber(value) + Number.EPSILON) * factor) / factor
+}
+
 export const formatAmount = (value) =>
-  swissAmountFormatter.format(normalizeNumber(value))
+  swissAmountFormatter.format(roundToDecimals(value, 2))
+
+export const formatInteger = (value) =>
+  swissIntegerFormatter.format(Math.trunc(normalizeNumber(value)))
