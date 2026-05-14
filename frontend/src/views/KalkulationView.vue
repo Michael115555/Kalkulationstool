@@ -101,12 +101,10 @@ const {
             :druckermarke="druckermarke"
             :druckermodelle="druckermodelleDerMarkeNamen"
             :druckermodell="druckermodell"
-            :can-save-project="canSaveProject"
             :can-edit-configuration-selection="canEditConfigurationSelection"
             @select-kunde="selectKunde"
             @select-druckermarke="selectDruckermarke"
             @select-druckermodell="selectDruckermodell"
-            @save-project="saveProject"
           />
 
           <template v-if="(kundeId || isExotischesModell) && druckermarke && (druckermodell || isExotischesModell)">
@@ -169,6 +167,21 @@ const {
             />
           </template>
 
+          <div
+            v-if="canSaveProject"
+            class="calculation-sticky-save"
+          >
+            <button
+              type="button"
+              class="btn btn-primary toolbar-save-button calculation-sticky-save-button"
+              aria-label="Projekt speichern"
+              title="Projekt speichern"
+              @click="saveProject"
+            >
+              <span class="pi pi-save" aria-hidden="true"></span>
+              <span>Projekt speichern</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

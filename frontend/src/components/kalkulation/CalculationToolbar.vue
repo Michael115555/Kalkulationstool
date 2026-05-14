@@ -29,10 +29,6 @@ const props = defineProps({
     type: String,
     required: true
   },
-  canSaveProject: {
-    type: Boolean,
-    required: true
-  },
   canEditConfigurationSelection: {
     type: Boolean,
     required: true
@@ -42,8 +38,7 @@ const props = defineProps({
 const emit = defineEmits([
   'select-kunde',
   'select-druckermarke',
-  'select-druckermodell',
-  'save-project'
+  'select-druckermodell'
 ])
 
 const isExotischesModellSelected = computed(() =>
@@ -69,18 +64,6 @@ const druckermarkenMitExotischemModell = computed(() => {
     ...marken,
     EXOTIC_MODEL_OPTION
   ]
-})
-
-const saveButtonTitle = computed(() => {
-  if (isExotischesModellSelected.value) {
-    return 'Exotische Modelle werden manuell kalkuliert und nicht in der Datenbank gespeichert'
-  }
-
-  if (props.canSaveProject) {
-    return 'Projekt speichern'
-  }
-
-  return 'Bitte zuerst Kunde, Druckermarke, Druckermodell und Druckerposition wählen'
 })
 
 const DRUCKERMARKE_PLACEHOLDER = 'Marke wählen'
@@ -207,17 +190,6 @@ const isDruckermodellLocked = computed(() =>
         </select>
       </label>
 
-      <div class="toolbar-field toolbar-field-save">
-        <button
-          type="button"
-          class="btn btn-primary toolbar-save-button"
-          :disabled="!canSaveProject || isExotischesModellSelected"
-          :title="saveButtonTitle"
-          @click="emit('save-project')"
-        >
-          Projekt speichern
-        </button>
-      </div>
     </div>
   </div>
 </template>

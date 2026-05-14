@@ -588,7 +588,7 @@ const toggleDetailsPanel = (panelName) => {
         <table class="table align-middle mb-0 offer-conditions-table">
           <thead>
             <tr>
-              <th scope="col" class="text-center">✓</th>
+              <th scope="col" class="text-center"></th>
               <th scope="col">Kondition</th>
               <th scope="col">Einheit</th>
               <th scope="col">Auswahl</th>

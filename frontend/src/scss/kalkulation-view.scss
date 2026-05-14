@@ -13,6 +13,7 @@ body.configuration-offcanvas-open {
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 5rem);
+  padding-bottom: calc(var(--kt-spacing-2xl) + 4.75rem);
 }
 
 .calculation-config-section {
@@ -37,10 +38,9 @@ body.configuration-offcanvas-open {
   width: 100%;
   gap: 1rem;
   grid-template-columns:
-    minmax(18rem, 1.35fr)
+    minmax(18rem, 1.1fr)
     minmax(14rem, 0.9fr)
-    minmax(18rem, 1fr)
-    max-content;
+    minmax(22rem, 1.4fr);
 }
 
 .toolbar-field {
@@ -61,18 +61,11 @@ body.configuration-offcanvas-open {
   min-width: 0;
 }
 
-.toolbar-field-save {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  min-width: 0;
-}
-
 .toolbar-label {
   flex: 0 0 auto;
   margin: 0;
   color: var(--kt-color-text-primary);
-  font-size: var(--kt-font-size-md);
+  font-size: 0.96rem;
   font-weight: 500;
   line-height: var(--kt-line-height-tight);
   white-space: nowrap;
@@ -130,6 +123,22 @@ body.configuration-offcanvas-open {
   box-shadow: none;
   opacity: 1;
   cursor: not-allowed;
+}
+
+.calculation-sticky-save {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 1020;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.calculation-sticky-save-button {
+  gap: 0.55rem;
+  box-shadow: 0 0.85rem 1.8rem rgba(16, 24, 40, 0.18);
+  pointer-events: auto;
 }
 
 .calculation-empty-offer {
@@ -622,11 +631,11 @@ body.configuration-offcanvas-open {
   display: flex;
   align-items: center;
   color: var(--kt-color-text-primary);
-  font-size: var(--kt-font-size-lg);
+  font-size: 1.04rem;
   font-weight: 600;
   letter-spacing: 0;
-  line-height: 2.35rem;
-  min-height: 2.35rem;
+  line-height: 2.15rem;
+  min-height: 2.15rem;
   margin: 0;
 }
 
@@ -634,7 +643,7 @@ body.configuration-offcanvas-open {
   min-height: 2.75rem;
   padding-top: var(--kt-spacing-sm);
   padding-bottom: var(--kt-spacing-sm);
-  font-size: var(--kt-font-size-md);
+  font-size: 0.96rem;
   line-height: 1.2;
 }
 
@@ -707,11 +716,11 @@ body.configuration-offcanvas-open {
 
 .table thead th {
   background-color: #fbfcfe;
-  color: var(--kt-color-text-primary);
-  font-weight: 500;
+  color: var(--kt-color-text-secondary);
+  font-weight: 600;
   border-bottom: 1px solid #e9edf3;
   vertical-align: middle;
-  font-size: var(--kt-font-size-sm);
+  font-size: 0.9rem;
   line-height: var(--kt-line-height-tight);
   white-space: nowrap;
 }
@@ -971,7 +980,7 @@ body.configuration-offcanvas-open {
 }
 
 .calculation-card-heading {
-  min-height: 2.2rem;
+  min-height: 2.05rem;
   margin-bottom: 0.65rem;
 }
 
@@ -996,8 +1005,8 @@ body.configuration-offcanvas-open {
 
 .calculation-form-label {
   color: var(--kt-color-text-primary);
-  font-size: var(--kt-font-size-md);
-  font-weight: 500;
+  font-size: 0.96rem;
+  font-weight: 450;
   line-height: var(--kt-line-height-tight);
 }
 
@@ -1005,7 +1014,7 @@ body.configuration-offcanvas-open {
   min-height: 2.35rem;
   border-radius: var(--kt-spacing-sm);
   text-align: right;
-  font-size: var(--kt-font-size-md);
+  font-size: 0.96rem;
 }
 
 .calculation-form-row > .readonly-price {
@@ -1016,7 +1025,7 @@ body.configuration-offcanvas-open {
   min-width: 4.25rem;
   justify-content: center;
   color: var(--kt-color-text-secondary);
-  font-size: var(--kt-font-size-md);
+  font-size: 0.96rem;
   background: var(--kt-color-bg-light);
 }
 
@@ -1030,7 +1039,7 @@ body.configuration-offcanvas-open {
 .month-group .form-control,
 .currency-group .form-control {
   min-height: 2.35rem;
-  font-size: var(--kt-font-size-md);
+  font-size: 0.96rem;
 }
 
 .currency-group .readonly-price {
@@ -1042,7 +1051,7 @@ body.configuration-offcanvas-open {
   min-width: 4.5rem;
   justify-content: center;
   color: var(--kt-color-text-secondary);
-  font-size: var(--kt-font-size-md);
+  font-size: 0.96rem;
   background: var(--kt-color-bg-light);
 }
 
@@ -1051,26 +1060,26 @@ body.configuration-offcanvas-open {
   min-height: 2.75rem;
   margin-top: 0.55rem;
   padding: 0 var(--kt-spacing-xs);
-  background-color: var(--kt-color-bg-very-light);
-  border: 1px solid #e4ebff;
+  background-color: #f5f8ff;
+  border: 1px solid #e5edff;
   border-radius: var(--kt-spacing-sm);
   overflow: hidden;
 }
 
 .kalkulation-view .net-row .calculation-form-label,
 .kalkulation-view .net-row .amount-input {
-  color: #155eef;
-  font-weight: 700;
+  color: #1d4ed8;
+  font-weight: 600;
 }
 
 .kalkulation-view .net-row .calculation-form-label {
   padding-left: 0.75rem;
-  font-size: 1.08rem;
+  font-size: 1rem;
 }
 
 .kalkulation-view .net-price-input {
   min-height: 2.75rem;
-  background-color: var(--kt-color-bg-very-light);
+  background-color: #f5f8ff;
   border-color: transparent;
   box-shadow: none;
 }
@@ -1090,7 +1099,7 @@ body.configuration-offcanvas-open {
 }
 
 .kalkulation-view .net-price-input:focus {
-  background-color: var(--kt-color-bg-very-light);
+  background-color: #f5f8ff;
   border-color: transparent;
   box-shadow: none;
 }
@@ -1120,9 +1129,9 @@ body.configuration-offcanvas-open {
   margin: -0.1rem 0;
   color: var(--kt-color-text-primary);
   cursor: pointer;
-  font-size: var(--kt-font-size-lg);
+  font-size: 1.04rem;
   font-weight: 600;
-  line-height: 2.2rem;
+  line-height: 2.05rem;
   list-style: none;
 }
 
@@ -1169,7 +1178,7 @@ body.configuration-offcanvas-open {
 }
 
 .conditions-group:not(:last-child) {
-  margin-bottom: 1.85rem;
+  margin-bottom: 1.35rem;
 }
 
 .conditions-group + .conditions-group {
@@ -1180,12 +1189,12 @@ body.configuration-offcanvas-open {
 .conditions-group-title {
   display: flex;
   align-items: center;
-  min-height: 2.2rem;
-  margin: 0 0 0.65rem;
+  min-height: 1.9rem;
+  margin: 0 0 0.45rem;
   color: var(--kt-color-text-primary);
-  font-size: var(--kt-font-size-lg);
+  font-size: 1rem;
   font-weight: 600;
-  line-height: 2.2rem;
+  line-height: 1.9rem;
   letter-spacing: 0;
 }
 
@@ -1199,8 +1208,8 @@ body.configuration-offcanvas-open {
   grid-template-columns: minmax(24rem, 1.35fr) repeat(3, minmax(0, 1fr));
   align-items: center;
   gap: 1.1rem;
-  min-height: 3.05rem;
-  padding: 0.6rem 0;
+  min-height: 2.75rem;
+  padding: 0.45rem 0;
   border-bottom: 1px solid var(--kt-color-border-light);
   background: transparent;
 }
@@ -1210,11 +1219,12 @@ body.configuration-offcanvas-open {
 }
 
 .conditions-header-row {
-  min-height: 2rem;
+  min-height: 1.65rem;
   padding-top: 0;
+  padding-bottom: 0.25rem;
   background: transparent;
-  color: var(--kt-color-text-primary);
-  font-size: var(--kt-font-size-md);
+  color: var(--kt-color-text-secondary);
+  font-size: 0.9rem;
   font-weight: 600;
 }
 
@@ -1238,7 +1248,7 @@ body.configuration-offcanvas-open {
 .conditions-value-label {
   min-width: 0;
   color: var(--kt-color-text-primary);
-  font-size: var(--kt-font-size-md);
+  font-size: 0.96rem;
   font-weight: 500;
   line-height: var(--kt-line-height-tight);
 }
@@ -1268,25 +1278,25 @@ body.configuration-offcanvas-open {
 .conditions-row .form-select,
 .conditions-row .amount-input {
   min-height: 2.35rem;
-  font-size: var(--kt-font-size-md);
+  font-size: 0.96rem;
 }
 
 .rappen-group .form-control {
   min-height: 2.35rem;
-  font-size: var(--kt-font-size-md);
+  font-size: 0.96rem;
 }
 
 .rappen-group .input-group-text {
   min-width: 4.25rem;
   justify-content: center;
   color: var(--kt-color-text-secondary);
-  font-size: var(--kt-font-size-md);
+  font-size: 0.96rem;
   background: var(--kt-color-bg-light);
 }
 
 .scan-fee-select {
   min-height: 2.35rem;
-  font-size: var(--kt-font-size-md);
+  font-size: 0.96rem;
 }
 
 .offer-conditions-card .table-responsive {
@@ -1296,15 +1306,30 @@ body.configuration-offcanvas-open {
 .offer-conditions-table {
   table-layout: fixed;
   width: 100%;
+  min-width: 52rem;
+  max-width: 90rem;
   margin-bottom: 0;
   border: 0;
   border-color: #e7ebf0;
+  font-size: 0.96rem;
 }
 
 .offer-conditions-table > :not(caption) > * > * {
   border-color: #e7ebf0;
   border-right: 0;
   border-left: 0;
+}
+
+.offer-conditions-table thead th {
+  height: 2.45rem;
+  padding: 0.42rem 0.75rem;
+}
+
+.offer-conditions-table tbody td {
+  height: 2.9rem;
+  padding: 0.32rem 0.75rem;
+  line-height: 1.25;
+  vertical-align: middle;
 }
 
 .offer-conditions-table th:nth-child(1),
@@ -1314,24 +1339,39 @@ body.configuration-offcanvas-open {
 
 .offer-conditions-table th:nth-child(2),
 .offer-conditions-table td:nth-child(2) {
-  width: 48%;
+  width: 50%;
 }
 
 .offer-conditions-table th:nth-child(3),
 .offer-conditions-table td:nth-child(3) {
-  width: 22%;
+  width: 18%;
 }
 
 .offer-conditions-table th:nth-child(4),
 .offer-conditions-table td:nth-child(4) {
-  width: 26%;
+  width: 24%;
 }
 
 .offer-condition-value-cell {
   min-width: 9rem;
 }
 
+.offer-condition-value-cell > span {
+  display: flex;
+  align-items: center;
+  min-height: 2.25rem;
+}
+
+.offer-condition-select {
+  min-height: 2.25rem;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  font-size: 0.96rem;
+  line-height: 1.2;
+}
+
 .offer-condition-checkbox {
+  margin: 0;
   cursor: pointer;
 }
 
@@ -1345,7 +1385,7 @@ body.configuration-offcanvas-open {
 }
 
 .calculated-price-input {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .rent-section {
@@ -1356,7 +1396,7 @@ body.configuration-offcanvas-open {
 .rent-options {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.55rem;
+  gap: 0.45rem;
 }
 
 .rent-option {
@@ -1366,11 +1406,11 @@ body.configuration-offcanvas-open {
   align-items: center;
   align-content: center;
   gap: 0.3rem 0.85rem;
-  min-height: 4.05rem;
-  padding: 0.6rem 0.85rem;
+  min-height: 3.75rem;
+  padding: 0.55rem 0.75rem;
   border: 1px solid #e4e7ec;
   border-radius: var(--kt-spacing-sm);
-  background: #ffffff;
+  background: #fbfcfe;
 }
 
 .rent-icon {
@@ -1379,20 +1419,20 @@ body.configuration-offcanvas-open {
   align-self: center;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.05rem;
+  height: 2.05rem;
   border: 1px solid var(--kt-color-border);
   border-radius: var(--kt-spacing-sm);
-  background: var(--kt-color-bg-light);
-  color: #000000;
-  font-size: 0.9rem;
+  background: #ffffff;
+  color: var(--kt-color-text-secondary);
+  font-size: 0.85rem;
 }
 
 .rent-label,
 .rent-value,
 .rent-basis {
   color: var(--kt-color-text-primary);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 500;
   line-height: var(--kt-line-height-tight);
 }
@@ -1401,11 +1441,11 @@ body.configuration-offcanvas-open {
   min-width: 0;
   color: var(--kt-color-text-primary);
   text-align: left;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .rent-amount {
-  color: #155eef;
+  color: #1d4ed8;
   font-weight: 600;
 }
 
@@ -1416,21 +1456,13 @@ body.configuration-offcanvas-open {
 
 .rent-basis {
   color: var(--kt-color-text-tertiary);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 500;
 }
 
 @media (max-width: 1199.98px) {
   .calculation-toolbar {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .toolbar-field-save {
-    justify-content: stretch;
-  }
-
-  .toolbar-save-button {
-    width: 100%;
   }
 
   .calculation-layout {
@@ -1454,11 +1486,13 @@ body.configuration-offcanvas-open {
     gap: 0.6rem;
   }
 
-  .toolbar-field-save {
-    justify-content: stretch;
+  .calculation-sticky-save {
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
   }
 
-  .toolbar-save-button {
+  .calculation-sticky-save-button {
     width: 100%;
   }
 
