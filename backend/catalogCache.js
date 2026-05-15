@@ -31,6 +31,5 @@ const getCatalogCache = () => {
 
 module.exports = {
   getCatalogCache,
-  setCatalogCache,
-  isCacheValid
+  setCatalogCache
 }

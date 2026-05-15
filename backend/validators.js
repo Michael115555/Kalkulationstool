@@ -436,14 +436,6 @@ const validateKonfigurationPayload = (payload = {}) => {
 
 module.exports = {
   validateInteger,
-  validateString,
-  validateEmail,
-  normalizeSwissPhone,
-  validateSwissPhone,
-  validateOptionalInteger,
-  validateOptionalNonNegativeInteger,
-  validateOptionalString,
-  validateCalculationSnapshot,
   validateKundePayload,
   validateKonfigurationPayload,
   ApiError

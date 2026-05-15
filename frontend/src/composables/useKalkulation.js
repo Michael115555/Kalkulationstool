@@ -125,8 +125,6 @@ export const useKalkulation = () => {
   const kunden = ref([])
   const kundeId = ref(null)
   const projectName = ref('')
-  const neuerKundenname = ref('')
-  const isCreatingKunde = ref(false)
 
   const katalog = ref({
     druckermodelle: [],
@@ -139,9 +137,6 @@ export const useKalkulation = () => {
   const activeConfigurationVariantId = ref(null)
   const isNewConfigurationDraft = ref(false)
   const configurationVariants = ref([])
-  const isRenameConfigurationPanelVisible = ref(false)
-  const editingConfigurationVariantName = ref('')
-  const isDeleteConfigurationConfirmationVisible = ref(false)
 
   let isLoadingConfigurationVariant = false
   let isInitialDataLoaded = false
@@ -186,10 +181,6 @@ export const useKalkulation = () => {
 
     return Array.from(marken).sort((a, b) => a.localeCompare(b, 'de-CH'))
   })
-
-  const druckermodelle = computed(() =>
-    katalog.value.druckermodelle.map((modell) => modell.name)
-  )
 
   const druckermodelleDerMarke = computed(() =>
     katalog.value.druckermodelle.filter(
@@ -259,10 +250,6 @@ export const useKalkulation = () => {
         druckermarke.value &&
         (druckermodell.value || isExotischesModell.value)
     )
-  )
-
-  const varianten = computed(() =>
-    selectedDruckermodell.value?.varianten.map((eintrag) => eintrag.bezeichnung) ?? []
   )
 
   const verfuegbaresZubehoer = computed(() => {
@@ -1471,63 +1458,6 @@ export const useKalkulation = () => {
     )
   )
 
-  const filteredConfigurationVariants = computed(() =>
-    configurationVariants.value.filter(
-      (configurationVariant) => isConfigurationComplete(configurationVariant)
-    )
-  )
-
-  const getConfigurationPositionCount = (configurationVariant) =>
-    configurationVariant.calculation.positions.filter(
-      (position) =>
-        position.zubehoer ||
-        position.bezeichnung ||
-        normalizeNumber(position.vp) > 0
-    ).length
-
-  const getConfigurationMeta = (configurationVariant) => {
-    const positionCount = getConfigurationPositionCount(configurationVariant)
-    const positionLabel = positionCount === 1 ? 'Position' : 'Positionen'
-    const kundeName =
-      kunden.value.find((kunde) => kunde.id === configurationVariant.kundeId)?.firmenname ??
-      'Ohne Kunde'
-
-    return {
-      line1: `${kundeName} · ${positionCount} ${positionLabel}`,
-      line2: `${configurationVariant.calculation.druckermodell} · ${configurationVariant.calculation.variante}`
-    }
-  }
-
-  const activeConfigurationName = computed(
-    () => getActiveConfigurationVariant()?.name ?? (projectName.value.trim() || 'Kein Projekt')
-  )
-
-  const deleteConfigurationConfirmationText = computed(
-    () => `„${activeConfigurationName.value}“ wirklich löschen?`
-  )
-
-  const isEditingConfigurationNameDuplicate = computed(() => {
-    const name = editingConfigurationVariantName.value.trim()
-    const editingConfigurationVariant = getActiveConfigurationVariant()
-
-    if (!name || !editingConfigurationVariant) {
-      return false
-    }
-
-    return configurationVariants.value.some(
-      (configurationVariant) =>
-        configurationVariant.id !== editingConfigurationVariant.id &&
-        configurationVariant.kundeId === editingConfigurationVariant.kundeId &&
-        configurationVariant.name === name
-    )
-  })
-
-  const canSaveConfigurationVariantName = computed(() => {
-    const name = editingConfigurationVariantName.value.trim()
-
-    return name.length > 0 && !isEditingConfigurationNameDuplicate.value
-  })
-
   const getUniqueConfigurationName = (modell, baseName) => {
     const existingNames = configurationVariants.value
       .filter(isConfigurationComplete)
@@ -1574,66 +1504,6 @@ export const useKalkulation = () => {
     }
 
     return 'Projekt'
-  }
-
-  const updateProjectName = (name) => {
-    projectName.value = name
-
-    const activeConfigurationVariant = getActiveConfigurationVariant()
-    const cleanName = name.trim()
-
-    if (!activeConfigurationVariant || !cleanName || activeConfigurationVariant.name === cleanName) {
-      return
-    }
-
-    activeConfigurationVariant.name = cleanName
-    activeConfigurationVariant.calculation = createCalculationSnapshot(cleanName)
-    queueSaveConfigurationVariant(activeConfigurationVariant)
-  }
-
-  const normalizeProjectName = () => {
-    const cleanName = projectName.value.trim()
-    const activeConfigurationVariant = getActiveConfigurationVariant()
-
-    if (!cleanName) {
-      projectName.value = activeConfigurationVariant?.name ?? ''
-      return
-    }
-
-    updateProjectName(cleanName)
-  }
-
-  const generateDuplicateConfigurationName = (modell, configName) => {
-    const existingNames = configurationVariants.value
-      .filter(isConfigurationComplete)
-      .map((configurationVariant) => configurationVariant.name)
-
-    const cleanName = configName
-      .replace(/^Kopie von\s+/i, '')
-      .replace(/\s+Kopie(\s+\d+)?$/i, '')
-      .trim()
-
-    if (cleanName === 'Standard' || cleanName.startsWith('Alternative')) {
-      let index = 1
-      let candidate = `Alternative ${index}`
-
-      while (existingNames.includes(candidate)) {
-        index += 1
-        candidate = `Alternative ${index}`
-      }
-
-      return candidate
-    }
-
-    let index = 1
-    let candidate = `${cleanName} Kopie`
-
-    while (existingNames.includes(candidate)) {
-      index += 1
-      candidate = `${cleanName} Kopie ${index}`
-    }
-
-    return candidate
   }
 
   const selectDruckermarke = (marke) => {
@@ -1688,23 +1558,6 @@ export const useKalkulation = () => {
     }
   }
 
-  const selectVariante = (nextVariante) => {
-    if (nextVariante === variante.value || !canEditConfigurationSelection.value) {
-      return
-    }
-
-    saveActiveConfigurationVariant()
-
-    if (!druckermodell.value || !nextVariante) {
-      variante.value = ''
-      positions.value = []
-      naechsteId.value = 1
-      return
-    }
-
-    loadCalculationSnapshot(createDefaultCalculationSnapshot(druckermodell.value, nextVariante))
-  }
-
   const selectKunde = (id) => {
     const nextKundeId = id ? Number(id) : null
 
@@ -1739,43 +1592,6 @@ export const useKalkulation = () => {
       activeConfigurationVariant.calculation.kundeId = nextKundeId
       queueSaveConfigurationVariant(activeConfigurationVariant)
     }
-  }
-
-  const createKunde = async () => {
-    const firmenname = neuerKundenname.value.trim()
-
-    if (!firmenname || isCreatingKunde.value) {
-      return
-    }
-
-    isCreatingKunde.value = true
-
-    try {
-      const kunde = await api.createKunde({ firmenname })
-
-      kunden.value = [...kunden.value, kunde].sort((a, b) =>
-        a.firmenname.localeCompare(b.firmenname, 'de-CH')
-      )
-      neuerKundenname.value = ''
-      catalogError.value = ''
-    } catch (error) {
-      catalogError.value = `Kunde konnte nicht erstellt werden: ${error.message}`
-    } finally {
-      isCreatingKunde.value = false
-    }
-  }
-
-  const selectConfigurationVariant = (id) => {
-    if (id === activeConfigurationVariantId.value) {
-      return
-    }
-
-    isRenameConfigurationPanelVisible.value = false
-    isDeleteConfigurationConfirmationVisible.value = false
-    saveActiveConfigurationVariant()
-    isNewConfigurationDraft.value = false
-    activeConfigurationVariantId.value = id
-    loadConfigurationVariant(getActiveConfigurationVariant())
   }
 
   const addConfigurationVariant = async () => {
@@ -1824,148 +1640,6 @@ export const useKalkulation = () => {
     kundeId.value = null
     druckermarke.value = ''
     clearCalculationSelection()
-  }
-
-  const startNewConfiguration = () => {
-    saveActiveConfigurationVariant()
-    activeConfigurationVariantId.value = null
-    isNewConfigurationDraft.value = true
-    kundeId.value = null
-    projectName.value = ''
-    druckermarke.value = ''
-    clearCalculationSelection()
-    isRenameConfigurationPanelVisible.value = false
-    isDeleteConfigurationConfirmationVisible.value = false
-    editingConfigurationVariantName.value = ''
-    catalogError.value = ''
-  }
-
-  const renameConfigurationVariant = () => {
-    const activeConfigurationVariant = getActiveConfigurationVariant()
-
-    if (!activeConfigurationVariant) {
-      return
-    }
-
-    isDeleteConfigurationConfirmationVisible.value = false
-    isRenameConfigurationPanelVisible.value = true
-    editingConfigurationVariantName.value = activeConfigurationVariant.name
-  }
-
-  const commitConfigurationVariantRename = async () => {
-    const configurationVariant = getActiveConfigurationVariant()
-    const name = editingConfigurationVariantName.value.trim()
-
-    if (!configurationVariant) {
-      cancelConfigurationVariantRename()
-      return
-    }
-
-    if (!canSaveConfigurationVariantName.value) {
-      return
-    }
-
-    configurationVariant.name = name
-    configurationVariant.calculation = createCalculationSnapshot(name)
-    projectName.value = name
-    isRenameConfigurationPanelVisible.value = false
-    editingConfigurationVariantName.value = ''
-
-    try {
-      await persistConfigurationVariant(configurationVariant)
-    } catch (error) {
-      catalogError.value = `Name konnte nicht gespeichert werden: ${error.message}`
-    }
-  }
-
-  const cancelConfigurationVariantRename = () => {
-    isRenameConfigurationPanelVisible.value = false
-    editingConfigurationVariantName.value = ''
-  }
-
-  const duplicateConfigurationVariant = async () => {
-    saveActiveConfigurationVariant()
-
-    const activeConfigurationVariant = getActiveConfigurationVariant()
-
-    if (!activeConfigurationVariant) {
-      return
-    }
-
-    try {
-      const name = generateDuplicateConfigurationName(
-        activeConfigurationVariant.druckermodell,
-        activeConfigurationVariant.name
-      )
-
-      const configurationVariant = await createConfigurationVariantInDatabase(
-        activeConfigurationVariant.druckermodell,
-        cloneCalculationSnapshot(activeConfigurationVariant.calculation),
-        name
-      )
-
-      configurationVariants.value.push(configurationVariant)
-      activeConfigurationVariantId.value = configurationVariant.id
-      isNewConfigurationDraft.value = false
-      projectName.value = configurationVariant.name
-      loadConfigurationVariant(configurationVariant)
-    } catch (error) {
-      catalogError.value = `Projekt konnte nicht dupliziert werden: ${error.message}`
-    }
-  }
-
-  const deleteConfigurationVariant = () => {
-    if (!getActiveConfigurationVariant()) {
-      return
-    }
-
-    isDeleteConfigurationConfirmationVisible.value = true
-  }
-
-  const cancelDeleteConfigurationVariant = () => {
-    isDeleteConfigurationConfirmationVisible.value = false
-  }
-
-  const confirmDeleteConfigurationVariant = async () => {
-    if (!getActiveConfigurationVariant()) {
-      isDeleteConfigurationConfirmationVisible.value = false
-      return
-    }
-
-    const deletedId = activeConfigurationVariantId.value
-    const activeIndex = filteredConfigurationVariants.value.findIndex(
-      (configurationVariant) => configurationVariant.id === deletedId
-    )
-    const nextActiveIndex = Math.max(0, activeIndex - 1)
-
-    try {
-      await api.deleteKonfiguration(deletedId)
-      configurationVariants.value = configurationVariants.value.filter(
-        (configurationVariant) => configurationVariant.id !== deletedId
-      )
-
-      const nextConfigurationVariant =
-        filteredConfigurationVariants.value[nextActiveIndex] ??
-        filteredConfigurationVariants.value[0] ??
-        null
-
-      activeConfigurationVariantId.value = nextConfigurationVariant?.id ?? null
-
-      if (nextConfigurationVariant) {
-        isNewConfigurationDraft.value = false
-        loadConfigurationVariant(nextConfigurationVariant)
-      } else {
-        isNewConfigurationDraft.value = false
-        kundeId.value = null
-        projectName.value = ''
-        druckermarke.value = ''
-        clearCalculationSelection()
-      }
-
-      isDeleteConfigurationConfirmationVisible.value = false
-    } catch (error) {
-      catalogError.value = `Projekt konnte nicht gelöscht werden: ${error.message}`
-    }
   }
 
   const addPosition = () => {
@@ -2128,14 +1802,7 @@ export const useKalkulation = () => {
     catalogError,
     kunden,
     kundeId,
-    projectName,
-    updateProjectName,
-    normalizeProjectName,
-    selectedKunde,
-    neuerKundenname,
-    isCreatingKunde,
     selectKunde,
-    createKunde,
 
     druckermarke,
     druckermarken,
@@ -2146,22 +1813,15 @@ export const useKalkulation = () => {
 
     druckermodell,
     selectDruckermodell,
-    druckermodelle,
     druckermodelleDerMarkeNamen,
-    variante,
-    selectVariante,
-    varianten,
 
     canEditConfigurationSelection,
     canEditPositions,
-    configurationVariants,
-    startNewConfiguration,
 
     positions,
     konditionenA3Mfp,
     isEmptyPosition,
     updatePositionZubehoer,
-    zubehoerKategorien,
     positionsKategorien,
     updatePositionProdukt,
     getProdukteByZubehoer,
@@ -2207,25 +1867,6 @@ export const useKalkulation = () => {
     nettopreis,
     mietoptionen,
     getMietbetrag,
-    mietbasis,
-
-    filteredConfigurationVariants,
-    activeConfigurationVariantId,
-    selectConfigurationVariant,
-    getConfigurationMeta,
-    activeConfigurationName,
-    isRenameConfigurationPanelVisible,
-    isDeleteConfigurationConfirmationVisible,
-    editingConfigurationVariantName,
-    commitConfigurationVariantRename,
-    cancelConfigurationVariantRename,
-    isEditingConfigurationNameDuplicate,
-    canSaveConfigurationVariantName,
-    deleteConfigurationConfirmationText,
-    cancelDeleteConfigurationVariant,
-    confirmDeleteConfigurationVariant,
-    renameConfigurationVariant,
-    duplicateConfigurationVariant,
-    deleteConfigurationVariant
+    mietbasis
   }
 }
