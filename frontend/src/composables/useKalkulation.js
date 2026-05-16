@@ -18,6 +18,7 @@ import {
 
 const EXOTIC_MODEL_OPTION = 'Exotisches Modell'
 const MANUAL_CALCULATION_MODEL = 'Manuelle Kalkulation'
+const MANUAL_POSITION_CATEGORY = 'Manuell'
 const KONDITIONEN_A3_MFP_SELECTION_VERSION = 5
 const INCLUDED_DELIVERY_OPTION = 'inkl'
 const INCLUDED_DELIVERY_CONDITION_KEYS = new Set([
@@ -317,18 +318,25 @@ export const useKalkulation = () => {
     if (isExotischesModell.value) {
       const kategorien = getUniqueKategorieNamen([
         'Drucker',
+        MANUAL_POSITION_CATEGORY,
         ...katalog.value.zubehoerKategorien.map((kategorie) => kategorie.name)
       ])
 
       return kategorien.sort((a, b) => {
         if (a === 'Drucker') return -1
         if (b === 'Drucker') return 1
+        if (a === MANUAL_POSITION_CATEGORY) return 1
+        if (b === MANUAL_POSITION_CATEGORY) return -1
 
         return a.localeCompare(b, 'de-CH')
       })
     }
 
-    return getUniqueKategorieNamen(['Drucker', ...zubehoerKategorien.value])
+    return getUniqueKategorieNamen([
+      'Drucker',
+      ...zubehoerKategorien.value,
+      MANUAL_POSITION_CATEGORY
+    ])
   })
 
   const lieferungOptionen = computed(() => katalog.value.lieferungOptionen)
@@ -439,6 +447,9 @@ export const useKalkulation = () => {
     epKategorie: 'optionen'
   })
 
+  const isManualPosition = (position) =>
+    position?.zubehoer === MANUAL_POSITION_CATEGORY
+
   const createManualPosition = (id = 1, zubehoer = '') => ({
     id,
     zubehoerId: null,
@@ -548,7 +559,7 @@ export const useKalkulation = () => {
   })
 
   const getProdukteByZubehoer = (zubehoer) => {
-    if (isExotischesModell.value) {
+    if (isExotischesModell.value || zubehoer === MANUAL_POSITION_CATEGORY) {
       return []
     }
 
@@ -606,6 +617,21 @@ export const useKalkulation = () => {
         istDrucker: true,
         zubehoer: 'Drucker',
         epKategorie: 'body'
+      }
+    }
+
+    if (isManualPosition(position)) {
+      return {
+        ...createManualPosition(position?.id ?? naechsteId.value, MANUAL_POSITION_CATEGORY),
+        ...position,
+        id: position?.id ?? naechsteId.value,
+        zubehoer: MANUAL_POSITION_CATEGORY,
+        zubehoerId: null,
+        druckermodellId: null,
+        druckerVarianteId: null,
+        istDrucker: false,
+        einkaufsPreis: position?.einkaufsPreis ?? formatAmount(0),
+        epKategorie: position?.epKategorie ?? 'optionen'
       }
     }
 
@@ -746,6 +772,11 @@ export const useKalkulation = () => {
           )
         )
       : createDefaultPositions()
+    const nextPositionId = Math.max(
+      Number(snapshot?.naechsteId) || 0,
+      2,
+      ...normalizedPositions.map((position) => Number(position.id) + 1)
+    )
 
     return {
       kundeId: snapshot?.kundeId ?? null,
@@ -779,9 +810,7 @@ export const useKalkulation = () => {
         snapshot?.konditionenA3MfpVersion >= KONDITIONEN_A3_MFP_SELECTION_VERSION
       ),
       konditionenA3MfpVersion: KONDITIONEN_A3_MFP_SELECTION_VERSION,
-      naechsteId:
-        snapshot?.naechsteId ??
-        Math.max(2, ...normalizedPositions.map((position) => Number(position.id) + 1)),
+      naechsteId: nextPositionId,
       displaySnapshot: snapshot?.displaySnapshot ?? null
     }
   }
@@ -966,6 +995,7 @@ export const useKalkulation = () => {
 
   const updatePositionZubehoer = (position) => {
     const isDrucker = position.zubehoer === 'Drucker'
+    const isManual = position.zubehoer === MANUAL_POSITION_CATEGORY
 
     position.bezeichnung = ''
     position.zubehoerId = null
@@ -973,14 +1003,15 @@ export const useKalkulation = () => {
     position.druckerVarianteId = null
     position.istDrucker = isDrucker
     position.vp = formatAmount(0)
-    position.einkaufsPreis = isExotischesModell.value ? formatAmount(0) : null
+    position.einkaufsPreis =
+      isExotischesModell.value || isManual ? formatAmount(0) : null
     position.epKategorie = isDrucker
       ? 'body'
       : getZubehoerKategorieByName(position.zubehoer)?.epKategorie ?? 'optionen'
   }
 
   const updatePositionProdukt = (position) => {
-    if (isExotischesModell.value) {
+    if (isExotischesModell.value || isManualPosition(position)) {
       position.istDrucker = position.zubehoer === 'Drucker'
       position.druckermodellId = null
       position.druckerVarianteId = null
@@ -1435,7 +1466,7 @@ export const useKalkulation = () => {
         return false
       }
 
-      if (isExotischesModell.value) {
+      if (isExotischesModell.value || isManualPosition(position)) {
         return normalizeNumber(position.vp) > 0 || getEinkaufspreis(position) > 0
       }
 

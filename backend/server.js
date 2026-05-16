@@ -337,6 +337,13 @@ const serializeKonfiguration = (konfiguration) => ({
   aktualisiertAm: konfiguration.aktualisiertAm
 })
 
+const isCountedProjectPosition = (position) =>
+  Boolean(
+    position?.istDrucker ||
+      position?.zubehoerId ||
+      String(position?.bezeichnung ?? '').trim()
+  )
+
 const serializeProjektSummary = (konfiguration) => {
   const calculation = parseSnapshot(konfiguration)
   const positions = Array.isArray(calculation.positions) ? calculation.positions : []
@@ -348,8 +355,7 @@ const serializeProjektSummary = (konfiguration) => {
     druckermodellId: konfiguration.druckermodellId,
     druckerVarianteId: konfiguration.druckerVarianteId,
     total: amountFromDb(konfiguration.total),
-    positionsCount: positions.filter((position) => position.zubehoer || position.bezeichnung)
-      .length,
+    positionsCount: positions.filter(isCountedProjectPosition).length,
     calculation: {
       kundeId: konfiguration.kundeId ?? null,
       druckermodell: calculation.druckermodell ?? '',

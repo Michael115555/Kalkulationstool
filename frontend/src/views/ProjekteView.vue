@@ -15,9 +15,16 @@ const verkaeufer = ref([])
 let loadingIndicatorTimer = null
 
 const sortedProjekte = computed(() =>
-  [...projekte.value].sort((a, b) =>
-    getProjektName(a).localeCompare(getProjektName(b), 'de-CH')
-  )
+  [...projekte.value].sort((a, b) => {
+    const aktualisiertAmA = Date.parse(a.aktualisiertAm ?? '') || 0
+    const aktualisiertAmB = Date.parse(b.aktualisiertAm ?? '') || 0
+
+    if (aktualisiertAmA !== aktualisiertAmB) {
+      return aktualisiertAmB - aktualisiertAmA
+    }
+
+    return Number(b.id ?? 0) - Number(a.id ?? 0)
+  })
 )
 
 const getKundeId = (projekt) =>
@@ -203,6 +210,7 @@ onBeforeUnmount(() => {
             <table class="table align-middle mb-0 table-bordered projekte-table">
               <thead>
                 <tr>
+                  <th scope="col" class="text-end">Nr.</th>
                   <th scope="col">Projektname</th>
                   <th scope="col">Kunde</th>
                   <th scope="col">Verkäufer</th>
@@ -214,62 +222,25 @@ onBeforeUnmount(() => {
 
               <tbody>
                 <tr
-                  v-for="projekt in sortedProjekte"
+                  v-for="(projekt, index) in sortedProjekte"
                   :key="projekt.id"
                 >
-                  <td>
-                    <input
-                      :value="getProjektName(projekt)"
-                      type="text"
-                      class="form-control control-field readonly-price"
-                      readonly
-                      tabindex="-1"
-                      aria-label="Projektname"
-                    />
+                  <td class="text-end project-number-cell">
+                    {{ sortedProjekte.length - index }}
                   </td>
 
-                  <td>
-                    <input
-                      :value="getProjektKunde(projekt)"
-                      type="text"
-                      class="form-control control-field readonly-price"
-                      readonly
-                      tabindex="-1"
-                      aria-label="Kunde"
-                    />
+                  <td>{{ getProjektName(projekt) }}</td>
+
+                  <td>{{ getProjektKunde(projekt) }}</td>
+
+                  <td>{{ getProjektVerkaeufer(projekt) }}</td>
+
+                  <td class="text-end project-number-cell">
+                    {{ getPositionenCount(projekt) }}
                   </td>
 
-                  <td>
-                    <input
-                      :value="getProjektVerkaeufer(projekt)"
-                      type="text"
-                      class="form-control control-field readonly-price"
-                      readonly
-                      tabindex="-1"
-                      aria-label="Verkäufer"
-                    />
-                  </td>
-
-                  <td>
-                    <input
-                      :value="getPositionenCount(projekt)"
-                      type="text"
-                      class="form-control control-field text-end readonly-price"
-                      readonly
-                      tabindex="-1"
-                      aria-label="Positionen"
-                    />
-                  </td>
-
-                  <td>
-                    <input
-                      :value="formatAmount(projekt.total ?? 0)"
-                      type="text"
-                      class="form-control control-field text-end readonly-price"
-                      readonly
-                      tabindex="-1"
-                      aria-label="Nettopreis CHF"
-                    />
+                  <td class="text-end project-number-cell">
+                    {{ formatAmount(projekt.total ?? 0) }}
                   </td>
 
                   <td class="text-center align-middle">
@@ -288,7 +259,7 @@ onBeforeUnmount(() => {
                 </tr>
 
                 <tr v-if="sortedProjekte.length === 0" class="empty-position-row">
-                  <td colspan="6">
+                  <td colspan="7">
                     <div class="project-empty-table-text">
                       Noch keine Projekte vorhanden.
                     </div>
@@ -375,7 +346,7 @@ onBeforeUnmount(() => {
 
 .projekte-table {
   width: 100%;
-  min-width: 72rem;
+  min-width: 58rem;
   margin-bottom: 0;
   border-style: hidden;
   table-layout: fixed;
@@ -397,6 +368,10 @@ onBeforeUnmount(() => {
   border-color: #e7ebf0;
 }
 
+.projekte-table tbody tr:hover td {
+  background-color: #fbfcfe;
+}
+
 .projekte-table.table-bordered > :not(caption) > * > * {
   border-color: #e7ebf0;
 }
@@ -410,60 +385,45 @@ onBeforeUnmount(() => {
 
 .projekte-table th:nth-child(1),
 .projekte-table td:nth-child(1) {
-  width: 38%;
+  width: 4.25rem;
 }
 
 .projekte-table th:nth-child(2),
 .projekte-table td:nth-child(2) {
-  width: 21%;
+  width: 38%;
 }
 
 .projekte-table th:nth-child(3),
 .projekte-table td:nth-child(3) {
-  width: 16%;
+  width: 21%;
 }
 
 .projekte-table th:nth-child(4),
 .projekte-table td:nth-child(4) {
-  width: 7%;
+  width: 16%;
 }
 
 .projekte-table th:nth-child(5),
 .projekte-table td:nth-child(5) {
-  width: 13%;
+  width: 7%;
 }
 
 .projekte-table th:nth-child(6),
 .projekte-table td:nth-child(6) {
+  width: 13%;
+}
+
+.projekte-table th:nth-child(7),
+.projekte-table td:nth-child(7) {
   width: 4.25rem;
   min-width: 4.25rem;
   max-width: 4.25rem;
   text-align: center;
 }
 
-.projekte-table input,
-.projekte-table select {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.control-field {
-  min-height: 2.35rem;
-  min-width: 0;
-  padding-top: 0.36rem;
-  padding-right: 0.7rem;
-  padding-bottom: 0.36rem;
-  padding-left: 0.7rem;
-  font-size: var(--kt-font-size-md);
-  line-height: 1.2;
-}
-
-.readonly-price {
-  background-color: #f8fafc;
-  color: #667085;
-  cursor: default;
-  opacity: 1;
+.project-number-cell {
+  color: var(--kt-color-text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .project-action-list {

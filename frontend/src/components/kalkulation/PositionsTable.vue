@@ -59,6 +59,9 @@ const emit = defineEmits(['add-position', 'remove-position'])
 const isDruckerPosition = (position) =>
   position.istDrucker || position.zubehoer === 'Drucker'
 
+const isManuellePosition = (position) =>
+  position.zubehoer === 'Manuell'
+
 const isRequiredDruckerPosition = (position, index) =>
   index === 0 && isDruckerPosition(position)
 
@@ -74,7 +77,7 @@ const getBezeichnungPlaceholder = (position) => {
     return 'Bitte zuerst Kategorie wählen'
   }
 
-  if (props.isExotischesModell) {
+  if (props.isExotischesModell || isManuellePosition(position)) {
     return position.zubehoer === 'Drucker'
       ? 'Druckerbezeichnung eingeben'
       : 'Bezeichnung eingeben'
@@ -150,7 +153,7 @@ const normalizeManualEinkaufspreis = (position) => {
 
           <td>
             <input
-              v-if="isExotischesModell"
+              v-if="isExotischesModell || isManuellePosition(position)"
               v-model="position.bezeichnung"
               type="text"
               class="form-control control-field"
@@ -213,7 +216,7 @@ const normalizeManualEinkaufspreis = (position) => {
 
           <td>
             <input
-              v-if="isExotischesModell"
+              v-if="isExotischesModell || isManuellePosition(position)"
               v-model="position.einkaufsPreis"
               type="text"
               inputmode="decimal"
