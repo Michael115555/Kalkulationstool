@@ -18,7 +18,7 @@ import {
 
 const EXOTIC_MODEL_OPTION = 'Exotisches Modell'
 const MANUAL_CALCULATION_MODEL = 'Manuelle Kalkulation'
-const MANUAL_POSITION_CATEGORY = 'Manuell'
+const MANUAL_POSITION_CATEGORY = 'Diverses'
 const KONDITIONEN_A3_MFP_SELECTION_VERSION = 5
 const INCLUDED_DELIVERY_OPTION = 'inkl'
 const INCLUDED_DELIVERY_CONDITION_KEYS = new Set([
