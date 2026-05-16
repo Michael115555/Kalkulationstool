@@ -220,8 +220,7 @@ const getDefaultKonditionAuswahl = (kondition) =>
 const updateKonditionChecked = (kondition) => {
   if (isIncludedDeliveryCondition(kondition)) {
     kondition.auswahl = 'inkl'
-    kondition.checked = false
-    kondition.manuell = false
+    kondition.manuell = true
     return
   }
 
@@ -602,7 +601,6 @@ const toggleDetailsPanel = (panelName) => {
                   v-model="kondition.checked"
                   class="form-check-input offer-condition-checkbox"
                   type="checkbox"
-                  :disabled="isIncludedDeliveryCondition(kondition)"
                   :aria-label="`${kondition.label} auswählen`"
                   @change="updateKonditionChecked(kondition)"
                 />

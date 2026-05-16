@@ -120,8 +120,8 @@
 
 .calculation-sticky-save {
   position: fixed;
-  right: 1.25rem;
-  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  right: 1.5rem;
+  bottom: max(1.5rem, env(safe-area-inset-bottom));
   z-index: 1020;
   display: flex;
   justify-content: flex-end;
@@ -132,7 +132,9 @@
 
 .calculation-sticky-save-button {
   gap: 0.55rem;
-  box-shadow: 0 0.65rem 1.4rem rgba(16, 24, 40, 0.14);
+  box-shadow:
+    0 0.9rem 1.8rem rgba(16, 24, 40, 0.16),
+    0 0.2rem 0.45rem rgba(16, 24, 40, 0.08);
   pointer-events: auto;
 }
 

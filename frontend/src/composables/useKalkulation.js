@@ -522,7 +522,17 @@ export const useKalkulation = () => {
   const syncIncludedDeliveryConditions = (isIncluded = lieferungOption.value === INCLUDED_DELIVERY_OPTION) => {
     konditionenA3Mfp.value.forEach((kondition) => {
       if (INCLUDED_DELIVERY_CONDITION_KEYS.has(kondition.key)) {
-        kondition.auswahl = isIncluded ? 'inkl' : 'keine'
+        if (isIncluded) {
+          kondition.auswahl = 'inkl'
+
+          if (!kondition.manuell) {
+            kondition.checked = false
+          }
+
+          return
+        }
+
+        kondition.auswahl = 'keine'
         kondition.checked = false
         kondition.manuell = false
       }
