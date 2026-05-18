@@ -551,6 +551,16 @@ const handleRequest = async (request, response) => {
 
 const server = http.createServer(handleRequest)
 
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${port} ist bereits belegt. Bitte beende den laufenden Backend-Prozess und versuche es erneut.`)
+    process.exit(1)
+  }
+
+  console.error(`Server konnte nicht gestartet werden: ${error.message}`)
+  process.exit(1)
+})
+
 server.listen(port, () => {
   console.log(`Kalkulation API laeuft auf http://localhost:${port}`)
 })

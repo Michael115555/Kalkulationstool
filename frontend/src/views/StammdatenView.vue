@@ -169,7 +169,7 @@
 
                       <button
                         type="button"
-                        class="customer-row-button customer-delete-button"
+                        class="table-delete-button"
                         aria-label="Kunde löschen"
                         :disabled="customer.isDeleting || (customers.length === 1 && customer.isNew)"
                         @click.stop="askDeleteCustomer(customer)"
@@ -913,10 +913,6 @@ onBeforeUnmount(() => {
   transition: color 0.15s ease;
 }
 
-.customer-delete-button {
-  color: #c9a0a0;
-}
-
 .customer-save-button {
   color: #667085;
 }
@@ -945,18 +941,9 @@ onBeforeUnmount(() => {
   color: #1d4ed8;
 }
 
-.customer-delete-button:hover:not(:disabled),
-.customer-delete-button:focus-visible:not(:disabled) {
-  color: #dc2626;
-}
-
 .customer-row-button:focus-visible {
   border-radius: 0.2rem;
   outline-offset: 0.2rem;
-}
-
-.customer-delete-button:focus-visible {
-  outline: 2px solid #fecaca;
 }
 
 .customer-row-button:disabled {

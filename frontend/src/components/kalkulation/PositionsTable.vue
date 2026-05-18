@@ -259,7 +259,7 @@ const normalizeManualEinkaufspreis = (position) => {
             <button
               v-else
               type="button"
-              class="delete-icon"
+              class="table-delete-button"
               aria-label="Position löschen"
               @click="emit('remove-position', position.id)"
             >

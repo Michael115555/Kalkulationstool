@@ -247,9 +247,8 @@ onBeforeUnmount(() => {
                     <div class="project-action-list">
                       <button
                         type="button"
-                        class="project-action-button project-action-icon-danger"
+                        class="table-delete-button"
                         aria-label="Projekt löschen"
-                        title="Projekt löschen"
                         @click="askDeleteProjekt(projekt)"
                       >
                         <i class="pi pi-trash" aria-hidden="true"></i>
@@ -431,47 +430,6 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-}
-
-.project-action-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #2563eb;
-  transition: color 0.15s ease;
-}
-
-.project-action-button:hover:not(:disabled),
-.project-action-button:focus-visible:not(:disabled) {
-  color: #1d4ed8;
-}
-
-.project-action-icon-danger {
-  color: #c9a0a0;
-}
-
-.project-action-icon-danger:hover:not(:disabled),
-.project-action-icon-danger:focus-visible:not(:disabled) {
-  color: #dc2626;
-}
-
-.project-action-button:focus-visible {
-  border-radius: 0.2rem;
-  outline: 2px solid #bfdbfe;
-  outline-offset: 0.2rem;
-}
-
-.project-action-icon-danger:focus-visible {
-  outline-color: #fecaca;
-}
-
-.project-action-button .pi {
-  font-size: 1rem;
 }
 
 .project-empty-table-text {
