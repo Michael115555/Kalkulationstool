@@ -1,9 +1,11 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { createKalkulationApi } from '../services/kalkulationApi'
 import { formatAmount } from '../utils/numberFormat'
 
 const api = createKalkulationApi()
+const router = useRouter()
 const LOADING_INDICATOR_DELAY = 140
 
 const isLoading = ref(false)
@@ -145,6 +147,13 @@ const askDeleteProjekt = (projekt) => {
   projektToDelete.value = projekt
 }
 
+const editProjekt = (projekt) => {
+  router.push({
+    name: 'kalkulation',
+    query: { projektId: projekt.id }
+  })
+}
+
 const cancelDeleteProjekt = () => {
   if (isDeletingProjekt.value) {
     return
@@ -216,7 +225,7 @@ onBeforeUnmount(() => {
                   <th scope="col">Verkäufer</th>
                   <th scope="col" class="text-end">Positionen</th>
                   <th scope="col" class="text-end">Nettopreis CHF</th>
-                  <th scope="col" class="text-center">Aktion</th>
+                  <th scope="col" class="text-center">Aktionen</th>
                 </tr>
               </thead>
 
@@ -245,6 +254,16 @@ onBeforeUnmount(() => {
 
                   <td class="text-center align-middle">
                     <div class="project-action-list">
+                      <button
+                        type="button"
+                        class="table-edit-button"
+                        aria-label="Projekt bearbeiten"
+                        title="Projekt bearbeiten"
+                        @click="editProjekt(projekt)"
+                      >
+                        <i class="pi pi-pencil" aria-hidden="true"></i>
+                      </button>
+
                       <button
                         type="button"
                         class="table-delete-button"
@@ -414,9 +433,9 @@ onBeforeUnmount(() => {
 
 .projekte-table th:nth-child(7),
 .projekte-table td:nth-child(7) {
-  width: 4.25rem;
-  min-width: 4.25rem;
-  max-width: 4.25rem;
+  width: 5.5rem;
+  min-width: 5.5rem;
+  max-width: 5.5rem;
   text-align: center;
 }
 
@@ -429,7 +448,18 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.6rem;
+  gap: 0.15rem;
+}
+
+.projekte-table .table-edit-button,
+.projekte-table .table-delete-button {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.projekte-table .table-edit-button .pi,
+.projekte-table .table-delete-button .pi {
+  font-size: 0.95rem;
 }
 
 .project-empty-table-text {

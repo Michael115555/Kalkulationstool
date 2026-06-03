@@ -1,4 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { createKalkulationApi } from '../services/kalkulationApi'
 import {
   calculateCombinedScanFee,
@@ -116,6 +117,8 @@ const KONDITIONEN_A3_MFP = [
 
 export const useKalkulation = () => {
   const api = createKalkulationApi()
+  const route = useRoute()
+  const router = useRouter()
 
   const naechsteId = ref(1)
   const druckermarke = ref('')
@@ -136,6 +139,7 @@ export const useKalkulation = () => {
   })
 
   const activeConfigurationVariantId = ref(null)
+  const editingProjectId = ref(null)
   const isNewConfigurationDraft = ref(false)
   const configurationVariants = ref([])
 
@@ -241,6 +245,18 @@ export const useKalkulation = () => {
     () =>
       activeConfigurationVariantId.value !== null &&
       activeConfigurationVariantId.value !== undefined
+  )
+
+  const isEditingProject = computed(() =>
+    Boolean(editingProjectId.value)
+  )
+
+  const editingProjectName = computed(() =>
+    projectName.value.trim() || 'Projekt'
+  )
+
+  const saveProjectButtonLabel = computed(() =>
+    isEditingProject.value ? 'Änderungen speichern' : 'Projekt speichern'
   )
 
   const canEditConfigurationSelection = computed(() => !isCatalogLoading.value)
@@ -610,12 +626,17 @@ export const useKalkulation = () => {
     }
 
     if (position?.istDrucker) {
+      const druckerPosition = createDruckerPosition(modellName, variantenName, herstellerName)
+
       return {
-        ...createDruckerPosition(modellName, variantenName, herstellerName),
+        ...druckerPosition,
         ...position,
         id: position.id ?? 1,
         istDrucker: true,
         zubehoer: 'Drucker',
+        druckermodellId: position?.druckermodellId ?? druckerPosition.druckermodellId,
+        druckerVarianteId:
+          position?.druckerVarianteId ?? druckerPosition.druckerVarianteId,
         epKategorie: 'body'
       }
     }
@@ -901,6 +922,15 @@ export const useKalkulation = () => {
       (configurationVariant) => configurationVariant.id === activeConfigurationVariantId.value
     )
 
+  const getProjectIdFromRoute = () => {
+    const rawProjectId = Array.isArray(route.query?.projektId)
+      ? route.query.projektId[0]
+      : route.query?.projektId
+    const projectId = Number(rawProjectId)
+
+    return Number.isInteger(projectId) && projectId > 0 ? projectId : null
+  }
+
   const saveActiveConfigurationVariant = (shouldPersist = true) => {
     if (
       isExotischesModell.value ||
@@ -925,7 +955,7 @@ export const useKalkulation = () => {
     activeConfigurationVariant.druckermodell = druckermodell.value
     activeConfigurationVariant.total = nettopreis.value
 
-    if (shouldPersist) {
+    if (shouldPersist && !isEditingProject.value) {
       queueSaveConfigurationVariant(activeConfigurationVariant)
     }
   }
@@ -1631,7 +1661,9 @@ export const useKalkulation = () => {
         activeConfigurationVariant.name
       )
       activeConfigurationVariant.calculation.kundeId = nextKundeId
-      queueSaveConfigurationVariant(activeConfigurationVariant)
+      if (!isEditingProject.value) {
+        queueSaveConfigurationVariant(activeConfigurationVariant)
+      }
     }
   }
 
@@ -1668,19 +1700,79 @@ export const useKalkulation = () => {
     }
   }
 
+  const resetToNewCalculation = () => {
+    activeConfigurationVariantId.value = null
+    editingProjectId.value = null
+    isNewConfigurationDraft.value = false
+    projectName.value = ''
+    kundeId.value = null
+    druckermarke.value = ''
+    clearCalculationSelection()
+  }
+
+  const saveEditedProject = async () => {
+    if (!canSaveProject.value) {
+      catalogError.value =
+        'Bitte Kunde, Druckermarke, Druckermodell und eine Druckerposition erfassen.'
+      return null
+    }
+
+    const activeConfigurationVariant = getActiveConfigurationVariant()
+
+    if (!activeConfigurationVariant || !editingProjectId.value) {
+      catalogError.value = 'Projekt konnte nicht zum Bearbeiten geladen werden.'
+      return null
+    }
+
+    try {
+      window.clearTimeout(saveTimer)
+      saveActiveConfigurationVariant(false)
+
+      const savedConfigurationVariant = await api.updateKonfiguration(
+        activeConfigurationVariant.id,
+        createConfigurationPayload(activeConfigurationVariant)
+      )
+      const mappedConfigurationVariant = mapConfigurationFromApi(savedConfigurationVariant)
+      const configurationIndex = configurationVariants.value.findIndex(
+        (configurationVariant) => configurationVariant.id === mappedConfigurationVariant.id
+      )
+
+      if (configurationIndex >= 0) {
+        configurationVariants.value.splice(configurationIndex, 1, mappedConfigurationVariant)
+      } else {
+        configurationVariants.value.push(mappedConfigurationVariant)
+      }
+
+      catalogError.value = ''
+
+      return mappedConfigurationVariant
+    } catch (error) {
+      catalogError.value = `Projekt konnte nicht gespeichert werden: ${error.message}`
+      return null
+    }
+  }
+
   const saveProject = async () => {
+    if (isEditingProject.value) {
+      const savedProject = await saveEditedProject()
+
+      if (!savedProject) {
+        return
+      }
+
+      resetToNewCalculation()
+      await router.replace({ name: 'kalkulation', query: {} })
+
+      return
+    }
+
     const savedProject = await addConfigurationVariant()
 
     if (!savedProject) {
       return
     }
 
-    activeConfigurationVariantId.value = null
-    isNewConfigurationDraft.value = false
-    projectName.value = ''
-    kundeId.value = null
-    druckermarke.value = ''
-    clearCalculationSelection()
+    resetToNewCalculation()
   }
 
   const addPosition = () => {
@@ -1719,12 +1811,20 @@ export const useKalkulation = () => {
       .map(mapConfigurationFromApi)
       .filter(isConfigurationComplete)
 
-    kundeId.value = null
-    projectName.value = ''
-    activeConfigurationVariantId.value = null
-    isNewConfigurationDraft.value = false
-    druckermarke.value = ''
-    clearCalculationSelection()
+    resetToNewCalculation()
+
+    const projectIdFromRoute = getProjectIdFromRoute()
+    const projectToEdit = projectIdFromRoute
+      ? configurationVariants.value.find(
+          (configurationVariant) => configurationVariant.id === projectIdFromRoute
+        )
+      : null
+
+    if (projectToEdit) {
+      activeConfigurationVariantId.value = projectToEdit.id
+      editingProjectId.value = projectToEdit.id
+      loadConfigurationVariant(projectToEdit)
+    }
 
     isInitialDataLoaded = true
   }
@@ -1833,7 +1933,11 @@ export const useKalkulation = () => {
 
     const activeConfigurationVariant = getActiveConfigurationVariant()
 
-    if (activeConfigurationVariant && !isExotischesModell.value) {
+    if (
+      activeConfigurationVariant &&
+      !isExotischesModell.value &&
+      !isEditingProject.value
+    ) {
       persistConfigurationVariant(activeConfigurationVariant).catch(() => {})
     }
   })
@@ -1851,6 +1955,9 @@ export const useKalkulation = () => {
     isExotischesModell,
     canSaveProject,
     saveProject,
+    isEditingProject,
+    editingProjectName,
+    saveProjectButtonLabel,
 
     druckermodell,
     selectDruckermodell,

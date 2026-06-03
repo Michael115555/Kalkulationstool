@@ -24,6 +24,9 @@ const {
   positionsKategorien,
   canSaveProject,
   saveProject,
+  isEditingProject,
+  editingProjectName,
+  saveProjectButtonLabel,
   canEditConfigurationSelection,
   canEditPositions,
 
@@ -170,16 +173,27 @@ const {
           <div
             v-if="canSaveProject"
             class="calculation-sticky-save"
+            :class="{ 'calculation-sticky-save-editing': isEditingProject }"
           >
+            <div
+              v-if="isEditingProject"
+              class="calculation-edit-save-line"
+              aria-label="Projekt bearbeiten"
+            >
+              <span class="pi pi-pencil" aria-hidden="true"></span>
+              <span class="calculation-edit-save-mode">Projekt bearbeiten:</span>
+              <strong class="calculation-edit-save-title">{{ editingProjectName }}</strong>
+            </div>
+
             <button
               type="button"
               class="btn btn-primary toolbar-save-button calculation-sticky-save-button"
-              aria-label="Projekt speichern"
-              title="Projekt speichern"
+              :aria-label="saveProjectButtonLabel"
+              :title="saveProjectButtonLabel"
               @click="saveProject"
             >
               <span class="pi pi-save" aria-hidden="true"></span>
-              <span>Projekt speichern</span>
+              <span>{{ saveProjectButtonLabel }}</span>
             </button>
           </div>
         </div>

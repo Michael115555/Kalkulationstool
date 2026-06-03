@@ -99,6 +99,7 @@ body {
   line-height: var(--kt-line-height-tight);
 }
 
+.table-edit-button,
 .table-delete-button {
   display: inline-flex;
   align-items: center;
@@ -112,6 +113,21 @@ body {
   transition: color var(--kt-transition-fast);
 }
 
+.table-edit-button {
+  color: var(--kt-color-primary);
+}
+
+.table-edit-button:hover:not(:disabled),
+.table-edit-button:focus-visible:not(:disabled) {
+  color: var(--kt-color-primary-dark);
+}
+
+.table-edit-button:focus-visible {
+  border-radius: 0.2rem;
+  outline: 2px solid #bfdbfe;
+  outline-offset: 0.2rem;
+}
+
 .table-delete-button:hover:not(:disabled),
 .table-delete-button:focus-visible:not(:disabled) {
   color: #dc2626;
@@ -123,11 +139,13 @@ body {
   outline-offset: 0.2rem;
 }
 
+.table-edit-button:disabled,
 .table-delete-button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
 
+.table-edit-button .pi,
 .table-delete-button .pi {
   font-size: 1rem;
 }
