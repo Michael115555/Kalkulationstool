@@ -23,10 +23,12 @@ const {
 
   positionsKategorien,
   canSaveProject,
+  showSaveProjectBar,
   saveProject,
   isEditingProject,
   editingProjectName,
   saveProjectButtonLabel,
+  saveProjectButtonTitle,
   canEditConfigurationSelection,
   canEditPositions,
 
@@ -171,25 +173,36 @@ const {
           </template>
 
           <div
-            v-if="canSaveProject"
+            v-if="showSaveProjectBar"
             class="calculation-sticky-save"
             :class="{ 'calculation-sticky-save-editing': isEditingProject }"
           >
             <div
-              v-if="isEditingProject"
               class="calculation-edit-save-line"
-              aria-label="Projekt bearbeiten"
+              :aria-label="isEditingProject ? 'Projekt bearbeiten' : 'Neue Kalkulation speichern'"
             >
-              <span class="pi pi-pencil" aria-hidden="true"></span>
-              <span class="calculation-edit-save-mode">Projekt bearbeiten:</span>
-              <strong class="calculation-edit-save-title">{{ editingProjectName }}</strong>
+              <span
+                class="pi"
+                :class="isEditingProject ? 'pi-pencil' : 'pi-file-plus'"
+                aria-hidden="true"
+              ></span>
+              <span class="calculation-edit-save-mode">
+                {{ isEditingProject ? 'Projekt bearbeiten:' : 'Neue Kalkulation' }}
+              </span>
+              <strong
+                v-if="isEditingProject"
+                class="calculation-edit-save-title"
+              >
+                {{ editingProjectName }}
+              </strong>
             </div>
 
             <button
               type="button"
               class="btn btn-primary toolbar-save-button calculation-sticky-save-button"
-              :aria-label="saveProjectButtonLabel"
-              :title="saveProjectButtonLabel"
+              :aria-label="canSaveProject ? saveProjectButtonLabel : saveProjectButtonTitle"
+              :title="saveProjectButtonTitle"
+              :disabled="!canSaveProject"
               @click="saveProject"
             >
               <span class="pi pi-save" aria-hidden="true"></span>

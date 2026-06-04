@@ -179,7 +179,7 @@ describe('useKalkulation', () => {
     expect(payload.calculation.positions[0].druckermodellId).toBe(5)
     expect(payload.calculation.positions[0].druckerVarianteId).toBe(8)
     expect(composable.catalogError.value).toBe('')
-    expect(mocks.router.replace).toHaveBeenCalledWith({ name: 'kalkulation', query: {} })
+    expect(mocks.router.replace).toHaveBeenCalledWith({ name: 'projekte' })
     expect(composable.kundeId.value).toBeNull()
     expect(composable.druckermarke.value).toBe('')
     expect(composable.druckermodell.value).toBe('')
@@ -196,7 +196,13 @@ describe('useKalkulation', () => {
 
     const { app, composable, element } = await mountUseKalkulation()
 
+    expect(composable.showSaveProjectBar.value).toBe(false)
+
     composable.selectKunde(36)
+
+    expect(composable.showSaveProjectBar.value).toBe(true)
+    expect(composable.canSaveProject.value).toBe(false)
+
     composable.selectDruckermarke('Konica Minolta')
     composable.selectDruckermodell('bizhub Cxx1i')
 
@@ -215,6 +221,28 @@ describe('useKalkulation', () => {
     expect(composable.druckermodell.value).toBe('')
     expect(composable.positions.value).toEqual([])
     expect(composable.canSaveProject.value).toBe(false)
+    expect(composable.showSaveProjectBar.value).toBe(false)
+
+    app.unmount()
+    element.remove()
+  })
+
+  it('zeigt bei exotischem Modell keine Speicherleiste', async () => {
+    mocks.route.query = {}
+    mocks.api.getKonfigurationen.mockResolvedValue([])
+
+    const { app, composable, element } = await mountUseKalkulation()
+
+    composable.selectKunde(36)
+
+    expect(composable.showSaveProjectBar.value).toBe(true)
+
+    composable.selectDruckermarke('Exotisches Modell')
+
+    expect(composable.isExotischesModell.value).toBe(true)
+    expect(composable.positions.value.length).toBeGreaterThan(0)
+    expect(composable.canSaveProject.value).toBe(false)
+    expect(composable.showSaveProjectBar.value).toBe(false)
 
     app.unmount()
     element.remove()
