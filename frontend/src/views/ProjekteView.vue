@@ -18,14 +18,10 @@ let loadingIndicatorTimer = null
 
 const sortedProjekte = computed(() =>
   [...projekte.value].sort((a, b) => {
-    const aktualisiertAmA = Date.parse(a.aktualisiertAm ?? '') || 0
-    const aktualisiertAmB = Date.parse(b.aktualisiertAm ?? '') || 0
+    const idA = Number(a.id ?? 0)
+    const idB = Number(b.id ?? 0)
 
-    if (aktualisiertAmA !== aktualisiertAmB) {
-      return aktualisiertAmB - aktualisiertAmA
-    }
-
-    return Number(b.id ?? 0) - Number(a.id ?? 0)
+    return idB - idA
   })
 )
 
