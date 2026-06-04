@@ -196,7 +196,8 @@ describe('useKalkulation', () => {
 
     const { app, composable, element } = await mountUseKalkulation()
 
-    expect(composable.showSaveProjectBar.value).toBe(false)
+    expect(composable.showSaveProjectBar.value).toBe(true)
+    expect(composable.canSaveProject.value).toBe(false)
 
     composable.selectKunde(36)
 
@@ -221,13 +222,13 @@ describe('useKalkulation', () => {
     expect(composable.druckermodell.value).toBe('')
     expect(composable.positions.value).toEqual([])
     expect(composable.canSaveProject.value).toBe(false)
-    expect(composable.showSaveProjectBar.value).toBe(false)
+    expect(composable.showSaveProjectBar.value).toBe(true)
 
     app.unmount()
     element.remove()
   })
 
-  it('zeigt bei exotischem Modell keine Speicherleiste', async () => {
+  it('zeigt bei exotischem Modell eine deaktivierte Speicherleiste', async () => {
     mocks.route.query = {}
     mocks.api.getKonfigurationen.mockResolvedValue([])
 
@@ -242,7 +243,7 @@ describe('useKalkulation', () => {
     expect(composable.isExotischesModell.value).toBe(true)
     expect(composable.positions.value.length).toBeGreaterThan(0)
     expect(composable.canSaveProject.value).toBe(false)
-    expect(composable.showSaveProjectBar.value).toBe(false)
+    expect(composable.showSaveProjectBar.value).toBe(true)
 
     app.unmount()
     element.remove()

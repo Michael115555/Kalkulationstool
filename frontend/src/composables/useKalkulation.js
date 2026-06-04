@@ -1529,30 +1529,9 @@ export const useKalkulation = () => {
     )
   )
 
-  const saveProjectButtonTitle = computed(() => {
-    if (canSaveProject.value) {
-      return saveProjectButtonLabel.value
-    }
+  const saveProjectButtonTitle = computed(() => saveProjectButtonLabel.value)
 
-    if (isExotischesModell.value) {
-      return 'Exotische Modelle können noch nicht als Projekt gespeichert werden'
-    }
-
-    return 'Kunde, Druckermarke, Druckermodell und Druckerposition erfassen'
-  })
-
-  const showSaveProjectBar = computed(() =>
-    Boolean(
-      !isExotischesModell.value &&
-        (
-          isEditingProject.value ||
-          currentConfigurationKundeId.value ||
-          druckermarke.value ||
-          druckermodell.value ||
-          positions.value.length
-        )
-    )
-  )
+  const showSaveProjectBar = computed(() => true)
 
   const getUniqueConfigurationName = (modell, baseName) => {
     const existingNames = configurationVariants.value

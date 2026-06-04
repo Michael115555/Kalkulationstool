@@ -114,12 +114,12 @@ body {
 }
 
 .table-edit-button {
-  color: var(--kt-color-primary);
+  color: var(--kt-color-text-light);
 }
 
 .table-edit-button:hover:not(:disabled),
 .table-edit-button:focus-visible:not(:disabled) {
-  color: var(--kt-color-primary-dark);
+  color: var(--kt-color-text-secondary);
 }
 
 .table-edit-button:focus-visible {
