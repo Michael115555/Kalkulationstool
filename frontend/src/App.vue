@@ -70,10 +70,10 @@ onMounted(async () => {
 <template>
   <div class="app-shell min-vh-100">
     <nav class="topbar navbar navbar-expand-lg" aria-label="Hauptnavigation">
-      <div class="container-fluid topbar-container px-3 px-lg-4">
-        <RouterLink class="navbar-brand app-brand mb-0" to="/">
+      <div class="container-fluid topbar-container px-3">
+        <span class="navbar-brand app-brand mb-0">
           Kalkulationstool
-        </RouterLink>
+        </span>
 
         <button
           class="navbar-toggler border-0 shadow-none px-1"
