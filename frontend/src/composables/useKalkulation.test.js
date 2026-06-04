@@ -228,7 +228,7 @@ describe('useKalkulation', () => {
     element.remove()
   })
 
-  it('zeigt bei exotischem Modell eine deaktivierte Speicherleiste', async () => {
+  it('blendet bei exotischem Modell die Speicherleiste aus', async () => {
     mocks.route.query = {}
     mocks.api.getKonfigurationen.mockResolvedValue([])
 
@@ -243,7 +243,7 @@ describe('useKalkulation', () => {
     expect(composable.isExotischesModell.value).toBe(true)
     expect(composable.positions.value.length).toBeGreaterThan(0)
     expect(composable.canSaveProject.value).toBe(false)
-    expect(composable.showSaveProjectBar.value).toBe(true)
+    expect(composable.showSaveProjectBar.value).toBe(false)
 
     app.unmount()
     element.remove()

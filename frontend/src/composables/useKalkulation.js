@@ -1531,7 +1531,7 @@ export const useKalkulation = () => {
 
   const saveProjectButtonTitle = computed(() => saveProjectButtonLabel.value)
 
-  const showSaveProjectBar = computed(() => true)
+  const showSaveProjectBar = computed(() => !isExotischesModell.value)
 
   const getUniqueConfigurationName = (modell, baseName) => {
     const existingNames = configurationVariants.value

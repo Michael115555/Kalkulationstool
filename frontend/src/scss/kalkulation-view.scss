@@ -181,12 +181,6 @@
   pointer-events: auto;
 }
 
-.calculation-sticky-save-editing .calculation-sticky-save-button:not(:disabled):hover,
-.calculation-sticky-save-editing .calculation-sticky-save-button:not(:disabled):active {
-  border-color: var(--kt-color-primary);
-  background: var(--kt-color-primary);
-}
-
 .position-toolbar {
   min-height: 2.5rem;
   margin: 1rem 0 0.7rem;
