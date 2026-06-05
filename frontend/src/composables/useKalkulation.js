@@ -997,9 +997,8 @@ export const useKalkulation = () => {
   }
 
   const createConfigurationVariantInDatabase = async (
-    modell,
-    calculation = createDefaultCalculationSnapshot(modell),
-    name = getNextConfigurationVariantName(modell)
+    calculation = createDefaultCalculationSnapshot(),
+    name = getNextConfigurationVariantName()
   ) => {
     const calculationWithKunde = {
       ...calculation,
@@ -1533,7 +1532,7 @@ export const useKalkulation = () => {
 
   const showSaveProjectBar = computed(() => !isExotischesModell.value)
 
-  const getUniqueConfigurationName = (modell, baseName) => {
+  const getUniqueConfigurationName = (baseName) => {
     const existingNames = configurationVariants.value
       .filter(isConfigurationComplete)
       .map((configurationVariant) => configurationVariant.name)
@@ -1553,14 +1552,14 @@ export const useKalkulation = () => {
     return name
   }
 
-  const getNextConfigurationVariantName = (modell) => {
+  const getNextConfigurationVariantName = () => {
     const alternativesCount = configurationVariants.value.filter(
       (configurationVariant) =>
         isConfigurationComplete(configurationVariant) &&
         configurationVariant.name.startsWith('Alternative')
     ).length
 
-    return getUniqueConfigurationName(modell, `Alternative ${alternativesCount + 1}`)
+    return getUniqueConfigurationName(`Alternative ${alternativesCount + 1}`)
   }
 
   const getProjectConfigurationBaseName = () => {
@@ -1679,14 +1678,10 @@ export const useKalkulation = () => {
     }
 
     try {
-      const name = getUniqueConfigurationName(
-        druckermodell.value,
-        getProjectConfigurationBaseName()
-      )
+      const name = getUniqueConfigurationName(getProjectConfigurationBaseName())
       const calculation = createCalculationSnapshot(name)
 
       const configurationVariant = await createConfigurationVariantInDatabase(
-        druckermodell.value,
         calculation,
         name
       )
