@@ -220,6 +220,7 @@ const getDefaultKonditionAuswahl = (kondition) =>
 const updateKonditionChecked = (kondition) => {
   if (isIncludedDeliveryCondition(kondition)) {
     kondition.auswahl = 'inkl'
+    kondition.checked = true
     kondition.manuell = true
     return
   }

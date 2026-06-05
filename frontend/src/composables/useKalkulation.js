@@ -551,17 +551,14 @@ export const useKalkulation = () => {
       if (INCLUDED_DELIVERY_CONDITION_KEYS.has(kondition.key)) {
         if (isIncluded) {
           kondition.auswahl = 'inkl'
-
-          if (!kondition.manuell) {
-            kondition.checked = false
-          }
-
+          kondition.checked = true
+          kondition.manuell = true
           return
         }
 
-        kondition.auswahl = 'keine'
-        kondition.checked = false
-        kondition.manuell = false
+        if (kondition.auswahl === 'inkl') {
+          kondition.auswahl = kondition.checked ? 'betrag' : 'keine'
+        }
       }
     })
   }

@@ -3,6 +3,11 @@ import { JSDOM } from 'jsdom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useKalkulation } from './useKalkulation'
 
+const DELIVERY_CONDITION_KEYS = [
+  'bereitstellung_vorkonfiguration_justagen',
+  'lieferung_standort_kurzinstruktion'
+]
+
 const mocks = vi.hoisted(() => ({
   api: {
     getKatalog: vi.fn(),
@@ -48,7 +53,10 @@ const createKatalog = () => ({
     }
   ],
   zubehoerKategorien: [],
-  lieferungOptionen: [{ value: 'inkl', label: 'Lieferung inkl.', betrag: 0 }],
+  lieferungOptionen: [
+    { value: 'exkl', label: 'Lieferung exkl.', betrag: 0 },
+    { value: 'inkl', label: 'Lieferung inkl.', betrag: 790 }
+  ],
   mietansaetze: { 48: 0 },
   epFaktoren: {}
 })
@@ -100,6 +108,20 @@ const createSavedConfiguration = () => ({
     displaySnapshot: null
   }
 })
+
+const createDeliveryConditions = ({ auswahl, checked }) =>
+  DELIVERY_CONDITION_KEYS.map((key) => ({
+    key,
+    label: key,
+    einheit: 'pauschal',
+    betragText: key === 'bereitstellung_vorkonfiguration_justagen' ? '390.00' : '400.00',
+    auswahl,
+    checked,
+    manuell: true
+  }))
+
+const getDeliveryConditions = (conditions) =>
+  conditions.filter((condition) => DELIVERY_CONDITION_KEYS.includes(condition.key))
 
 const flushPromises = async () => {
   await Promise.resolve()
@@ -178,6 +200,20 @@ describe('useKalkulation', () => {
     expect(payload.calculation.restwertMonate).toBe(12)
     expect(payload.calculation.positions[0].druckermodellId).toBe(5)
     expect(payload.calculation.positions[0].druckerVarianteId).toBe(8)
+    expect(getDeliveryConditions(payload.calculation.konditionenA3Mfp)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'bereitstellung_vorkonfiguration_justagen',
+          auswahl: 'inkl',
+          checked: true
+        }),
+        expect.objectContaining({
+          key: 'lieferung_standort_kurzinstruktion',
+          auswahl: 'inkl',
+          checked: true
+        })
+      ])
+    )
     expect(composable.catalogError.value).toBe('')
     expect(mocks.router.replace).toHaveBeenCalledWith({ name: 'projekte' })
     expect(composable.kundeId.value).toBeNull()
@@ -185,6 +221,82 @@ describe('useKalkulation', () => {
     expect(composable.druckermodell.value).toBe('')
     expect(composable.positions.value).toEqual([])
     expect(composable.isEditingProject.value).toBe(false)
+
+    app.unmount()
+    element.remove()
+  })
+
+  it('markiert inkludierte Lieferkonditionen automatisch', async () => {
+    const { app, composable, element } = await mountUseKalkulation()
+
+    const deliveryConditions = getDeliveryConditions(composable.konditionenA3Mfp.value)
+
+    expect(deliveryConditions).toHaveLength(2)
+    expect(deliveryConditions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'bereitstellung_vorkonfiguration_justagen',
+          auswahl: 'inkl',
+          checked: true
+        }),
+        expect.objectContaining({
+          key: 'lieferung_standort_kurzinstruktion',
+          auswahl: 'inkl',
+          checked: true
+        })
+      ])
+    )
+
+    app.unmount()
+    element.remove()
+  })
+
+  it('behaelt gespeicherte Lieferkonditionen bei exklusiver Lieferung', async () => {
+    const savedConfiguration = createSavedConfiguration()
+    savedConfiguration.calculation.lieferungOption = 'exkl'
+    savedConfiguration.calculation.lieferungBetrag = '0.00'
+    savedConfiguration.calculation.konditionenA3Mfp = createDeliveryConditions({
+      auswahl: 'betrag',
+      checked: true
+    })
+    mocks.api.getKonfigurationen.mockResolvedValue([savedConfiguration])
+
+    const { app, composable, element } = await mountUseKalkulation()
+
+    expect(getDeliveryConditions(composable.konditionenA3Mfp.value)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'bereitstellung_vorkonfiguration_justagen',
+          auswahl: 'betrag',
+          checked: true
+        }),
+        expect.objectContaining({
+          key: 'lieferung_standort_kurzinstruktion',
+          auswahl: 'betrag',
+          checked: true
+        })
+      ])
+    )
+
+    composable.restwertMonate.value = 12
+    await composable.saveProject()
+
+    const [, payload] = mocks.api.updateKonfiguration.mock.calls[0]
+
+    expect(getDeliveryConditions(payload.calculation.konditionenA3Mfp)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'bereitstellung_vorkonfiguration_justagen',
+          auswahl: 'betrag',
+          checked: true
+        }),
+        expect.objectContaining({
+          key: 'lieferung_standort_kurzinstruktion',
+          auswahl: 'betrag',
+          checked: true
+        })
+      ])
+    )
 
     app.unmount()
     element.remove()
