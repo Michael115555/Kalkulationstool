@@ -77,9 +77,9 @@
   min-width: 10.5rem;
   min-height: 2.75rem;
   padding: 0.58rem 1.15rem;
-  border: 1px solid var(--kt-color-success);
+  border: 1px solid var(--kt-color-primary);
   border-radius: var(--kt-border-radius-sm);
-  background: var(--kt-color-success);
+  background: var(--kt-color-primary);
   color: var(--kt-color-bg-white);
   box-shadow: none;
   font-size: var(--kt-font-size-md);
@@ -94,14 +94,14 @@
 
 .toolbar-save-button:not(:disabled):hover,
 .toolbar-save-button:not(:disabled):focus-visible {
-  border-color: var(--kt-color-success-dark);
-  background: var(--kt-color-success-dark);
+  border-color: var(--kt-color-primary-dark);
+  background: var(--kt-color-primary-dark);
   color: var(--kt-color-bg-white);
 }
 
 .toolbar-save-button:not(:disabled):active {
-  border-color: var(--kt-color-success-darker);
-  background: var(--kt-color-success-darker);
+  border-color: var(--kt-color-primary-dark);
+  background: var(--kt-color-primary-dark);
 }
 
 .toolbar-save-button:disabled {
