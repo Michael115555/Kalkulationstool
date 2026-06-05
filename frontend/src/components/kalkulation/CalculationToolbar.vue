@@ -108,6 +108,8 @@ const isDruckermodellLocked = computed(() =>
         <select
           :value="kundeId ?? ''"
           class="form-select control-field toolbar-select"
+          :class="{ 'pending-selection-field': !canEditConfigurationSelection }"
+          :disabled="!canEditConfigurationSelection"
           @change="emit('select-kunde', $event.target.value)"
         >
           <option value="">Kunde wählen</option>
@@ -124,16 +126,19 @@ const isDruckermodellLocked = computed(() =>
       <label class="toolbar-field toolbar-field-brand">
         <span class="toolbar-label">Druckermarke:</span>
 
-        <input
+        <select
           v-if="isDruckermarkeLocked"
-          type="text"
-          class="form-control control-field toolbar-select pending-selection-field"
-          :value="druckermarke || DRUCKERMARKE_PLACEHOLDER"
+          class="form-select control-field toolbar-select pending-selection-field"
+          :value="druckermarke || ''"
           :title="druckermarke || DRUCKERMARKE_PLACEHOLDER"
-          readonly
+          disabled
           tabindex="-1"
           aria-label="Druckermarke"
-        />
+        >
+          <option :value="druckermarke || ''">
+            {{ druckermarke || DRUCKERMARKE_PLACEHOLDER }}
+          </option>
+        </select>
 
         <select
           v-else
@@ -156,16 +161,19 @@ const isDruckermodellLocked = computed(() =>
       <label class="toolbar-field toolbar-field-model">
         <span class="toolbar-label">Druckermodell:</span>
 
-        <input
+        <select
           v-if="isDruckermodellLocked"
-          type="text"
-          class="form-control control-field toolbar-select pending-selection-field"
-          :value="druckermodell || druckermodellPlaceholder"
+          class="form-select control-field toolbar-select pending-selection-field"
+          :value="druckermodell || ''"
           :title="druckermodell || druckermodellPlaceholder"
-          readonly
+          disabled
           tabindex="-1"
           aria-label="Druckermodell"
-        />
+        >
+          <option :value="druckermodell || ''">
+            {{ druckermodell || druckermodellPlaceholder }}
+          </option>
+        </select>
 
         <select
           v-else

@@ -12,6 +12,10 @@ const props = defineProps({
     type: Boolean,
     required: true
   },
+  canEditConfigurationSelection: {
+    type: Boolean,
+    required: true
+  },
   isExotischesModell: {
     type: Boolean,
     default: false
@@ -65,6 +69,13 @@ const isDiversesPosition = (position) =>
 const isRequiredDruckerPosition = (position, index) =>
   index === 0 && isDruckerPosition(position)
 
+const isDruckerKategorieReadonly = (position, index) =>
+  isRequiredDruckerPosition(position, index)
+
+const isDruckerBezeichnungReadonly = (position, index) =>
+  !props.canEditConfigurationSelection &&
+  isRequiredDruckerPosition(position, index)
+
 const getKategoriePlaceholder = () =>
   props.canEditPositions ? 'Kategorie wählen' : 'Bitte zuerst Druckermodell wählen'
 
@@ -86,8 +97,10 @@ const getBezeichnungPlaceholder = (position) => {
   return 'Bezeichnung wählen'
 }
 
-const isBezeichnungLocked = (position) =>
-  !props.canEditPositions || !position.zubehoer
+const isBezeichnungLocked = (position, index) =>
+  !props.canEditPositions ||
+  !position.zubehoer ||
+  isDruckerBezeichnungReadonly(position, index)
 
 const normalizeManualEinkaufspreis = (position) => {
   position.einkaufsPreis = props.formatAmount(position.einkaufsPreis)
@@ -120,15 +133,16 @@ const normalizeManualEinkaufspreis = (position) => {
           :class="{ 'empty-position-row': isEmptyPosition(position) }"
         >
           <td>
-            <input
-              v-if="isRequiredDruckerPosition(position, index)"
-              type="text"
-              class="form-control control-field required-position-field"
+            <select
+              v-if="isDruckerKategorieReadonly(position, index)"
+              class="form-select control-field required-position-field"
               value="Drucker"
-              readonly
+              disabled
               tabindex="-1"
               aria-label="Drucker Pflichtposition"
-            />
+            >
+              <option value="Drucker">Drucker</option>
+            </select>
 
             <select
               v-else
@@ -157,10 +171,11 @@ const normalizeManualEinkaufspreis = (position) => {
               v-model="position.bezeichnung"
               type="text"
               class="form-control control-field"
+              :class="{ 'pending-selection-field': isDruckerBezeichnungReadonly(position, index) }"
               :placeholder="getBezeichnungPlaceholder(position)"
               :title="position.bezeichnung"
               maxlength="255"
-              :disabled="!canEditPositions"
+              :disabled="!canEditPositions || isDruckerBezeichnungReadonly(position, index)"
               aria-label="Bezeichnung"
             />
 
@@ -168,10 +183,10 @@ const normalizeManualEinkaufspreis = (position) => {
               v-else
               v-model="position.bezeichnung"
               class="form-select control-field"
-              :class="{ 'pending-selection-field': isBezeichnungLocked(position) }"
+              :class="{ 'pending-selection-field': isBezeichnungLocked(position, index) }"
               :title="position.bezeichnung || getBezeichnungPlaceholder(position)"
               :aria-label="`Bezeichnung Position ${index + 1}`"
-              :disabled="isBezeichnungLocked(position)"
+              :disabled="isBezeichnungLocked(position, index)"
               @change="updatePositionProdukt(position)"
             >
               <option value="" disabled>{{ getBezeichnungPlaceholder(position) }}</option>

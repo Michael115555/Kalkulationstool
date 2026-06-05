@@ -187,6 +187,15 @@ describe('useKalkulation', () => {
     expect(composable.canSaveProject.value).toBe(true)
     expect(composable.isEditingProject.value).toBe(true)
     expect(composable.editingProjectName.value).toBe('bizhub Cxx1i bizhub C451i')
+    expect(composable.canEditConfigurationSelection.value).toBe(false)
+
+    composable.selectKunde(99)
+    composable.selectDruckermarke('Canon')
+    composable.selectDruckermodell('Canon imageForce C51xx')
+
+    expect(composable.kundeId.value).toBe(36)
+    expect(composable.druckermarke.value).toBe('Konica Minolta')
+    expect(composable.druckermodell.value).toBe('bizhub Cxx1i')
 
     composable.restwertMonate.value = 12
     await composable.saveProject()

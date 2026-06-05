@@ -117,6 +117,7 @@ const {
               :positions="positions"
               :zubehoer-kategorien="positionsKategorien"
               :can-edit-positions="canEditPositions"
+              :can-edit-configuration-selection="canEditConfigurationSelection"
               :is-exotisches-modell="isExotischesModell"
               :is-empty-position="isEmptyPosition"
               :update-position-zubehoer="updatePositionZubehoer"

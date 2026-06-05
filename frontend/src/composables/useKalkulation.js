@@ -259,7 +259,9 @@ export const useKalkulation = () => {
     isEditingProject.value ? 'Änderungen speichern' : 'Projekt speichern'
   )
 
-  const canEditConfigurationSelection = computed(() => !isCatalogLoading.value)
+  const canEditConfigurationSelection = computed(() =>
+    !isCatalogLoading.value && !isEditingProject.value
+  )
 
   const canEditPositions = computed(() =>
     Boolean(
