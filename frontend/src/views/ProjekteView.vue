@@ -353,7 +353,7 @@ onBeforeUnmount(() => {
 }
 
 .projekte-table-responsive {
-  border: 1px solid #e4e7ec;
+  border: 1px solid var(--kt-color-border);
   border-radius: var(--kt-border-radius-sm);
   overflow-x: auto;
 }
@@ -367,8 +367,8 @@ onBeforeUnmount(() => {
 }
 
 .projekte-table thead th {
-  background-color: #fbfcfe;
-  border-bottom: 1px solid #e9edf3;
+  background-color: var(--kt-color-bg-light);
+  border-bottom: 1px solid var(--kt-color-border-light);
   color: var(--kt-color-text-primary);
   font-size: var(--kt-font-size-sm);
   font-weight: 500;
@@ -378,16 +378,16 @@ onBeforeUnmount(() => {
 }
 
 .projekte-table tbody td {
-  background-color: #ffffff;
-  border-color: #e7ebf0;
+  background-color: var(--kt-color-bg-white);
+  border-color: var(--kt-color-border);
 }
 
 .projekte-table tbody tr:hover td {
-  background-color: #fbfcfe;
+  background-color: var(--kt-color-bg-light);
 }
 
 .projekte-table.table-bordered > :not(caption) > * > * {
-  border-color: #e7ebf0;
+  border-color: var(--kt-color-border);
 }
 
 .projekte-table th,
@@ -460,7 +460,7 @@ onBeforeUnmount(() => {
 
 .project-empty-table-text {
   padding: 0.8rem 0;
-  color: #667085;
+  color: var(--kt-color-text-tertiary);
   font-size: var(--kt-font-size-md);
   font-weight: 500;
   text-align: center;
@@ -474,7 +474,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(16, 24, 40, 0.46);
+  background: rgba(var(--bs-dark-rgb), 0.46);
   backdrop-filter: blur(0.15rem);
 }
 
@@ -483,10 +483,10 @@ onBeforeUnmount(() => {
   gap: 1rem;
   width: min(31rem, 100%);
   padding: 1.25rem;
-  border: 1px solid #e4e7ec;
+  border: 1px solid var(--kt-color-border);
   border-radius: 0.42rem;
-  background: #ffffff;
-  box-shadow: 0 1.5rem 4rem rgba(16, 24, 40, 0.24);
+  background: var(--kt-color-bg-white);
+  box-shadow: 0 1.5rem 4rem rgba(var(--bs-dark-rgb), 0.24);
 }
 
 .confirm-delete-content {
@@ -503,7 +503,7 @@ onBeforeUnmount(() => {
 
 .confirm-delete-text {
   margin: 0;
-  color: #667085;
+  color: var(--kt-color-text-tertiary);
   font-size: var(--kt-font-size-md);
   font-weight: 500;
   line-height: 1.4;
@@ -530,27 +530,27 @@ onBeforeUnmount(() => {
 }
 
 .confirm-delete-button-secondary {
-  border: 1px solid #d0d5dd;
-  background: #ffffff;
-  color: #344054;
+  border: 1px solid var(--kt-color-border);
+  background: var(--kt-color-bg-white);
+  color: var(--kt-color-text-secondary);
 }
 
 .confirm-delete-button-secondary:hover:not(:disabled),
 .confirm-delete-button-secondary:focus-visible:not(:disabled) {
-  background: #f8fafc;
-  border-color: #98a2b3;
+  background: var(--kt-color-bg-light);
+  border-color: var(--kt-color-text-light);
 }
 
 .confirm-delete-button-danger {
-  border: 1px solid #dc2626;
-  background: #dc2626;
-  color: #ffffff;
+  border: 1px solid var(--kt-color-error);
+  background: var(--kt-color-error);
+  color: var(--kt-color-bg-white);
 }
 
 .confirm-delete-button-danger:hover:not(:disabled),
 .confirm-delete-button-danger:focus-visible:not(:disabled) {
-  border-color: #b91c1c;
-  background: #b91c1c;
+  border-color: var(--kt-color-error-dark);
+  background: var(--kt-color-error-dark);
 }
 
 .confirm-delete-button:disabled {

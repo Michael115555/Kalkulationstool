@@ -1,8 +1,13 @@
 <script setup>
+import { ref } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import CalculationPanel from '../components/kalkulation/CalculationPanel.vue'
 import CalculationToolbar from '../components/kalkulation/CalculationToolbar.vue'
 import PositionsTable from '../components/kalkulation/PositionsTable.vue'
 import { useKalkulation } from '../composables/useKalkulation'
+
+const isLeaveProjectEditDialogOpen = ref(false)
+let pendingRouteLeaveResolve = null
 
 const {
   isCatalogLoading,
@@ -27,6 +32,7 @@ const {
   saveProject,
   isEditingProject,
   editingProjectName,
+  hasUnsavedEditedProjectChanges,
   saveProjectButtonLabel,
   saveProjectButtonTitle,
   canEditConfigurationSelection,
@@ -82,6 +88,41 @@ const {
   getMietbetrag,
   mietbasis
 } = useKalkulation()
+
+const resolvePendingRouteLeave = (canLeave) => {
+  if (!pendingRouteLeaveResolve) {
+    return
+  }
+
+  const resolve = pendingRouteLeaveResolve
+  pendingRouteLeaveResolve = null
+  isLeaveProjectEditDialogOpen.value = false
+  resolve(canLeave)
+}
+
+const cancelLeaveProjectEdit = () => {
+  resolvePendingRouteLeave(false)
+}
+
+const confirmLeaveProjectEdit = () => {
+  resolvePendingRouteLeave(true)
+}
+
+onBeforeRouteLeave(() => {
+  if (!hasUnsavedEditedProjectChanges.value) {
+    return true
+  }
+
+  if (pendingRouteLeaveResolve) {
+    return false
+  }
+
+  isLeaveProjectEditDialogOpen.value = true
+
+  return new Promise((resolve) => {
+    pendingRouteLeaveResolve = resolve
+  })
+})
 </script>
 
 <template>
@@ -200,7 +241,7 @@ const {
 
             <button
               type="button"
-              class="btn btn-primary toolbar-save-button calculation-sticky-save-button"
+              class="btn toolbar-save-button calculation-sticky-save-button"
               :aria-label="canSaveProject ? saveProjectButtonLabel : saveProjectButtonTitle"
               :title="saveProjectButtonTitle"
               :disabled="!canSaveProject"
@@ -214,5 +255,134 @@ const {
       </div>
     </div>
 
+    <div
+      v-if="isLeaveProjectEditDialogOpen"
+      class="confirm-leave-backdrop"
+      @click.self="cancelLeaveProjectEdit"
+    >
+      <div
+        class="confirm-leave-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Bearbeitung verlassen?"
+      >
+        <div class="confirm-leave-content">
+          <h2 class="confirm-leave-title">
+            Bearbeitung verlassen?
+          </h2>
+
+          <p class="confirm-leave-text">
+            Nicht gespeicherte Änderungen gehen verloren.
+          </p>
+        </div>
+
+        <div class="confirm-leave-actions">
+          <button
+            type="button"
+            class="confirm-leave-button confirm-leave-button-secondary"
+            @click="confirmLeaveProjectEdit"
+          >
+            Verlassen
+          </button>
+
+          <button
+            type="button"
+            class="confirm-leave-button confirm-leave-button-primary"
+            @click="cancelLeaveProjectEdit"
+          >
+            Weiter bearbeiten
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
+
+<style scoped>
+.confirm-leave-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(var(--bs-dark-rgb), 0.46);
+  backdrop-filter: blur(0.15rem);
+}
+
+.confirm-leave-dialog {
+  display: grid;
+  gap: 1rem;
+  width: min(31rem, 100%);
+  padding: 1.25rem;
+  border: 1px solid var(--kt-color-border);
+  border-radius: 0.42rem;
+  background: var(--kt-color-bg-white);
+  box-shadow: 0 1.5rem 4rem rgba(var(--bs-dark-rgb), 0.24);
+}
+
+.confirm-leave-content {
+  min-width: 0;
+}
+
+.confirm-leave-title {
+  margin: 0 0 0.3rem;
+  color: var(--kt-color-text-primary);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.confirm-leave-text {
+  margin: 0;
+  color: var(--kt-color-text-tertiary);
+  font-size: var(--kt-font-size-md);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.confirm-leave-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  margin-top: 0.3rem;
+}
+
+.confirm-leave-button {
+  min-height: 2.55rem;
+  padding: 0.45rem 1rem;
+  border-radius: 0.42rem;
+  font-size: var(--kt-font-size-md);
+  font-weight: 500;
+  line-height: 1.2;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.confirm-leave-button-secondary {
+  border: 1px solid var(--kt-color-border);
+  background: var(--kt-color-bg-white);
+  color: var(--kt-color-text-secondary);
+}
+
+.confirm-leave-button-secondary:hover:not(:disabled),
+.confirm-leave-button-secondary:focus-visible:not(:disabled) {
+  background: var(--kt-color-bg-light);
+  border-color: var(--kt-color-text-light);
+}
+
+.confirm-leave-button-primary {
+  border: 1px solid var(--kt-color-primary);
+  background: var(--kt-color-primary);
+  color: var(--kt-color-bg-white);
+}
+
+.confirm-leave-button-primary:hover:not(:disabled),
+.confirm-leave-button-primary:focus-visible:not(:disabled) {
+  border-color: var(--kt-color-primary-dark);
+  background: var(--kt-color-primary-dark);
+}
+</style>

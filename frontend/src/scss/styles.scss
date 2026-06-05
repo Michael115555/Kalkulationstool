@@ -17,30 +17,36 @@
   --kt-spacing-3xl: 1.9rem;    /* 30px */
 
   /* ===== COLOR PALETTE - PRIMARY ===== */
-  --kt-color-primary: #2563eb;
-  --kt-color-primary-dark: #1d4ed8;
-  --kt-color-primary-light: #3b82f6;
+  --kt-color-primary: var(--bs-primary);
+  --kt-color-primary-dark: var(--bs-link-hover-color);
+  --kt-color-primary-light: var(--bs-primary-border-subtle);
+  --kt-color-primary-bg-subtle: var(--bs-primary-bg-subtle);
+  --kt-color-primary-border-subtle: var(--bs-primary-border-subtle);
 
   /* ===== COLOR PALETTE - TEXT ===== */
-  --kt-color-text-primary: #101828;
-  --kt-color-text-secondary: #475467;
-  --kt-color-text-tertiary: #667085;
-  --kt-color-text-light: #98a2b3;
+  --kt-color-text-primary: var(--bs-gray-900);
+  --kt-color-text-secondary: var(--bs-gray-700);
+  --kt-color-text-tertiary: var(--bs-gray-600);
+  --kt-color-text-light: var(--bs-gray-500);
 
   /* ===== COLOR PALETTE - BACKGROUND ===== */
-  --kt-color-bg-white: #ffffff;
-  --kt-color-bg-light: #f8fafc;
-  --kt-color-bg-very-light: #eef4ff;
+  --kt-color-bg-white: var(--bs-white);
+  --kt-color-bg-light: var(--bs-tertiary-bg);
+  --kt-color-bg-very-light: var(--kt-color-primary-bg-subtle);
 
   /* ===== COLOR PALETTE - BORDERS & DIVIDERS ===== */
-  --kt-color-border: #e4e7ec;
-  --kt-color-border-light: #f0f1f3;
+  --kt-color-border: var(--bs-border-color);
+  --kt-color-border-light: var(--bs-gray-200);
 
   /* ===== COLOR PALETTE - SUCCESS, WARNING, ERROR ===== */
-  --kt-color-success: #10b981;
-  --kt-color-warning: #f59e0b;
-  --kt-color-error: #ef4444;
-  --kt-color-error-bg: #fee2e2;
+  --kt-color-success: var(--bs-success);
+  --kt-color-success-dark: var(--bs-success-text-emphasis);
+  --kt-color-success-darker: var(--bs-success-text-emphasis);
+  --kt-color-warning: var(--bs-warning);
+  --kt-color-error: var(--bs-danger);
+  --kt-color-error-dark: var(--bs-danger-text-emphasis);
+  --kt-color-error-bg: var(--bs-danger-bg-subtle);
+  --kt-color-error-border-subtle: var(--bs-danger-border-subtle);
 
   /* ===== BORDER RADIUS ===== */
   --kt-border-radius-sm: 0.42rem;
@@ -53,9 +59,9 @@
   --kt-transition-slow: 0.3s ease;
 
   /* ===== SHADOW ===== */
-  --kt-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --kt-shadow-base: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --kt-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --kt-shadow-sm: var(--bs-box-shadow-sm);
+  --kt-shadow-base: var(--bs-box-shadow);
+  --kt-shadow-md: var(--bs-box-shadow-lg);
 }
 
 html,
@@ -87,6 +93,20 @@ body {
   font-size: var(--kt-font-size-md);
 }
 
+.form-check-input {
+  accent-color: var(--kt-color-primary);
+}
+
+.form-check-input:checked {
+  background-color: var(--kt-color-primary);
+  border-color: var(--kt-color-primary);
+}
+
+.form-check-input:focus {
+  border-color: var(--kt-color-primary-light);
+  box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.16);
+}
+
 .form-label,
 .col-form-label {
   font-size: var(--kt-font-size-sm);
@@ -109,7 +129,7 @@ body {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #c9a0a0;
+  color: var(--kt-color-error);
   transition: color var(--kt-transition-fast);
 }
 
@@ -124,18 +144,18 @@ body {
 
 .table-edit-button:focus-visible {
   border-radius: 0.2rem;
-  outline: 2px solid #bfdbfe;
+  outline: 2px solid var(--kt-color-primary-border-subtle);
   outline-offset: 0.2rem;
 }
 
 .table-delete-button:hover:not(:disabled),
 .table-delete-button:focus-visible:not(:disabled) {
-  color: #dc2626;
+  color: var(--kt-color-error-dark);
 }
 
 .table-delete-button:focus-visible {
   border-radius: 0.2rem;
-  outline: 2px solid #fecaca;
+  outline: 2px solid var(--kt-color-error-border-subtle);
   outline-offset: 0.2rem;
 }
 

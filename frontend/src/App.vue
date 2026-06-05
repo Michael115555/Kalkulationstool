@@ -132,7 +132,7 @@ onMounted(async () => {
 .app-content {
   min-height: calc(100vh - 4rem);
   padding: 0;
-  background: #ffffff;
+  background: var(--kt-color-bg-white);
 }
 
 .app-content-fade-enter-active {
@@ -144,8 +144,8 @@ onMounted(async () => {
 }
 
 .topbar {
-  background: #ffffff;
-  border-bottom: 1px solid #e7ebf3;
+  background: var(--kt-color-bg-white);
+  border-bottom: 1px solid var(--kt-color-border-light);
   padding: 0;
 }
 
@@ -159,10 +159,10 @@ onMounted(async () => {
 .app-brand {
   display: inline-flex;
   align-items: center;
-  color: #101828;
+  color: var(--kt-color-text-primary);
   font-size: var(--kt-font-size-lg);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   line-height: var(--kt-line-height-tight);
 }
 
@@ -195,7 +195,7 @@ onMounted(async () => {
   height: 100%;
   min-height: 4rem;
   padding: 0 1rem;
-  color: #344054;
+  color: var(--kt-color-text-secondary);
   font-size: var(--kt-font-size-md);
   font-weight: 500;
   line-height: 1;
@@ -204,11 +204,11 @@ onMounted(async () => {
 
 .app-nav-link:hover,
 .app-nav-link:focus-visible {
-  color: #1f4fff;
+  color: var(--kt-color-primary-dark);
 }
 
 .app-nav-link.active {
-  color: #2457ff;
+  color: var(--kt-color-primary);
 }
 
 .app-nav-link.active::after {
@@ -218,17 +218,17 @@ onMounted(async () => {
   bottom: 0;
   left: 0;
   height: 3px;
-  background: #2457ff;
+  background: var(--kt-color-primary);
 }
 
 .nav-icon {
   font-size: 1rem;
   line-height: 1;
-  color: #667085;
+  color: var(--kt-color-text-tertiary);
 }
 
 .app-nav-link.active .nav-icon {
-  color: #2457ff;
+  color: var(--kt-color-primary);
 }
 
 @media (max-width: 991.98px) {
@@ -259,7 +259,7 @@ onMounted(async () => {
   }
 
   .app-nav-link.active {
-    border-left-color: #1f4fff;
+    border-left-color: var(--kt-color-primary-dark);
   }
 
   .app-nav-link.active::after {

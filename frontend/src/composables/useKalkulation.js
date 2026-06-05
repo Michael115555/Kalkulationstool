@@ -140,6 +140,7 @@ export const useKalkulation = () => {
 
   const activeConfigurationVariantId = ref(null)
   const editingProjectId = ref(null)
+  const editingProjectSavedFingerprint = ref('')
   const isNewConfigurationDraft = ref(false)
   const configurationVariants = ref([])
 
@@ -249,6 +250,13 @@ export const useKalkulation = () => {
 
   const isEditingProject = computed(() =>
     Boolean(editingProjectId.value)
+  )
+
+  const hasUnsavedEditedProjectChanges = computed(
+    () =>
+      isEditingProject.value &&
+      Boolean(editingProjectSavedFingerprint.value) &&
+      getEditedProjectFingerprint() !== editingProjectSavedFingerprint.value
   )
 
   const editingProjectName = computed(() =>
@@ -709,6 +717,77 @@ export const useKalkulation = () => {
       naechsteId: naechsteId.value,
       displaySnapshot: createDisplaySnapshot(displayProjectName)
     }
+  }
+
+  const normalizeComparableAmount = (value) => normalizeNumber(value)
+
+  const normalizeComparableId = (value) => {
+    const id = Number(value)
+
+    return Number.isFinite(id) ? id : null
+  }
+
+  const createComparableCalculationSnapshot = () => {
+    const snapshot = createCalculationSnapshot(projectName.value.trim())
+
+    return {
+      kundeId: normalizeComparableId(snapshot.kundeId),
+      druckermarke: snapshot.druckermarke,
+      druckermodellId: normalizeComparableId(snapshot.druckermodellId),
+      druckerVarianteId: normalizeComparableId(snapshot.druckerVarianteId),
+      druckermodell: snapshot.druckermodell,
+      variante: snapshot.variante,
+      eintauschRabattProzent: normalizeComparableAmount(snapshot.eintauschRabattProzent),
+      lieferungOption: snapshot.lieferungOption,
+      lieferungBetrag: normalizeComparableAmount(snapshot.lieferungBetrag),
+      restwertMonate: normalizeComparableAmount(snapshot.restwertMonate),
+      restwertBetrag: normalizeComparableAmount(snapshot.restwertBetrag),
+      inklusiveKopienSW: normalizeComparableAmount(snapshot.inklusiveKopienSW),
+      inklusiveKopienColor: normalizeComparableAmount(snapshot.inklusiveKopienColor),
+      preisZusatzPrintSW: normalizeComparableAmount(snapshot.preisZusatzPrintSW),
+      preisZusatzPrintColor: normalizeComparableAmount(snapshot.preisZusatzPrintColor),
+      flatratePauschalBetrag: normalizeComparableAmount(snapshot.flatratePauschalBetrag),
+      scanpauschaleMietMonate: normalizeComparableAmount(snapshot.scanpauschaleMietMonate),
+      scanpauschaleAuswahl: snapshot.scanpauschaleAuswahl,
+      positions: snapshot.positions.map((position) => ({
+        id: normalizeComparableId(position.id),
+        zubehoerId: normalizeComparableId(position.zubehoerId),
+        druckermodellId: normalizeComparableId(position.druckermodellId),
+        druckerVarianteId: normalizeComparableId(position.druckerVarianteId),
+        istDrucker: Boolean(position.istDrucker),
+        zubehoer: position.zubehoer ?? '',
+        bezeichnung: position.bezeichnung ?? '',
+        menge: normalizeComparableAmount(position.menge),
+        vp: normalizeComparableAmount(position.vp),
+        einkaufsPreis:
+          position.einkaufsPreis === null || position.einkaufsPreis === undefined
+            ? null
+            : normalizeComparableAmount(position.einkaufsPreis),
+        epKategorie: position.epKategorie ?? ''
+      })),
+      konditionenA3Mfp: snapshot.konditionenA3Mfp.map((kondition) => ({
+        key: kondition.key,
+        checked: Boolean(kondition.checked),
+        auswahl: kondition.auswahl ?? ''
+      }))
+    }
+  }
+
+  const getEditedProjectFingerprint = () => {
+    const calculation = createComparableCalculationSnapshot()
+
+    return JSON.stringify({
+      name: projectName.value.trim(),
+      kundeId: calculation.kundeId,
+      druckermodellId: calculation.druckermodellId,
+      druckerVarianteId: calculation.druckerVarianteId,
+      total: normalizeComparableAmount(nettopreis.value),
+      calculation
+    })
+  }
+
+  const markEditedProjectAsSaved = () => {
+    editingProjectSavedFingerprint.value = getEditedProjectFingerprint()
   }
 
   const createDefaultCalculationSnapshot = (
@@ -1701,6 +1780,7 @@ export const useKalkulation = () => {
   const resetToNewCalculation = () => {
     activeConfigurationVariantId.value = null
     editingProjectId.value = null
+    editingProjectSavedFingerprint.value = ''
     isNewConfigurationDraft.value = false
     projectName.value = ''
     kundeId.value = null
@@ -1741,6 +1821,7 @@ export const useKalkulation = () => {
         configurationVariants.value.push(mappedConfigurationVariant)
       }
 
+      markEditedProjectAsSaved()
       catalogError.value = ''
 
       return mappedConfigurationVariant
@@ -1822,6 +1903,7 @@ export const useKalkulation = () => {
       activeConfigurationVariantId.value = projectToEdit.id
       editingProjectId.value = projectToEdit.id
       loadConfigurationVariant(projectToEdit)
+      markEditedProjectAsSaved()
     }
 
     isInitialDataLoaded = true
@@ -1956,6 +2038,7 @@ export const useKalkulation = () => {
     saveProject,
     isEditingProject,
     editingProjectName,
+    hasUnsavedEditedProjectChanges,
     saveProjectButtonLabel,
     saveProjectButtonTitle,
 

@@ -188,6 +188,7 @@ describe('useKalkulation', () => {
     expect(composable.isEditingProject.value).toBe(true)
     expect(composable.editingProjectName.value).toBe('bizhub Cxx1i bizhub C451i')
     expect(composable.canEditConfigurationSelection.value).toBe(false)
+    expect(composable.hasUnsavedEditedProjectChanges.value).toBe(false)
 
     composable.selectKunde(99)
     composable.selectDruckermarke('Canon')
@@ -198,6 +199,8 @@ describe('useKalkulation', () => {
     expect(composable.druckermodell.value).toBe('bizhub Cxx1i')
 
     composable.restwertMonate.value = 12
+    expect(composable.hasUnsavedEditedProjectChanges.value).toBe(true)
+
     await composable.saveProject()
 
     expect(mocks.api.updateKonfiguration).toHaveBeenCalledTimes(1)
@@ -230,6 +233,7 @@ describe('useKalkulation', () => {
     expect(composable.druckermodell.value).toBe('')
     expect(composable.positions.value).toEqual([])
     expect(composable.isEditingProject.value).toBe(false)
+    expect(composable.hasUnsavedEditedProjectChanges.value).toBe(false)
 
     app.unmount()
     element.remove()

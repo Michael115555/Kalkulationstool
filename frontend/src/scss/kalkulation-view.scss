@@ -8,7 +8,7 @@
 .calculation-config-section {
   position: relative;
   width: 100%;
-  padding: 2rem 0;
+  padding: 2rem 0 2.2rem;
 }
 
 .calculation-config-section::after {
@@ -18,7 +18,7 @@
   bottom: 0;
   left: 0;
   height: 1px;
-  background: #edf0f5;
+  background: var(--kt-color-border-light);
 }
 
 .calculation-toolbar {
@@ -77,9 +77,9 @@
   min-width: 10.5rem;
   min-height: 2.75rem;
   padding: 0.58rem 1.15rem;
-  border: 1px solid var(--kt-color-primary);
+  border: 1px solid var(--kt-color-success);
   border-radius: var(--kt-border-radius-sm);
-  background: var(--kt-color-primary);
+  background: var(--kt-color-success);
   color: var(--kt-color-bg-white);
   box-shadow: none;
   font-size: var(--kt-font-size-md);
@@ -94,14 +94,14 @@
 
 .toolbar-save-button:not(:disabled):hover,
 .toolbar-save-button:not(:disabled):focus-visible {
-  border-color: var(--kt-color-primary-dark);
-  background: var(--kt-color-primary-dark);
+  border-color: var(--kt-color-success-dark);
+  background: var(--kt-color-success-dark);
   color: var(--kt-color-bg-white);
 }
 
 .toolbar-save-button:not(:disabled):active {
-  border-color: var(--kt-color-primary-dark);
-  background: var(--kt-color-primary-dark);
+  border-color: var(--kt-color-success-darker);
+  background: var(--kt-color-success-darker);
 }
 
 .toolbar-save-button:disabled {
@@ -178,7 +178,7 @@
 
 .position-toolbar {
   min-height: 2.5rem;
-  margin: 1rem 0 0.7rem;
+  margin: 1.55rem 0 0.8rem;
 }
 
 .positions-heading {
@@ -238,7 +238,7 @@
 }
 
 .position-add-button:focus-visible {
-  outline: 2px solid #bfdbfe;
+  outline: 2px solid var(--kt-color-primary-border-subtle);
   outline-offset: 0.2rem;
   border-radius: 0.2rem;
 }
@@ -286,10 +286,10 @@
 }
 
 .table thead th {
-  background-color: #fbfcfe;
+  background-color: var(--kt-color-bg-light);
   color: var(--kt-color-text-secondary);
   font-weight: 600;
-  border-bottom: 1px solid #e9edf3;
+  border-bottom: 1px solid var(--kt-color-border-light);
   vertical-align: middle;
   font-size: 0.9rem;
   line-height: var(--kt-line-height-tight);
@@ -297,7 +297,7 @@
 }
 
 .position-toolbar + .table-responsive {
-  border: 1px solid #e4e7ec;
+  border: 1px solid var(--kt-color-border);
   border-radius: var(--kt-border-radius-sm);
   overflow-x: auto;
 }
@@ -315,11 +315,11 @@
   width: 100%;
   margin-bottom: 0;
   border-style: hidden;
-  border-color: #e7ebf0;
+  border-color: var(--kt-color-border);
 }
 
 .positions-table.table-bordered > :not(caption) > * > * {
-  border-color: #e7ebf0;
+  border-color: var(--kt-color-border);
 }
 
 .positions-table th:nth-child(1),
@@ -360,14 +360,14 @@
 }
 
 .table tbody td {
-  background-color: #ffffff;
-  border-color: #e7ebf0;
+  background-color: var(--kt-color-bg-white);
+  border-color: var(--kt-color-border);
 }
 
 .position-add-table-row td {
   padding: 0.68rem 1.45rem;
-  border-top: 1px solid #eef1f6;
-  background: #fbfcfe;
+  border-top: 1px solid var(--kt-color-border-light);
+  background: var(--kt-color-bg-light);
 }
 
 .position-add-content {
@@ -382,7 +382,7 @@
   content: '';
   flex: 1 1 0;
   max-width: 38rem;
-  border-top: 1px solid #dbe5ff;
+  border-top: 1px solid var(--kt-color-primary-border-subtle);
   opacity: 0.85;
 }
 
@@ -397,7 +397,7 @@
 }
 
 .empty-position-row .form-control::placeholder {
-  color: #a7b0bf;
+  color: var(--kt-color-text-light);
 }
 
 .required-position-field {
@@ -422,8 +422,9 @@
 
 .calculation-panel {
   position: relative;
-  margin-top: 1.25rem;
-  padding-top: 1.05rem;
+  margin-top: 2rem;
+  padding-top: 1.65rem;
+  border-top: 1px solid var(--kt-color-border);
 }
 
 .calculation-panel::before {
@@ -434,12 +435,12 @@
   display: grid;
   grid-template-columns: minmax(0, 70fr) minmax(18rem, 30fr);
   align-items: start;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .calculation-card {
   min-width: 0;
-  padding: 1.15rem;
+  padding: 1.25rem;
   border: 1px solid var(--kt-color-border);
   border-radius: var(--kt-border-radius-sm);
   background: var(--kt-color-bg-white);
@@ -447,7 +448,9 @@
 
 .calculation-card-heading {
   min-height: 2.05rem;
-  margin-bottom: 0.65rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--kt-color-border-light);
 }
 
 .calculation-form {
@@ -526,15 +529,15 @@
   min-height: 2.75rem;
   margin-top: 0.55rem;
   padding: 0 var(--kt-spacing-xs);
-  background-color: #f5f8ff;
-  border: 1px solid #e5edff;
+  background-color: var(--kt-color-primary-bg-subtle);
+  border: 1px solid var(--kt-color-primary-border-subtle);
   border-radius: var(--kt-spacing-sm);
   overflow: hidden;
 }
 
 .kalkulation-view .net-row .calculation-form-label,
 .kalkulation-view .net-row .amount-input {
-  color: #1d4ed8;
+  color: var(--kt-color-primary-dark);
   font-weight: 600;
 }
 
@@ -545,7 +548,7 @@
 
 .kalkulation-view .net-price-input {
   min-height: 2.75rem;
-  background-color: #f5f8ff;
+  background-color: var(--kt-color-primary-bg-subtle);
   border-color: transparent;
   box-shadow: none;
 }
@@ -565,7 +568,7 @@
 }
 
 .kalkulation-view .net-price-input:focus {
-  background-color: #f5f8ff;
+  background-color: var(--kt-color-primary-bg-subtle);
   border-color: transparent;
   box-shadow: none;
 }
@@ -629,7 +632,7 @@
 }
 
 .collapsible-card-summary:focus-visible {
-  outline: 2px solid #bfdbfe;
+  outline: 2px solid var(--kt-color-primary-border-subtle);
   outline-offset: 0.2rem;
   border-radius: var(--kt-spacing-sm);
 }
@@ -776,12 +779,12 @@
   max-width: 90rem;
   margin-bottom: 0;
   border: 0;
-  border-color: #e7ebf0;
+  border-color: var(--kt-color-border);
   font-size: 0.96rem;
 }
 
 .offer-conditions-table > :not(caption) > * > * {
-  border-color: #e7ebf0;
+  border-color: var(--kt-color-border);
   border-right: 0;
   border-left: 0;
 }
@@ -847,7 +850,7 @@
 }
 
 .offer-condition-selected td {
-  background-color: #fbfcfe;
+  background-color: var(--kt-color-bg-light);
 }
 
 .calculated-price-input {
@@ -874,9 +877,9 @@
   gap: 0.3rem 0.85rem;
   min-height: 3.75rem;
   padding: 0.55rem 0.75rem;
-  border: 1px solid #e4e7ec;
+  border: 1px solid var(--kt-color-border);
   border-radius: var(--kt-spacing-sm);
-  background: #fbfcfe;
+  background: var(--kt-color-bg-light);
 }
 
 .rent-icon {
@@ -889,7 +892,7 @@
   height: 2.05rem;
   border: 1px solid var(--kt-color-border);
   border-radius: var(--kt-spacing-sm);
-  background: #ffffff;
+  background: var(--kt-color-bg-white);
   color: var(--kt-color-text-secondary);
   font-size: 0.85rem;
 }
@@ -911,7 +914,7 @@
 }
 
 .rent-amount {
-  color: #1d4ed8;
+  color: var(--kt-color-primary-dark);
   font-weight: 600;
 }
 
