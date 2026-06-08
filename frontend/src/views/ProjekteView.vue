@@ -282,6 +282,7 @@ onBeforeUnmount(() => {
                 <tr
                   v-for="(projekt, index) in sortedProjekte"
                   :key="projekt.id"
+                  class="project-table-row"
                 >
                   <td class="text-end project-number-cell">
                     {{ sortedProjekte.length - index }}
@@ -501,7 +502,7 @@ onBeforeUnmount(() => {
   border-color: var(--kt-color-border);
 }
 
-.projekte-table tbody tr:not(.project-add-table-row):hover td {
+.projekte-table tbody .project-table-row:hover td {
   background-color: var(--kt-color-bg-light);
 }
 
