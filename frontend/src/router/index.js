@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import KalkulationView from '../views/KalkulationView.vue'
 import ProjekteView from '../views/ProjekteView.vue'
 import StammdatenView from '../views/StammdatenView.vue'
 
@@ -9,8 +8,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'kalkulation',
-      component: KalkulationView
+      redirect: { name: 'projekte' }
     },
     {
       path: '/projekte',

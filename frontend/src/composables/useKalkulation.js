@@ -1,5 +1,4 @@
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref, unref, watch } from 'vue'
 import { createKalkulationApi } from '../services/kalkulationApi'
 import {
   calculateCombinedScanFee,
@@ -115,10 +114,22 @@ const KONDITIONEN_A3_MFP = [
   }
 ]
 
-export const useKalkulation = () => {
+export const useKalkulation = (options = {}) => {
   const api = createKalkulationApi()
-  const route = useRoute()
-  const router = useRouter()
+
+  const getOptionValue = (value) => {
+    if (typeof value === 'function') {
+      return value()
+    }
+
+    return unref(value)
+  }
+
+  const getProjectIdFromOptions = () => {
+    const projectId = Number(getOptionValue(options.projektId))
+
+    return Number.isInteger(projectId) && projectId > 0 ? projectId : null
+  }
 
   const naechsteId = ref(1)
   const druckermarke = ref('')
@@ -257,10 +268,6 @@ export const useKalkulation = () => {
       isEditingProject.value &&
       Boolean(editingProjectSavedFingerprint.value) &&
       getEditedProjectFingerprint() !== editingProjectSavedFingerprint.value
-  )
-
-  const editingProjectName = computed(() =>
-    projectName.value.trim() || 'Projekt'
   )
 
   const saveProjectButtonLabel = computed(() =>
@@ -1000,15 +1007,6 @@ export const useKalkulation = () => {
       (configurationVariant) => configurationVariant.id === activeConfigurationVariantId.value
     )
 
-  const getProjectIdFromRoute = () => {
-    const rawProjectId = Array.isArray(route.query?.projektId)
-      ? route.query.projektId[0]
-      : route.query?.projektId
-    const projectId = Number(rawProjectId)
-
-    return Number.isInteger(projectId) && projectId > 0 ? projectId : null
-  }
-
   const saveActiveConfigurationVariant = (shouldPersist = true) => {
     if (
       isExotischesModell.value ||
@@ -1608,8 +1606,6 @@ export const useKalkulation = () => {
 
   const saveProjectButtonTitle = computed(() => saveProjectButtonLabel.value)
 
-  const showSaveProjectBar = computed(() => !isExotischesModell.value)
-
   const getUniqueConfigurationName = (baseName) => {
     const existingNames = configurationVariants.value
       .filter(isConfigurationComplete)
@@ -1840,9 +1836,8 @@ export const useKalkulation = () => {
       }
 
       resetToNewCalculation()
-      await router.replace({ name: 'projekte' })
 
-      return
+      return savedProject
     }
 
     const savedProject = await addConfigurationVariant()
@@ -1852,6 +1847,7 @@ export const useKalkulation = () => {
     }
 
     resetToNewCalculation()
+    return savedProject
   }
 
   const addPosition = () => {
@@ -1892,10 +1888,10 @@ export const useKalkulation = () => {
 
     resetToNewCalculation()
 
-    const projectIdFromRoute = getProjectIdFromRoute()
-    const projectToEdit = projectIdFromRoute
+    const projectId = getProjectIdFromOptions()
+    const projectToEdit = projectId
       ? configurationVariants.value.find(
-          (configurationVariant) => configurationVariant.id === projectIdFromRoute
+          (configurationVariant) => configurationVariant.id === projectId
         )
       : null
 
@@ -1910,7 +1906,7 @@ export const useKalkulation = () => {
   }
 
   const hydrateInitialDataFromCache = () => {
-    const cachedData = api.getCachedRouteData('kalkulation')
+    const cachedData = api.getCachedRouteData('projektEditor')
 
     if (!cachedData) {
       return false
@@ -2034,10 +2030,7 @@ export const useKalkulation = () => {
     selectDruckermarke,
     isExotischesModell,
     canSaveProject,
-    showSaveProjectBar,
     saveProject,
-    isEditingProject,
-    editingProjectName,
     hasUnsavedEditedProjectChanges,
     saveProjectButtonLabel,
     saveProjectButtonTitle,

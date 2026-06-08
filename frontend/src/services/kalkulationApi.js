@@ -158,13 +158,17 @@ export const createKalkulationApi = (
           : null
       }
 
-      const katalog = getCachedResponse('/api/katalog')
-      const kunden = getCachedResponse('/api/kunden')
-      const konfigurationen = getCachedResponse('/api/konfigurationen')
+      if (routeName === 'projektEditor') {
+        const katalog = getCachedResponse('/api/katalog')
+        const kunden = getCachedResponse('/api/kunden')
+        const konfigurationen = getCachedResponse('/api/konfigurationen')
 
-      return katalog && kunden && konfigurationen
-        ? { katalog, kunden, konfigurationen }
-        : null
+        return katalog && kunden && konfigurationen
+          ? { katalog, kunden, konfigurationen }
+          : null
+      }
+
+      return null
     },
     prefetchRouteData: (routeName) => {
       if (routeName === 'stammdaten') {
@@ -175,7 +179,11 @@ export const createKalkulationApi = (
         return prefetchPaths(['/api/projekte', '/api/kunden', '/api/verkaeufer'])
       }
 
-      return prefetchPaths(['/api/katalog', '/api/kunden', '/api/konfigurationen'])
+      if (routeName === 'projektEditor') {
+        return prefetchPaths(['/api/katalog', '/api/kunden', '/api/konfigurationen'])
+      }
+
+      return Promise.resolve([])
     }
   }
 }

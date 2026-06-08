@@ -16,22 +16,11 @@ const mocks = vi.hoisted(() => ({
     getCachedRouteData: vi.fn(),
     createKonfiguration: vi.fn(),
     updateKonfiguration: vi.fn()
-  },
-  route: {
-    query: { projektId: '1' }
-  },
-  router: {
-    replace: vi.fn()
   }
 }))
 
 vi.mock('../services/kalkulationApi', () => ({
   createKalkulationApi: () => mocks.api
-}))
-
-vi.mock('vue-router', () => ({
-  useRoute: () => mocks.route,
-  useRouter: () => mocks.router
 }))
 
 const createKatalog = () => ({
@@ -129,11 +118,11 @@ const flushPromises = async () => {
   await new Promise((resolve) => window.setTimeout(resolve, 0))
 }
 
-const mountUseKalkulation = async () => {
+const mountUseKalkulation = async (options) => {
   let composable
   const app = createApp({
     setup() {
-      composable = useKalkulation()
+      composable = useKalkulation(options)
       return () => h('div')
     }
   })
@@ -158,7 +147,6 @@ describe('useKalkulation', () => {
     globalThis.Element = dom.window.Element
     globalThis.SVGElement = dom.window.SVGElement
 
-    mocks.route.query = { projektId: '1' }
     mocks.api.getKatalog.mockResolvedValue(createKatalog())
     mocks.api.getKunden.mockResolvedValue([{ id: 36, firmenname: 'TestFirma' }])
     mocks.api.getKonfigurationen.mockResolvedValue([createSavedConfiguration()])
@@ -169,7 +157,6 @@ describe('useKalkulation', () => {
     mocks.api.updateKonfiguration.mockImplementation((_id, payload) =>
       Promise.resolve({ id: _id, ...payload })
     )
-    mocks.router.replace.mockResolvedValue()
   })
 
   afterEach(() => {
@@ -182,11 +169,10 @@ describe('useKalkulation', () => {
   })
 
   it('speichert ein bearbeitetes Projekt mit normalisierten Drucker-IDs', async () => {
-    const { app, composable, element } = await mountUseKalkulation()
+    const { app, composable, element } = await mountUseKalkulation({ projektId: 1 })
 
     expect(composable.canSaveProject.value).toBe(true)
-    expect(composable.isEditingProject.value).toBe(true)
-    expect(composable.editingProjectName.value).toBe('bizhub Cxx1i bizhub C451i')
+    expect(composable.saveProjectButtonLabel.value).toBe('Änderungen speichern')
     expect(composable.canEditConfigurationSelection.value).toBe(false)
     expect(composable.hasUnsavedEditedProjectChanges.value).toBe(false)
 
@@ -227,12 +213,11 @@ describe('useKalkulation', () => {
       ])
     )
     expect(composable.catalogError.value).toBe('')
-    expect(mocks.router.replace).toHaveBeenCalledWith({ name: 'projekte' })
     expect(composable.kundeId.value).toBeNull()
     expect(composable.druckermarke.value).toBe('')
     expect(composable.druckermodell.value).toBe('')
     expect(composable.positions.value).toEqual([])
-    expect(composable.isEditingProject.value).toBe(false)
+    expect(composable.saveProjectButtonLabel.value).toBe('Projekt speichern')
     expect(composable.hasUnsavedEditedProjectChanges.value).toBe(false)
 
     app.unmount()
@@ -240,7 +225,7 @@ describe('useKalkulation', () => {
   })
 
   it('markiert inkludierte Lieferkonditionen automatisch', async () => {
-    const { app, composable, element } = await mountUseKalkulation()
+    const { app, composable, element } = await mountUseKalkulation({ projektId: 1 })
 
     const deliveryConditions = getDeliveryConditions(composable.konditionenA3Mfp.value)
 
@@ -274,7 +259,7 @@ describe('useKalkulation', () => {
     })
     mocks.api.getKonfigurationen.mockResolvedValue([savedConfiguration])
 
-    const { app, composable, element } = await mountUseKalkulation()
+    const { app, composable, element } = await mountUseKalkulation({ projektId: 1 })
 
     expect(getDeliveryConditions(composable.konditionenA3Mfp.value)).toEqual(
       expect.arrayContaining([
@@ -315,18 +300,15 @@ describe('useKalkulation', () => {
     element.remove()
   })
 
-  it('wechselt nach dem ersten Projektspeichern zu einer neuen Kalkulation', async () => {
-    mocks.route.query = {}
+  it('wechselt nach dem ersten Projektspeichern zu einem neuen Projektentwurf', async () => {
     mocks.api.getKonfigurationen.mockResolvedValue([])
 
     const { app, composable, element } = await mountUseKalkulation()
 
-    expect(composable.showSaveProjectBar.value).toBe(true)
     expect(composable.canSaveProject.value).toBe(false)
 
     composable.selectKunde(36)
 
-    expect(composable.showSaveProjectBar.value).toBe(true)
     expect(composable.canSaveProject.value).toBe(false)
 
     composable.selectDruckermarke('Konica Minolta')
@@ -341,34 +323,28 @@ describe('useKalkulation', () => {
     await composable.saveProject()
 
     expect(mocks.api.createKonfiguration).toHaveBeenCalledTimes(1)
-    expect(mocks.router.replace).not.toHaveBeenCalled()
     expect(composable.kundeId.value).toBeNull()
     expect(composable.druckermarke.value).toBe('')
     expect(composable.druckermodell.value).toBe('')
     expect(composable.positions.value).toEqual([])
     expect(composable.canSaveProject.value).toBe(false)
-    expect(composable.showSaveProjectBar.value).toBe(true)
 
     app.unmount()
     element.remove()
   })
 
-  it('blendet bei exotischem Modell die Speicherleiste aus', async () => {
-    mocks.route.query = {}
+  it('deaktiviert das Speichern bei exotischem Modell', async () => {
     mocks.api.getKonfigurationen.mockResolvedValue([])
 
     const { app, composable, element } = await mountUseKalkulation()
 
     composable.selectKunde(36)
 
-    expect(composable.showSaveProjectBar.value).toBe(true)
-
     composable.selectDruckermarke('Exotisches Modell')
 
     expect(composable.isExotischesModell.value).toBe(true)
     expect(composable.positions.value.length).toBeGreaterThan(0)
     expect(composable.canSaveProject.value).toBe(false)
-    expect(composable.showSaveProjectBar.value).toBe(false)
 
     app.unmount()
     element.remove()

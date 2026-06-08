@@ -1,11 +1,10 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref, unref } from 'vue'
+import ProjectEditorView from './KalkulationView.vue'
 import { createKalkulationApi } from '../services/kalkulationApi'
 import { formatAmount } from '../utils/numberFormat'
 
 const api = createKalkulationApi()
-const router = useRouter()
 const LOADING_INDICATOR_DELAY = 140
 
 const isLoading = ref(false)
@@ -14,6 +13,8 @@ const errorMessage = ref('')
 const projekte = ref([])
 const kunden = ref([])
 const verkaeufer = ref([])
+const projectOverlay = ref(null)
+const projectEditorView = ref(null)
 let loadingIndicatorTimer = null
 
 const sortedProjekte = computed(() =>
@@ -138,16 +139,68 @@ const hydrateProjekteFromCache = () => {
 
 const projektToDelete = ref(null)
 const isDeletingProjekt = ref(false)
+const projectOverlayTitle = computed(() => {
+  if (projectOverlay.value?.mode !== 'edit') {
+    return 'Neues Projekt'
+  }
+
+  const projektName = String(projectOverlay.value?.projektName ?? '').trim()
+
+  return projektName ? `Projekt bearbeiten: ${projektName}` : 'Projekt bearbeiten'
+})
+const getProjectEditorExposedValue = (key, fallback) => {
+  const value = projectEditorView.value?.[key]
+
+  return value === undefined || value === null ? fallback : unref(value)
+}
+const canSaveProjectOverlay = computed(() =>
+  Boolean(getProjectEditorExposedValue('canSaveProject', false))
+)
+const projectSaveButtonLabel = computed(() =>
+  getProjectEditorExposedValue('saveProjectButtonLabel', 'Projekt speichern')
+)
+const projectSaveButtonTitle = computed(() =>
+  getProjectEditorExposedValue('saveProjectButtonTitle', projectSaveButtonLabel.value)
+)
 
 const askDeleteProjekt = (projekt) => {
   projektToDelete.value = projekt
 }
 
+const openNewProjekt = () => {
+  api.prefetchRouteData('projektEditor')
+  projectEditorView.value = null
+  projectOverlay.value = {
+    key: `new-${Date.now()}`,
+    mode: 'new',
+    projektId: null,
+    projektName: ''
+  }
+}
+
 const editProjekt = (projekt) => {
-  router.push({
-    name: 'kalkulation',
-    query: { projektId: projekt.id }
-  })
+  api.prefetchRouteData('projektEditor')
+  projectEditorView.value = null
+  projectOverlay.value = {
+    key: `edit-${projekt.id}-${Date.now()}`,
+    mode: 'edit',
+    projektId: projekt.id,
+    projektName: getProjektName(projekt)
+  }
+}
+
+const closeProjectOverlay = () => {
+  projectOverlay.value = null
+  projectEditorView.value = null
+}
+
+const handleProjectSaved = async () => {
+  closeProjectOverlay()
+  await loadProjekte()
+}
+
+const saveProjectFromHeader = async () => {
+  await projectEditorView.value?.handleSaveProject?.()
 }
 
 const cancelDeleteProjekt = () => {
@@ -279,11 +332,77 @@ onBeforeUnmount(() => {
                     </div>
                   </td>
                 </tr>
+
+                <tr class="project-add-table-row">
+                  <td colspan="7">
+                    <div class="project-add-content">
+                      <button
+                        type="button"
+                        class="project-add-button"
+                        aria-label="Neues Projekt"
+                        @click="openNewProjekt"
+                      >
+                        <i class="pi pi-plus" aria-hidden="true"></i>
+                        <span>Neues Projekt</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
         </div>
       </div>
+    </div>
+
+    <div
+      v-if="projectOverlay"
+      class="project-workspace-overlay"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="projectOverlayTitle"
+    >
+      <header class="project-workspace-header">
+        <h2
+          class="project-workspace-title"
+          :title="projectOverlayTitle"
+        >
+          {{ projectOverlayTitle }}
+        </h2>
+
+        <div class="project-workspace-actions">
+          <button
+            type="button"
+            class="project-overlay-cancel-button"
+            aria-label="Projekt abbrechen"
+            @click="closeProjectOverlay"
+          >
+            <span>Abbrechen</span>
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+
+          <button
+            type="button"
+            class="btn toolbar-save-button project-workspace-save-button"
+            :aria-label="canSaveProjectOverlay ? projectSaveButtonLabel : projectSaveButtonTitle"
+            :title="projectSaveButtonTitle"
+            :disabled="!canSaveProjectOverlay"
+            @click="saveProjectFromHeader"
+          >
+            <span class="pi pi-save" aria-hidden="true"></span>
+            <span>{{ projectSaveButtonLabel }}</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="project-workspace-content">
+        <ProjectEditorView
+          ref="projectEditorView"
+          :key="projectOverlay.key"
+          :projekt-id="projectOverlay.projektId"
+          @saved="handleProjectSaved"
+        />
+      </main>
     </div>
 
     <div
@@ -382,7 +501,7 @@ onBeforeUnmount(() => {
   border-color: var(--kt-color-border);
 }
 
-.projekte-table tbody tr:hover td {
+.projekte-table tbody tr:not(.project-add-table-row):hover td {
   background-color: var(--kt-color-bg-light);
 }
 
@@ -464,6 +583,190 @@ onBeforeUnmount(() => {
   font-size: var(--kt-font-size-md);
   font-weight: 500;
   text-align: center;
+}
+
+.project-add-table-row td {
+  padding: 0.68rem 1.45rem;
+  border-top: 1px solid var(--kt-color-border-light);
+  background: var(--kt-color-bg-light);
+}
+
+.project-add-content {
+  display: flex;
+  align-items: center;
+  gap: 1.35rem;
+  width: 100%;
+}
+
+.project-add-content::before,
+.project-add-content::after {
+  content: '';
+  flex: 1 1 0;
+  max-width: 38rem;
+  border-top: 1px solid var(--kt-color-primary-border-subtle);
+  opacity: 0.85;
+}
+
+.project-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 2.25rem;
+  padding: 0 0.55rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--kt-color-primary);
+  font-size: var(--kt-font-size-md);
+  font-weight: 500;
+  line-height: var(--kt-line-height-tight);
+  white-space: nowrap;
+}
+
+.project-add-button .pi {
+  font-size: 1rem;
+}
+
+.project-add-button:hover,
+.project-add-button:focus-visible {
+  background: var(--kt-color-bg-very-light);
+  color: var(--kt-color-primary-dark);
+}
+
+.project-add-button:focus-visible {
+  border-radius: 0.2rem;
+  outline: 2px solid var(--kt-color-primary-border-subtle);
+  outline-offset: 0.2rem;
+}
+
+.project-workspace-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  display: flex;
+  flex-direction: column;
+  background: var(--kt-color-bg-white);
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.project-workspace-header {
+  position: relative;
+  z-index: 1030;
+  display: flex;
+  flex: 0 0 4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--kt-color-border-light);
+  background: var(--kt-color-bg-white);
+}
+
+.project-workspace-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--kt-color-text-primary);
+  font-size: var(--kt-font-size-lg);
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: var(--kt-line-height-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-workspace-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.project-workspace-save-button {
+  gap: 0.55rem;
+  min-width: 11.5rem;
+  min-height: 2.75rem;
+  box-shadow: none;
+}
+
+.project-workspace-save-button .pi {
+  font-size: 1rem;
+}
+
+.project-overlay-cancel-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--kt-color-border);
+  border-radius: var(--kt-border-radius-sm);
+  background: var(--kt-color-bg-white);
+  color: var(--kt-color-text-secondary);
+  font-size: var(--kt-font-size-md);
+  font-weight: 500;
+  line-height: 1.2;
+  transition:
+    background-color var(--kt-transition-fast),
+    border-color var(--kt-transition-fast),
+    color var(--kt-transition-fast);
+}
+
+.project-overlay-cancel-button:hover,
+.project-overlay-cancel-button:focus-visible {
+  border-color: var(--kt-color-text-light);
+  background: var(--kt-color-bg-light);
+  color: var(--kt-color-text-primary);
+}
+
+.project-overlay-cancel-button:focus-visible {
+  outline: 2px solid var(--kt-color-primary-border-subtle);
+  outline-offset: 0.2rem;
+}
+
+.project-workspace-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  background: var(--kt-color-bg-white);
+}
+
+.project-workspace-content :deep(.calculation-page-card-body) {
+  min-height: calc(100vh - 4rem);
+}
+
+@media (max-width: 575.98px) {
+  .project-workspace-header {
+    flex-wrap: wrap;
+    align-items: stretch;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+
+  .project-workspace-title {
+    flex-basis: 100%;
+  }
+
+  .project-workspace-actions {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+  }
+
+  .project-workspace-save-button,
+  .project-overlay-cancel-button {
+    flex: 1 1 10rem;
+    min-width: 0;
+  }
 }
 
 .confirm-delete-backdrop {

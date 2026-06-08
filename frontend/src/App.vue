@@ -4,9 +4,8 @@ import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { createKalkulationApi } from './services/kalkulationApi'
 
 const navigationItems = [
-  { to: '/', name: 'kalkulation', label: 'Kalkulation', icon: 'pi pi-calculator' },
-  { to: '/stammdaten', name: 'stammdaten', label: 'Kunden', icon: 'pi pi-users' },
-  { to: '/projekte', name: 'projekte', label: 'Projekte', icon: 'pi pi-folder' }
+  { to: '/projekte', name: 'projekte', label: 'Projekte', icon: 'pi pi-folder' },
+  { to: '/stammdaten', name: 'stammdaten', label: 'Kunden', icon: 'pi pi-users' }
 ]
 
 const api = createKalkulationApi()
@@ -22,7 +21,7 @@ const closeNavigation = () => {
   isNavigationOpen.value = false
 }
 
-const getRouteDataName = () => route.name ?? 'kalkulation'
+const getRouteDataName = () => route.name ?? 'projekte'
 
 const prefetchRouteData = (routeName) => {
   return api.prefetchRouteData(routeName)
@@ -31,6 +30,7 @@ const prefetchRouteData = (routeName) => {
 const prefetchSecondaryViews = () => {
   api.prefetchRouteData('stammdaten')
   api.prefetchRouteData('projekte')
+  api.prefetchRouteData('projektEditor')
 }
 
 const waitForPaint = () =>

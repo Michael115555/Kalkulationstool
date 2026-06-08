@@ -1,12 +1,21 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import CalculationPanel from '../components/kalkulation/CalculationPanel.vue'
 import CalculationToolbar from '../components/kalkulation/CalculationToolbar.vue'
 import PositionsTable from '../components/kalkulation/PositionsTable.vue'
 import { useKalkulation } from '../composables/useKalkulation'
 
+const props = defineProps({
+  projektId: {
+    type: [Number, String],
+    default: null
+  }
+})
+
+const emit = defineEmits(['saved'])
 const isLeaveProjectEditDialogOpen = ref(false)
+const activeProjektId = computed(() => props.projektId)
 let pendingRouteLeaveResolve = null
 
 const {
@@ -28,10 +37,7 @@ const {
 
   positionsKategorien,
   canSaveProject,
-  showSaveProjectBar,
   saveProject,
-  isEditingProject,
-  editingProjectName,
   hasUnsavedEditedProjectChanges,
   saveProjectButtonLabel,
   saveProjectButtonTitle,
@@ -87,7 +93,9 @@ const {
   mietoptionen,
   getMietbetrag,
   mietbasis
-} = useKalkulation()
+} = useKalkulation({
+  projektId: activeProjektId
+})
 
 const resolvePendingRouteLeave = (canLeave) => {
   if (!pendingRouteLeaveResolve) {
@@ -107,6 +115,21 @@ const cancelLeaveProjectEdit = () => {
 const confirmLeaveProjectEdit = () => {
   resolvePendingRouteLeave(true)
 }
+
+const handleSaveProject = async () => {
+  const savedProject = await saveProject()
+
+  if (savedProject) {
+    emit('saved', savedProject)
+  }
+}
+
+defineExpose({
+  canSaveProject,
+  saveProjectButtonLabel,
+  saveProjectButtonTitle,
+  handleSaveProject
+})
 
 onBeforeRouteLeave(() => {
   if (!hasUnsavedEditedProjectChanges.value) {
@@ -213,44 +236,6 @@ onBeforeRouteLeave(() => {
               :format-amount="formatAmount"
             />
           </template>
-
-          <div
-            v-if="showSaveProjectBar"
-            class="calculation-sticky-save"
-            :class="{ 'calculation-sticky-save-editing': isEditingProject }"
-          >
-            <div
-              class="calculation-edit-save-line"
-              :aria-label="isEditingProject ? 'Projekt bearbeiten' : 'Neue Kalkulation speichern'"
-            >
-              <span
-                class="pi"
-                :class="isEditingProject ? 'pi-pencil' : 'pi-file-plus'"
-                aria-hidden="true"
-              ></span>
-              <span class="calculation-edit-save-mode">
-                {{ isEditingProject ? 'Projekt bearbeiten:' : 'Neue Kalkulation' }}
-              </span>
-              <strong
-                v-if="isEditingProject"
-                class="calculation-edit-save-title"
-              >
-                {{ editingProjectName }}
-              </strong>
-            </div>
-
-            <button
-              type="button"
-              class="btn toolbar-save-button calculation-sticky-save-button"
-              :aria-label="canSaveProject ? saveProjectButtonLabel : saveProjectButtonTitle"
-              :title="saveProjectButtonTitle"
-              :disabled="!canSaveProject"
-              @click="saveProject"
-            >
-              <span class="pi pi-save" aria-hidden="true"></span>
-              <span>{{ saveProjectButtonLabel }}</span>
-            </button>
-          </div>
         </div>
       </div>
     </div>
