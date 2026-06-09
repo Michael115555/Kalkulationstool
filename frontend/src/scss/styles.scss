@@ -120,6 +120,7 @@ body {
 }
 
 .table-edit-button,
+.table-offer-button,
 .table-delete-button {
   display: inline-flex;
   align-items: center;
@@ -137,12 +138,27 @@ body {
   color: var(--kt-color-text-light);
 }
 
+.table-offer-button {
+  color: var(--kt-color-primary);
+}
+
 .table-edit-button:hover:not(:disabled),
 .table-edit-button:focus-visible:not(:disabled) {
   color: var(--kt-color-text-secondary);
 }
 
+.table-offer-button:hover:not(:disabled),
+.table-offer-button:focus-visible:not(:disabled) {
+  color: var(--kt-color-primary-dark);
+}
+
 .table-edit-button:focus-visible {
+  border-radius: 0.2rem;
+  outline: 2px solid var(--kt-color-primary-border-subtle);
+  outline-offset: 0.2rem;
+}
+
+.table-offer-button:focus-visible {
   border-radius: 0.2rem;
   outline: 2px solid var(--kt-color-primary-border-subtle);
   outline-offset: 0.2rem;
@@ -160,12 +176,14 @@ body {
 }
 
 .table-edit-button:disabled,
+.table-offer-button:disabled,
 .table-delete-button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
 
 .table-edit-button .pi,
+.table-offer-button .pi,
 .table-delete-button .pi {
   font-size: 1rem;
 }

@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, unref } from 'vue'
 import ProjectEditorView from './KalkulationView.vue'
 import { createKalkulationApi } from '../services/kalkulationApi'
 import { formatAmount } from '../utils/numberFormat'
+import { buildOffertePdfBytes } from '../utils/offertePdf'
 
 const api = createKalkulationApi()
 const LOADING_INDICATOR_DELAY = 140
@@ -15,6 +16,8 @@ const kunden = ref([])
 const verkaeufer = ref([])
 const projectOverlay = ref(null)
 const projectEditorView = ref(null)
+const isCreatingOfferteProjektId = ref(null)
+const generatedPdfUrls = new Set()
 let loadingIndicatorTimer = null
 
 const sortedProjekte = computed(() =>
@@ -189,6 +192,114 @@ const editProjekt = (projekt) => {
   }
 }
 
+const getFullProjektForOfferte = async (projekt) => {
+  const konfigurationen = await api.getKonfigurationen()
+
+  return (
+    konfigurationen.find((konfiguration) => Number(konfiguration.id) === Number(projekt.id)) ??
+    projekt
+  )
+}
+
+const escapeStatusHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+const buildOfferteStatusHtml = (message) => `<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Offerte</title>
+    <style>
+      body {
+        display: grid;
+        min-height: 100vh;
+        margin: 0;
+        place-items: center;
+        background: #f3f4f6;
+        color: #1f2937;
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+      }
+
+      .status {
+        width: min(30rem, calc(100vw - 2rem));
+        padding: 1.25rem;
+        border: 1px solid #d7dde4;
+        border-radius: 0.5rem;
+        background: #fff;
+        box-shadow: 0 1rem 2.5rem rgba(15, 23, 42, 0.14);
+        font-weight: 600;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="status">${escapeStatusHtml(message)}</div>
+  </body>
+</html>`
+
+const writeHtmlToWindow = (targetWindow, html) => {
+  targetWindow.document.open()
+  targetWindow.document.write(html)
+  targetWindow.document.close()
+  targetWindow.focus()
+}
+
+const openPdfInNewTab = (targetWindow, bytes) => {
+  const blob = new Blob([bytes], { type: 'application/pdf' })
+  const url = URL.createObjectURL(blob)
+
+  generatedPdfUrls.add(url)
+  targetWindow.location.href = url
+  targetWindow.focus()
+}
+
+const createOfferte = async (projekt) => {
+  if (!projekt || isCreatingOfferteProjektId.value) {
+    return
+  }
+
+  isCreatingOfferteProjektId.value = projekt.id
+  errorMessage.value = ''
+  let offerteWindow = null
+
+  try {
+    offerteWindow = window.open('', '_blank')
+
+    if (!offerteWindow) {
+      throw new Error('Offertenfenster konnte nicht geöffnet werden.')
+    }
+
+    writeHtmlToWindow(offerteWindow, buildOfferteStatusHtml('Offerte wird vorbereitet...'))
+
+    const fullProjekt = await getFullProjektForOfferte(projekt)
+    const kunde = getKunde(fullProjekt) ?? getKunde(projekt)
+    const pdfBytes = buildOffertePdfBytes({
+      projekt: fullProjekt,
+      kunde,
+      verkaeuferName: getProjektVerkaeufer(projekt)
+    })
+
+    openPdfInNewTab(offerteWindow, pdfBytes)
+  } catch (error) {
+    errorMessage.value = `Offerte konnte nicht erstellt werden: ${error.message}`
+
+    if (offerteWindow) {
+      writeHtmlToWindow(
+        offerteWindow,
+        buildOfferteStatusHtml(`Offerte konnte nicht erstellt werden: ${error.message}`)
+      )
+    }
+  } finally {
+    isCreatingOfferteProjektId.value = null
+  }
+}
+
 const closeProjectOverlay = () => {
   projectOverlay.value = null
   projectEditorView.value = null
@@ -244,6 +355,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.clearTimeout(loadingIndicatorTimer)
+  generatedPdfUrls.forEach((url) => URL.revokeObjectURL(url))
+  generatedPdfUrls.clear()
 })
 </script>
 
@@ -304,6 +417,20 @@ onBeforeUnmount(() => {
 
                   <td class="text-center align-middle">
                     <div class="project-action-list">
+                      <button
+                        type="button"
+                        class="table-offer-button"
+                        :aria-label="`Offerte für ${getProjektName(projekt)} als PDF im neuen Tab anzeigen`"
+                        title="Offerte als PDF anzeigen"
+                        :disabled="isCreatingOfferteProjektId === projekt.id"
+                        @click="createOfferte(projekt)"
+                      >
+                        <i
+                          :class="isCreatingOfferteProjektId === projekt.id ? 'pi pi-spin pi-spinner' : 'pi pi-file-pdf'"
+                          aria-hidden="true"
+                        ></i>
+                      </button>
+
                       <button
                         type="button"
                         class="table-edit-button"
@@ -549,9 +676,9 @@ onBeforeUnmount(() => {
 
 .projekte-table th:nth-child(7),
 .projekte-table td:nth-child(7) {
-  width: 5.5rem;
-  min-width: 5.5rem;
-  max-width: 5.5rem;
+  width: 7.35rem;
+  min-width: 7.35rem;
+  max-width: 7.35rem;
   text-align: center;
 }
 
@@ -568,12 +695,14 @@ onBeforeUnmount(() => {
 }
 
 .projekte-table .table-edit-button,
+.projekte-table .table-offer-button,
 .projekte-table .table-delete-button {
   width: 1.75rem;
   height: 1.75rem;
 }
 
 .projekte-table .table-edit-button .pi,
+.projekte-table .table-offer-button .pi,
 .projekte-table .table-delete-button .pi {
   font-size: 0.95rem;
 }
