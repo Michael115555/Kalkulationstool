@@ -1441,7 +1441,9 @@ const TEMPLATE_TABLE_HEADER_HEIGHT = 28
 const TEMPLATE_ROW_HEIGHT = 19
 const TEMPLATE_BLANK_ROW_HEIGHT = TEMPLATE_ROW_HEIGHT
 const TEMPLATE_TOTALS_SPACER_HEIGHT = TEMPLATE_BLANK_ROW_HEIGHT
-const TEMPLATE_CLOSING_BASE_HEIGHT = 255 + TEMPLATE_TOTALS_SPACER_HEIGHT
+const TEMPLATE_TOTAL_ROW_HEIGHT = 21
+const TEMPLATE_CONDITIONS_BASE_HEIGHT = TEMPLATE_BLANK_ROW_HEIGHT + 20 + 18 + 18
+const TEMPLATE_ACCEPTANCE_HEIGHT = TEMPLATE_BLANK_ROW_HEIGHT + 20 + 24 + TEMPLATE_BLANK_ROW_HEIGHT
 
 const templateColumns = [
   { key: 'pos', label: 'Pos.', width: 31, align: 'center' },
@@ -1558,8 +1560,14 @@ const getTemplateAdjustmentRows = (data) =>
     }))
     .filter((row) => isFilled(row.label) || isFilled(row.value))
 
-const getTemplateClosingHeight = (adjustmentRows) =>
-  TEMPLATE_CLOSING_BASE_HEIGHT + adjustmentRows.length * TEMPLATE_ROW_HEIGHT
+const getTemplateTotalsHeight = (adjustmentRows) =>
+  TEMPLATE_TOTALS_SPACER_HEIGHT +
+  TEMPLATE_ROW_HEIGHT +
+  adjustmentRows.length * TEMPLATE_ROW_HEIGHT +
+  TEMPLATE_TOTAL_ROW_HEIGHT
+
+const getTemplateConditionsHeight = (hasServiceLine) =>
+  TEMPLATE_CONDITIONS_BASE_HEIGHT + (hasServiceLine ? 18 : 0)
 
 const drawTemplateLineRow = (layout, topY, row, height = 19) => {
   let x = TEMPLATE.x
@@ -1610,9 +1618,14 @@ const drawTemplateContinuationPage = (layout) => {
   return y - TEMPLATE_TABLE_HEADER_HEIGHT
 }
 
-const ensureTemplatePageSpace = (layout, y, requiredHeight) => {
+const ensureTemplatePageSpace = (layout, y, requiredHeight, options = {}) => {
   if (y - requiredHeight >= BOTTOM_Y) {
     return y
+  }
+
+  if (options.tableHeader === false) {
+    layout.addPage()
+    return TEMPLATE.top
   }
 
   return drawTemplateContinuationPage(layout)
@@ -1672,12 +1685,16 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   const rows = getTemplateRows(data)
   const displayRows = rows
   const adjustmentRows = getTemplateAdjustmentRows(data)
-  const templateClosingHeight = getTemplateClosingHeight(adjustmentRows)
+  const templateTotalsHeight = getTemplateTotalsHeight(adjustmentRows)
   const x = TEMPLATE.x
   const w = TEMPLATE.width
   const leftW = w * 0.5
   const rightW = w - leftW
   const rightX = x + leftW
+  const serviceLine = [...data.rentRows, ...data.serviceRows]
+    .slice(0, 2)
+    .map((row) => `${row.label}: ${row.value}`)
+    .join(' | ')
   let y = TEMPLATE.top
 
   drawTemplateCell(layout, x, y, leftW, 46, {
@@ -1795,7 +1812,7 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     const isLastRow = rowIndex === displayRows.length - 1
     const rowHeight = getTemplateLineRowHeight(row)
     const requiredHeight = isLastRow
-      ? rowHeight + templateClosingHeight
+      ? rowHeight + templateTotalsHeight
       : rowHeight
 
     y = ensureTemplatePageSpace(layout, y, requiredHeight)
@@ -1803,7 +1820,7 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     y -= rowHeight
   })
 
-  y = ensureTemplatePageSpace(layout, y, templateClosingHeight)
+  y = ensureTemplatePageSpace(layout, y, templateTotalsHeight, { tableHeader: false })
 
   drawTemplateFullRow(layout, y, TEMPLATE_TOTALS_SPACER_HEIGHT, '', {
     strokeColor: TEMPLATE.faintBorder
@@ -1821,9 +1838,13 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   drawTemplateTotalRow(layout, y, 'Gesamtbetrag:', totalAmount, {
     bold: true,
     color: COLORS.accentDark,
-    height: 21
+    height: TEMPLATE_TOTAL_ROW_HEIGHT
   })
-  y -= 21
+  y -= TEMPLATE_TOTAL_ROW_HEIGHT
+
+  y = ensureTemplatePageSpace(layout, y, getTemplateConditionsHeight(isFilled(serviceLine)), {
+    tableHeader: false
+  })
 
   drawTemplateFullRow(layout, y, TEMPLATE_BLANK_ROW_HEIGHT, '')
   y -= TEMPLATE_BLANK_ROW_HEIGHT
@@ -1842,11 +1863,6 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   })
   y -= 18
 
-  const serviceLine = [...data.rentRows, ...data.serviceRows]
-    .slice(0, 2)
-    .map((row) => `${row.label}: ${row.value}`)
-    .join(' | ')
-
   if (isFilled(serviceLine)) {
     drawTemplateFullRow(layout, y, 18, serviceLine, {
       size: 7.8,
@@ -1854,6 +1870,8 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     })
     y -= 18
   }
+
+  y = ensureTemplatePageSpace(layout, y, TEMPLATE_ACCEPTANCE_HEIGHT, { tableHeader: false })
 
   drawTemplateFullRow(layout, y, TEMPLATE_BLANK_ROW_HEIGHT, '')
   y -= TEMPLATE_BLANK_ROW_HEIGHT
