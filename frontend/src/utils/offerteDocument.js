@@ -180,7 +180,7 @@ const getPriceRows = (projekt, displaySnapshot) => {
       show: lieferung > 0
     },
     {
-      label: `Restwertübernahme (${formatInteger(restwertMonate)} Mt. à ${formatCurrency(restwertBetrag)})`,
+      label: 'Restwertübernahme',
       value: formatCurrency(restwertTotal),
       show: restwertTotal > 0
     },

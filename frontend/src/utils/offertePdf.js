@@ -104,36 +104,225 @@ const encodeWinAnsiHex = (value) => {
   return bytes.map((byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
+const helveticaWidths = {
+  regular: {
+    ' ': 278,
+    '!': 278,
+    '"': 355,
+    '#': 556,
+    '$': 556,
+    '%': 889,
+    '&': 667,
+    "'": 191,
+    '(': 333,
+    ')': 333,
+    '*': 389,
+    '+': 584,
+    ',': 278,
+    '-': 333,
+    '.': 278,
+    '/': 278,
+    '0': 556,
+    '1': 556,
+    '2': 556,
+    '3': 556,
+    '4': 556,
+    '5': 556,
+    '6': 556,
+    '7': 556,
+    '8': 556,
+    '9': 556,
+    ':': 278,
+    ';': 278,
+    '<': 584,
+    '=': 584,
+    '>': 584,
+    '?': 556,
+    '@': 1015,
+    A: 667,
+    B: 667,
+    C: 722,
+    D: 722,
+    E: 667,
+    F: 611,
+    G: 778,
+    H: 722,
+    I: 278,
+    J: 500,
+    K: 667,
+    L: 556,
+    M: 833,
+    N: 722,
+    O: 778,
+    P: 667,
+    Q: 778,
+    R: 722,
+    S: 667,
+    T: 611,
+    U: 722,
+    V: 667,
+    W: 944,
+    X: 667,
+    Y: 667,
+    Z: 611,
+    '[': 278,
+    '\\': 278,
+    ']': 278,
+    '^': 469,
+    _: 556,
+    '`': 222,
+    a: 556,
+    b: 556,
+    c: 500,
+    d: 556,
+    e: 556,
+    f: 278,
+    g: 556,
+    h: 556,
+    i: 222,
+    j: 222,
+    k: 500,
+    l: 222,
+    m: 833,
+    n: 556,
+    o: 556,
+    p: 556,
+    q: 556,
+    r: 333,
+    s: 500,
+    t: 278,
+    u: 556,
+    v: 500,
+    w: 722,
+    x: 500,
+    y: 500,
+    z: 500,
+    '{': 334,
+    '|': 260,
+    '}': 334,
+    '~': 584
+  },
+  bold: {
+    ' ': 278,
+    '!': 333,
+    '"': 474,
+    '#': 556,
+    '$': 556,
+    '%': 889,
+    '&': 722,
+    "'": 238,
+    '(': 333,
+    ')': 333,
+    '*': 389,
+    '+': 584,
+    ',': 278,
+    '-': 333,
+    '.': 278,
+    '/': 278,
+    '0': 556,
+    '1': 556,
+    '2': 556,
+    '3': 556,
+    '4': 556,
+    '5': 556,
+    '6': 556,
+    '7': 556,
+    '8': 556,
+    '9': 556,
+    ':': 333,
+    ';': 333,
+    '<': 584,
+    '=': 584,
+    '>': 584,
+    '?': 611,
+    '@': 975,
+    A: 722,
+    B: 722,
+    C: 722,
+    D: 722,
+    E: 667,
+    F: 611,
+    G: 778,
+    H: 722,
+    I: 278,
+    J: 556,
+    K: 722,
+    L: 611,
+    M: 833,
+    N: 722,
+    O: 778,
+    P: 667,
+    Q: 778,
+    R: 722,
+    S: 667,
+    T: 611,
+    U: 722,
+    V: 667,
+    W: 944,
+    X: 667,
+    Y: 667,
+    Z: 611,
+    '[': 333,
+    '\\': 278,
+    ']': 333,
+    '^': 584,
+    _: 556,
+    '`': 278,
+    a: 556,
+    b: 611,
+    c: 556,
+    d: 611,
+    e: 556,
+    f: 333,
+    g: 611,
+    h: 611,
+    i: 278,
+    j: 278,
+    k: 556,
+    l: 278,
+    m: 889,
+    n: 611,
+    o: 611,
+    p: 611,
+    q: 611,
+    r: 389,
+    s: 556,
+    t: 333,
+    u: 611,
+    v: 556,
+    w: 778,
+    x: 556,
+    y: 556,
+    z: 500,
+    '{': 389,
+    '|': 280,
+    '}': 389,
+    '~': 584
+  }
+}
+
+const helveticaAliases = {
+  'Ä': 'A',
+  'Ö': 'O',
+  'Ü': 'U',
+  'ä': 'a',
+  'à': 'a',
+  'ö': 'o',
+  'ü': 'u',
+  'é': 'e',
+  'è': 'e',
+  '’': "'"
+}
+
 const estimateTextWidth = (value, fontSize, isBold = false) => {
   const text = String(value ?? '')
-  const factor = isBold ? 1.055 : 1
+  const widths = isBold ? helveticaWidths.bold : helveticaWidths.regular
 
   return Array.from(text).reduce((width, character) => {
-    if (character === ' ') {
-      return width + fontSize * 0.28
-    }
+    const normalizedCharacter = helveticaAliases[character] ?? character
+    const characterWidth = widths[normalizedCharacter] ?? 556
 
-    if ('.,:;!|\'’'.includes(character)) {
-      return width + fontSize * 0.24
-    }
-
-    if ('ilI[]()'.includes(character)) {
-      return width + fontSize * 0.3
-    }
-
-    if ('mwMW'.includes(character)) {
-      return width + fontSize * 0.82
-    }
-
-    if (/[A-ZÄÖÜ]/.test(character)) {
-      return width + fontSize * 0.62 * factor
-    }
-
-    if (/[0-9]/.test(character)) {
-      return width + fontSize * 0.55
-    }
-
-    return width + fontSize * 0.5 * factor
+    return width + (characterWidth / 1000) * fontSize
   }, 0)
 }
 
@@ -1252,7 +1441,7 @@ const TEMPLATE_TABLE_HEADER_HEIGHT = 28
 const TEMPLATE_ROW_HEIGHT = 19
 const TEMPLATE_BLANK_ROW_HEIGHT = TEMPLATE_ROW_HEIGHT
 const TEMPLATE_TOTALS_SPACER_HEIGHT = TEMPLATE_BLANK_ROW_HEIGHT
-const TEMPLATE_CLOSING_HEIGHT = 255 + TEMPLATE_TOTALS_SPACER_HEIGHT
+const TEMPLATE_CLOSING_BASE_HEIGHT = 255 + TEMPLATE_TOTALS_SPACER_HEIGHT
 
 const templateColumns = [
   { key: 'pos', label: 'Pos.', width: 31, align: 'center' },
@@ -1343,7 +1532,7 @@ const getTemplateRecipientRows = (data) => ({
 })
 
 const getTemplateRows = (data) => {
-  const positionRows = data.positionRows.map((row, index) => ({
+  return data.positionRows.map((row, index) => ({
     pos: String(index + 1),
     description: row.bezeichnung,
     quantity: row.menge || '1',
@@ -1351,19 +1540,6 @@ const getTemplateRows = (data) => {
     unitPrice: formatTableAmount(row.einzelpreis),
     amount: formatTableAmount(row.total)
   }))
-  const adjustmentRows = data.priceRows
-    .filter((row) => !row.isTotal)
-    .filter((row) => positionRows.length === 0 || row.label !== 'Geräte- und Zubehörpaket')
-    .map((row) => ({
-      pos: '',
-      description: row.label,
-      quantity: '',
-      unit: '',
-      unitPrice: '',
-      amount: formatTableAmount(row.value)
-    }))
-
-  return [...positionRows, ...adjustmentRows]
 }
 
 const getTemplateSubtotal = (data) =>
@@ -1372,6 +1548,18 @@ const getTemplateSubtotal = (data) =>
       data.priceRows.find((row) => !row.isTotal)?.value ??
       ''
   )
+
+const getTemplateAdjustmentRows = (data) =>
+  data.priceRows
+    .filter((row) => !row.isTotal && row.label !== 'Geräte- und Zubehörpaket')
+    .map((row) => ({
+      label: row.label,
+      value: formatTableAmount(row.value)
+    }))
+    .filter((row) => isFilled(row.label) || isFilled(row.value))
+
+const getTemplateClosingHeight = (adjustmentRows) =>
+  TEMPLATE_CLOSING_BASE_HEIGHT + adjustmentRows.length * TEMPLATE_ROW_HEIGHT
 
 const drawTemplateLineRow = (layout, topY, row, height = 19) => {
   let x = TEMPLATE.x
@@ -1452,23 +1640,27 @@ const addTemplatePageNumbers = (layout) => {
 const drawTemplateTotalRow = (layout, topY, label, value, options = {}) => {
   const valueWidth = templateColumns.at(-1).width
   const labelWidth = TEMPLATE.width - valueWidth
+  const valueX = TEMPLATE.x + labelWidth
   const rowHeight = options.height ?? 19
+  const fontSize = options.bold ? 9.2 : 8.4
+  const bold = Boolean(options.bold)
+  const color = options.color ?? COLORS.ink
+  const paddingX = 4
+  const textY = topY - (rowHeight - (fontSize + 2.2)) / 2 - fontSize
 
-  drawTemplateCell(layout, TEMPLATE.x, topY, labelWidth, rowHeight, {
-    text: label,
-    strokeColor: TEMPLATE.faintBorder,
-    size: options.bold ? 9.2 : 8.4,
-    bold: Boolean(options.bold),
-    color: options.color ?? COLORS.ink,
-    align: 'right'
+  drawTemplateCell(layout, TEMPLATE.x, topY, TEMPLATE.width, rowHeight, {
+    strokeColor: TEMPLATE.faintBorder
   })
-  drawTemplateCell(layout, TEMPLATE.x + labelWidth, topY, valueWidth, rowHeight, {
-    text: value,
-    strokeColor: TEMPLATE.faintBorder,
-    size: options.bold ? 9.2 : 8.4,
-    bold: Boolean(options.bold),
-    color: options.color ?? COLORS.ink,
-    align: 'right'
+  layout.drawLine(valueX, topY, valueX, topY - rowHeight, 0.45, TEMPLATE.faintBorder)
+  layout.drawRightText(label, valueX - paddingX, textY, {
+    size: fontSize,
+    bold,
+    color
+  })
+  layout.drawRightText(value, TEMPLATE.x + TEMPLATE.width - paddingX, textY, {
+    size: fontSize,
+    bold,
+    color
   })
 }
 
@@ -1479,6 +1671,8 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   const totalAmount = formatTableAmount(getTotalAmount(data))
   const rows = getTemplateRows(data)
   const displayRows = rows
+  const adjustmentRows = getTemplateAdjustmentRows(data)
+  const templateClosingHeight = getTemplateClosingHeight(adjustmentRows)
   const x = TEMPLATE.x
   const w = TEMPLATE.width
   const leftW = w * 0.5
@@ -1601,7 +1795,7 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     const isLastRow = rowIndex === displayRows.length - 1
     const rowHeight = getTemplateLineRowHeight(row)
     const requiredHeight = isLastRow
-      ? rowHeight + TEMPLATE_CLOSING_HEIGHT
+      ? rowHeight + templateClosingHeight
       : rowHeight
 
     y = ensureTemplatePageSpace(layout, y, requiredHeight)
@@ -1609,7 +1803,7 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     y -= rowHeight
   })
 
-  y = ensureTemplatePageSpace(layout, y, TEMPLATE_CLOSING_HEIGHT)
+  y = ensureTemplatePageSpace(layout, y, templateClosingHeight)
 
   drawTemplateFullRow(layout, y, TEMPLATE_TOTALS_SPACER_HEIGHT, '', {
     strokeColor: TEMPLATE.faintBorder
@@ -1618,8 +1812,12 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
 
   drawTemplateTotalRow(layout, y, 'Zwischensumme:', getTemplateSubtotal(data))
   y -= TEMPLATE_ROW_HEIGHT
-  drawTemplateTotalRow(layout, y, 'MWST:', 'inkl.')
-  y -= TEMPLATE_ROW_HEIGHT
+
+  adjustmentRows.forEach((row) => {
+    drawTemplateTotalRow(layout, y, `${row.label}:`, row.value)
+    y -= TEMPLATE_ROW_HEIGHT
+  })
+
   drawTemplateTotalRow(layout, y, 'Gesamtbetrag:', totalAmount, {
     bold: true,
     color: COLORS.accentDark,
@@ -1632,7 +1830,7 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   drawTemplateFullRow(layout, y, 20, 'Bedingungen', {
     size: 10,
     bold: true,
-    color: COLORS.accentDark
+    color: COLORS.ink
   })
   y -= 20
   drawTemplateFullRow(layout, y, 18, 'Zahlungsbedingungen: 30 Tage netto nach Rechnungsstellung', {
@@ -1662,7 +1860,7 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   drawTemplateFullRow(layout, y, 20, 'Annahme der Offerte', {
     size: 10,
     bold: true,
-    color: COLORS.accentDark
+    color: COLORS.ink
   })
   y -= 20
   drawTemplateCell(layout, x, y, leftW, 24, {
