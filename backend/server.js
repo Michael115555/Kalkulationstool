@@ -14,6 +14,7 @@ const { getCatalogCache, setCatalogCache } = require('./catalogCache')
 const prisma = new PrismaClient()
 const port = Number(process.env.PORT || 3001)
 const MAX_JSON_BODY_BYTES = 1024 * 1024
+const DEMO_VERKAEUFER_EMAIL = 'demo.verkaeufer@local'
 
 const amountFromDb = (value) => Number(value ?? 0) / 100
 const amountToDb = (value) => Math.round(Number(value ?? 0) * 100)
@@ -201,11 +202,9 @@ const serializeKunde = (kunde) => ({
   id: kunde.id,
   firmenname: kunde.firmenname,
   kontaktname: kunde.kontaktname,
-  email: kunde.email,
-  telefon: kunde.telefon,
+  strasse: kunde.strasse,
+  plz: kunde.plz,
   ort: kunde.ort,
-  kontaktart: kunde.kontaktart,
-  versandart: kunde.versandart,
   verkaeuferId: kunde.verkaeuferId,
   verkaeufer: kunde.verkaeufer
     ? {
@@ -228,19 +227,27 @@ const getKunden = async () => {
   return kunden.map(serializeKunde)
 }
 
+const getDemoVerkaeuferId = async () => {
+  const demoVerkaeufer = await prisma.benutzer.findUnique({
+    where: { email: DEMO_VERKAEUFER_EMAIL },
+    select: { id: true }
+  })
+
+  return demoVerkaeufer?.id ?? null
+}
+
 const createKunde = async (payload) => {
   const validated = validateKundePayload(payload)
+  const demoVerkaeuferId = await getDemoVerkaeuferId()
 
   const kunde = await prisma.kunde.create({
     data: {
       firmenname: validated.firmenname,
       kontaktname: validated.kontaktname,
-      email: validated.email,
-      telefon: validated.telefon,
+      strasse: validated.strasse,
+      plz: validated.plz,
       ort: validated.ort,
-      kontaktart: validated.kontaktart,
-      versandart: validated.versandart,
-      verkaeuferId: validated.verkaeuferId
+      verkaeuferId: demoVerkaeuferId
     },
     include: {
       verkaeufer: true
@@ -253,18 +260,17 @@ const createKunde = async (payload) => {
 const updateKunde = async (id, payload) => {
   validateInteger(id, 'Kunde ID')
   const validated = validateKundePayload(payload)
+  const demoVerkaeuferId = await getDemoVerkaeuferId()
 
   const kunde = await prisma.kunde.update({
     where: { id },
     data: {
       firmenname: validated.firmenname,
       kontaktname: validated.kontaktname,
-      email: validated.email,
-      telefon: validated.telefon,
+      strasse: validated.strasse,
+      plz: validated.plz,
       ort: validated.ort,
-      kontaktart: validated.kontaktart,
-      versandart: validated.versandart,
-      verkaeuferId: validated.verkaeuferId
+      verkaeuferId: demoVerkaeuferId
     },
     include: {
       verkaeufer: true
@@ -306,7 +312,8 @@ const getVerkaeufer = async () => {
   const benutzer = await prisma.benutzer.findMany({
     where: {
       aktiv: true,
-      rolle: 'VERKAUF'
+      rolle: 'VERKAUF',
+      email: DEMO_VERKAEUFER_EMAIL
     },
     orderBy: [{ nachname: 'asc' }, { vorname: 'asc' }]
   })

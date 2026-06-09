@@ -102,6 +102,20 @@ const validateOptionalString = (value, fieldName, maxLength = 500) => {
   return str || null
 }
 
+const validateOptionalDigits = (value, fieldName, maxLength = 32) => {
+  const str = validateOptionalString(value, fieldName, maxLength)
+
+  if (str === null) {
+    return null
+  }
+
+  if (!/^\d+$/.test(str)) {
+    throw new ApiError(`${fieldName} darf nur Zahlen enthalten`, 400)
+  }
+
+  return str
+}
+
 const validateSnapshotString = (value, fieldName, maxLength = 255) => {
   const str = validateOptionalString(value, fieldName, maxLength)
   return str ?? ''
@@ -385,21 +399,17 @@ const validateSwissPhone = (value, fieldName = 'Telefon') => {
 const validateKundePayload = (payload = {}) => {
   const firmenname = validateString(payload.firmenname, 'Kundenname', 1, 255)
   const kontaktname = validateOptionalString(payload.kontaktname, 'Kontaktname', 255)
-  const email = validateEmail(payload.email, 'E Mail')
-  const telefon = validateSwissPhone(payload.telefon, 'Telefon')
+  const strasse = validateOptionalString(payload.strasse, 'Strasse', 255)
+  const plz = validateOptionalDigits(payload.plz, 'PLZ', 32)
   const ort = validateOptionalString(payload.ort, 'Ort', 255)
-  const kontaktart = validateOptionalString(payload.kontaktart, 'Kontaktart', 100)
-  const versandart = validateOptionalString(payload.versandart, 'Versandart', 100)
   const verkaeuferId = validateOptionalInteger(payload.verkaeuferId, 'Verkäufer ID')
 
   return {
     firmenname,
     kontaktname,
-    email,
-    telefon,
+    strasse,
+    plz,
     ort,
-    kontaktart,
-    versandart,
     verkaeuferId
   }
 }

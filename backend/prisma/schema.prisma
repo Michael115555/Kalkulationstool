@@ -55,6 +55,8 @@ model Kunde {
   kontaktname  String?
   email        String?
   telefon      String?
+  strasse      String?
+  plz          String?
   ort          String?
   kontaktart   String?
   versandart   String?

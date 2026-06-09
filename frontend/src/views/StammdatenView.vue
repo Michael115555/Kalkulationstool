@@ -20,11 +20,9 @@
                 <tr>
                   <th scope="col">Kundenname</th>
                   <th scope="col">Ansprechperson</th>
-                  <th scope="col">E-Mail</th>
-                  <th scope="col">Telefon</th>
+                  <th scope="col">Strasse</th>
+                  <th scope="col">PLZ / Ort</th>
                   <th scope="col">Verkäufer</th>
-                  <th scope="col">Kontaktart</th>
-                  <th scope="col">Versandart</th>
                   <th scope="col" class="text-center action-header">Aktion</th>
                 </tr>
               </thead>
@@ -58,40 +56,38 @@
                   </td>
                   <td>
                     <input
-                      v-model="customer.email"
-                      :class="['form-control', 'control-field', 'contact-control-field', { 'is-invalid': isCustomerEmailInvalid(customer) }]"
-                      placeholder="E-Mail"
-                      type="text"
-                      inputmode="email"
+                      v-model="customer.street"
+                      class="form-control control-field"
+                      placeholder="Strasse"
                       maxlength="255"
                       autocomplete="new-password"
-                      autocorrect="off"
-                      autocapitalize="off"
-                      spellcheck="false"
-                      aria-label="E-Mail"
-                      :aria-invalid="isCustomerEmailInvalid(customer) ? 'true' : 'false'"
-                      :title="isCustomerEmailInvalid(customer) ? EMAIL_FORMAT_ERROR : ''"
+                      aria-label="Strasse"
                       @input="scheduleCustomerAutoSave(customer)"
                     />
                   </td>
                   <td>
-                    <input
-                      v-model="customer.phone"
-                      :class="['form-control', 'control-field', 'contact-control-field', 'phone-control-field', { 'is-invalid': isCustomerPhoneInvalid(customer) }]"
-                      type="text"
-                      inputmode="tel"
-                      maxlength="32"
-                      autocomplete="new-password"
-                      autocorrect="off"
-                      autocapitalize="off"
-                      spellcheck="false"
-                      :placeholder="SWISS_PHONE_FORMAT"
-                      aria-label="Telefon"
-                      :aria-invalid="isCustomerPhoneInvalid(customer) ? 'true' : 'false'"
-                      :title="isCustomerPhoneInvalid(customer) ? SWISS_PHONE_FORMAT_ERROR : ''"
-                      @input="scheduleCustomerAutoSave(customer)"
-                      @blur="normalizeCustomerPhone(customer)"
-                    />
+                    <div class="customer-location-fields">
+                      <input
+                        v-model="customer.postalCode"
+                        class="form-control control-field postal-code-control-field"
+                        placeholder="PLZ"
+                        maxlength="32"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        autocomplete="new-password"
+                        aria-label="PLZ"
+                        @input="handlePostalCodeInput(customer)"
+                      />
+                      <input
+                        v-model="customer.city"
+                        class="form-control control-field"
+                        placeholder="Ort"
+                        maxlength="255"
+                        autocomplete="new-password"
+                        aria-label="Ort"
+                        @input="scheduleCustomerAutoSave(customer)"
+                      />
+                    </div>
                   </td>
                   <td>
                     <select
@@ -100,47 +96,13 @@
                       aria-label="Verkäufer"
                       @change="scheduleCustomerAutoSave(customer)"
                     >
-                      <option value="">Verkäufer wählen</option>
+                      <option v-if="!salespeople.length" value="">Demo Verkäufer</option>
                       <option
                         v-for="salesperson in salespeople"
                         :key="salesperson.id"
                         :value="salesperson.id"
                       >
                         {{ salesperson.name }}
-                      </option>
-                    </select>
-                  </td>
-                  <td>
-                    <select
-                      v-model="customer.contactType"
-                      class="form-select control-field"
-                      aria-label="Kontaktart"
-                      @change="scheduleCustomerAutoSave(customer)"
-                    >
-                      <option value="">Kontaktart wählen</option>
-                      <option
-                        v-for="contactType in contactTypes"
-                        :key="contactType"
-                        :value="contactType"
-                      >
-                        {{ contactType }}
-                      </option>
-                    </select>
-                  </td>
-                  <td>
-                    <select
-                      v-model="customer.deliveryType"
-                      class="form-select control-field"
-                      aria-label="Versandart"
-                      @change="scheduleCustomerAutoSave(customer)"
-                    >
-                      <option value="">Versandart wählen</option>
-                      <option
-                        v-for="deliveryType in deliveryTypes"
-                        :key="deliveryType"
-                        :value="deliveryType"
-                      >
-                        {{ deliveryType }}
                       </option>
                     </select>
                   </td>
@@ -180,7 +142,7 @@
                   </td>
                 </tr>
                 <tr class="customer-add-table-row">
-                  <td colspan="8">
+                  <td colspan="6">
                     <div class="customer-add-content">
                       <button
                         type="button"
@@ -254,32 +216,10 @@ import {
   getRememberedSelectedCustomerId,
   rememberSelectedCustomerId
 } from '../utils/selectedCustomer'
-import {
-  EMAIL_FORMAT_ERROR,
-  getCustomerValidationError,
-  isEmailFormatValid,
-  isSwissPhoneFormatValid,
-  normalizeSwissPhone,
-  SWISS_PHONE_FORMAT,
-  SWISS_PHONE_FORMAT_ERROR
-} from '../utils/customerValidation'
 
 const api = createKalkulationApi()
 const LOADING_INDICATOR_DELAY = 140
-
-const contactTypes = [
-  'Telefon',
-  'Besuch',
-  'Showroom',
-  'E-Mail'
-]
-
-const deliveryTypes = [
-  'Post',
-  'per Mail',
-  'persönlich überbracht',
-  'per Mail zurück an Verkäufer'
-]
+const DEMO_VERKAEUFER_EMAIL = 'demo.verkaeufer@local'
 
 const customers = ref([])
 const salespeople = ref([])
@@ -312,11 +252,10 @@ function createDraftCustomer() {
     isDeleting: false,
     name: '',
     contactPerson: '',
-    email: '',
-    phone: '',
-    salespersonId: '',
-    contactType: '',
-    deliveryType: '',
+    street: '',
+    postalCode: '',
+    city: '',
+    salespersonId: getDemoSalespersonId(),
     original: null
   }
 }
@@ -331,11 +270,10 @@ function mapApiCustomer(customer) {
     isDeleting: false,
     name: customer.firmenname ?? '',
     contactPerson: customer.kontaktname ?? '',
-    email: customer.email ?? '',
-    phone: customer.telefon ?? '',
-    salespersonId: customer.verkaeuferId ?? '',
-    contactType: customer.kontaktart ?? '',
-    deliveryType: customer.versandart ?? ''
+    street: customer.strasse ?? '',
+    postalCode: customer.plz ?? '',
+    city: customer.ort ?? '',
+    salespersonId: customer.verkaeuferId ?? ''
   }
 
   mappedCustomer.original = createCustomerSnapshot(mappedCustomer)
@@ -347,11 +285,10 @@ function createCustomerSnapshot(customer) {
   return {
     name: customer.name.trim(),
     contactPerson: customer.contactPerson.trim(),
-    email: customer.email.trim(),
-    phone: customer.phone.trim(),
-    salespersonId: customer.salespersonId || '',
-    contactType: customer.contactType || '',
-    deliveryType: customer.deliveryType || ''
+    street: customer.street.trim(),
+    postalCode: customer.postalCode.trim(),
+    city: customer.city.trim(),
+    salespersonId: customer.salespersonId || ''
   }
 }
 
@@ -359,11 +296,10 @@ function createCustomerInputSnapshot(customer) {
   return {
     name: customer.name,
     contactPerson: customer.contactPerson,
-    email: customer.email,
-    phone: customer.phone,
-    salespersonId: customer.salespersonId || '',
-    contactType: customer.contactType || '',
-    deliveryType: customer.deliveryType || ''
+    street: customer.street,
+    postalCode: customer.postalCode,
+    city: customer.city,
+    salespersonId: customer.salespersonId || ''
   }
 }
 
@@ -371,10 +307,9 @@ function createCustomerPayload(customer) {
   return {
     firmenname: customer.name.trim(),
     kontaktname: customer.contactPerson.trim() || null,
-    email: customer.email.trim() || null,
-    telefon: normalizeSwissPhone(customer.phone) || null,
-    kontaktart: customer.contactType || null,
-    versandart: customer.deliveryType || null,
+    strasse: customer.street.trim() || null,
+    plz: customer.postalCode.trim() || null,
+    ort: customer.city.trim() || null,
     verkaeuferId: customer.salespersonId || null
   }
 }
@@ -391,26 +326,43 @@ function canSaveCustomer(customer) {
   return Boolean(
     customer.name.trim() &&
       isCustomerDirty(customer) &&
-      !getCustomerValidationError(customer)
+      isCustomerPostalCodeValid(customer)
   )
 }
 
-function isCustomerEmailInvalid(customer) {
-  return Boolean(String(customer.email ?? '').trim() && !isEmailFormatValid(customer.email))
+function isCustomerPostalCodeValid(customer) {
+  return /^\d*$/.test(String(customer.postalCode ?? '').trim())
 }
 
-function isCustomerPhoneInvalid(customer) {
-  return Boolean(String(customer.phone ?? '').trim() && !isSwissPhoneFormatValid(customer.phone))
-}
-
-function normalizeCustomerPhone(customer) {
-  if (isSwissPhoneFormatValid(customer.phone)) {
-    customer.phone = normalizeSwissPhone(customer.phone)
-  }
+function handlePostalCodeInput(customer) {
+  customer.postalCode = String(customer.postalCode ?? '').replace(/\D/g, '')
+  scheduleCustomerAutoSave(customer)
 }
 
 function addCustomer() {
-  customers.value.push(createDraftCustomer())
+  const customer = createDraftCustomer()
+  applyDemoSalesperson(customer)
+  customers.value.push(customer)
+}
+
+function filterDemoSalespeople(entries) {
+  return entries.filter((salesperson) => salesperson.email === DEMO_VERKAEUFER_EMAIL)
+}
+
+function getDemoSalespersonId() {
+  return salespeople.value[0]?.id ?? ''
+}
+
+function applyDemoSalesperson(customer) {
+  const demoSalespersonId = getDemoSalespersonId()
+
+  if (demoSalespersonId) {
+    customer.salespersonId = demoSalespersonId
+  }
+}
+
+function applyDemoSalespersonToCustomers() {
+  customers.value.forEach(applyDemoSalesperson)
 }
 
 function rememberCustomerForCalculation(customer) {
@@ -437,10 +389,8 @@ function getCustomerSaveButtonTitle(customer) {
     return 'Kundenname eingeben, um zu speichern'
   }
 
-  const validationError = getCustomerValidationError(customer)
-
-  if (validationError) {
-    return validationError
+  if (!isCustomerPostalCodeValid(customer)) {
+    return 'PLZ darf nur Zahlen enthalten'
   }
 
   if (customer.hasPendingSave || isCustomerDirty(customer)) {
@@ -516,19 +466,14 @@ function saveCustomerNow(customer) {
   saveCustomer(customer)
 }
 
-function normalizeCustomerBeforeSave(customer) {
-  normalizeCustomerPhone(customer)
-}
-
 function createCustomerSnapshotFromApi(customer) {
   return {
     name: (customer.firmenname ?? '').trim(),
     contactPerson: (customer.kontaktname ?? '').trim(),
-    email: (customer.email ?? '').trim(),
-    phone: (customer.telefon ?? '').trim(),
-    salespersonId: customer.verkaeuferId || '',
-    contactType: customer.kontaktart || '',
-    deliveryType: customer.versandart || ''
+    street: (customer.strasse ?? '').trim(),
+    postalCode: (customer.plz ?? '').trim(),
+    city: (customer.ort ?? '').trim(),
+    salespersonId: customer.verkaeuferId || ''
   }
 }
 
@@ -536,11 +481,21 @@ function createCustomerInputSnapshotFromApi(customer) {
   return {
     name: customer.firmenname ?? '',
     contactPerson: customer.kontaktname ?? '',
-    email: customer.email ?? '',
-    phone: customer.telefon ?? '',
-    salespersonId: customer.verkaeuferId ?? '',
-    contactType: customer.kontaktart ?? '',
-    deliveryType: customer.versandart ?? ''
+    street: customer.strasse ?? '',
+    postalCode: customer.plz ?? '',
+    city: customer.ort ?? '',
+    salespersonId: customer.verkaeuferId ?? ''
+  }
+}
+
+function createCustomerSnapshotFromInputSnapshot(snapshot, savedCustomer) {
+  return {
+    name: String(snapshot.name ?? '').trim(),
+    contactPerson: String(snapshot.contactPerson ?? '').trim(),
+    street: String(snapshot.street ?? '').trim(),
+    postalCode: String(snapshot.postalCode ?? '').trim(),
+    city: String(snapshot.city ?? '').trim(),
+    salespersonId: savedCustomer.verkaeuferId || snapshot.salespersonId || ''
   }
 }
 
@@ -553,7 +508,7 @@ function applySavedCustomer(customer, savedCustomer, savedInputSnapshot) {
 
   customer.persistedId = savedCustomer.id
   customer.isNew = false
-  customer.original = createCustomerSnapshotFromApi(savedCustomer)
+  customer.original = createCustomerSnapshotFromInputSnapshot(savedInputSnapshot, savedCustomer)
 
   if (hasLocalInputChanges || serverNormalizedInput) {
     return
@@ -561,11 +516,11 @@ function applySavedCustomer(customer, savedCustomer, savedInputSnapshot) {
 
   customer.name = savedCustomer.firmenname ?? ''
   customer.contactPerson = savedCustomer.kontaktname ?? ''
-  customer.email = savedCustomer.email ?? ''
-  customer.phone = savedCustomer.telefon ?? ''
+  customer.street = savedCustomer.strasse ?? ''
+  customer.postalCode = savedCustomer.plz ?? ''
+  customer.city = savedCustomer.ort ?? ''
   customer.salespersonId = savedCustomer.verkaeuferId ?? ''
-  customer.contactType = savedCustomer.kontaktart ?? ''
-  customer.deliveryType = savedCustomer.versandart ?? ''
+  customer.original = createCustomerSnapshotFromApi(savedCustomer)
 }
 
 async function saveCustomer(customer) {
@@ -583,7 +538,6 @@ async function saveCustomer(customer) {
   customerError.value = ''
 
   try {
-    normalizeCustomerBeforeSave(customer)
     const savedInputSnapshot = createCustomerInputSnapshot(customer)
     const savedCustomer = customer.isNew
       ? await api.createKunde(createCustomerPayload(customer))
@@ -675,7 +629,8 @@ async function loadCustomers() {
     ])
 
     customers.value = loadedCustomers.map(mapApiCustomer)
-    salespeople.value = loadedSalespeople
+    salespeople.value = filterDemoSalespeople(loadedSalespeople)
+    applyDemoSalespersonToCustomers()
     hasLoadedCustomers.value = true
 
     if (!customers.value.length) {
@@ -699,7 +654,8 @@ function hydrateCustomersFromCache() {
   }
 
   customers.value = cachedData.kunden.map(mapApiCustomer)
-  salespeople.value = cachedData.verkaeufer
+  salespeople.value = filterDemoSalespeople(cachedData.verkaeufer)
+  applyDemoSalespersonToCustomers()
   hasLoadedCustomers.value = true
   isLoadingCustomers.value = false
   customerError.value = ''
@@ -766,7 +722,7 @@ onBeforeUnmount(() => {
 
 .customers-table {
   width: 100%;
-  min-width: 84rem;
+  min-width: 72rem;
   margin-bottom: 0;
   border-style: hidden;
   table-layout: fixed;
@@ -801,41 +757,31 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(1),
 .customers-table td:nth-child(1) {
-  width: 13.5%;
+  width: 19%;
 }
 
 .customers-table th:nth-child(2),
 .customers-table td:nth-child(2) {
-  width: 13%;
+  width: 18%;
 }
 
 .customers-table th:nth-child(3),
 .customers-table td:nth-child(3) {
-  width: 18.5%;
+  width: 22%;
 }
 
 .customers-table th:nth-child(4),
 .customers-table td:nth-child(4) {
-  width: 14.5%;
+  width: 20%;
 }
 
 .customers-table th:nth-child(5),
 .customers-table td:nth-child(5) {
-  width: 11.5%;
+  width: 14%;
 }
 
 .customers-table th:nth-child(6),
 .customers-table td:nth-child(6) {
-  width: 10%;
-}
-
-.customers-table th:nth-child(7),
-.customers-table td:nth-child(7) {
-  width: 13.5%;
-}
-
-.customers-table th:nth-child(8),
-.customers-table td:nth-child(8) {
   width: 5rem;
   min-width: 5rem;
   max-width: 5rem;
@@ -867,27 +813,16 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-.contact-control-field {
-  padding-right: 0.5rem;
-  padding-left: 0.5rem;
+.customer-location-fields {
+  display: grid;
+  grid-template-columns: minmax(4.3rem, 0.72fr) minmax(6.5rem, 1.28fr);
+  gap: 0.32rem;
+  width: 100%;
+  min-width: 0;
 }
 
-.phone-control-field {
+.postal-code-control-field {
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
-}
-
-.contact-control-field.is-invalid {
-  padding-right: 1.55rem;
-  background-position: right 0.4rem center;
-  background-size: 0.85rem 0.85rem;
-}
-
-.contact-control-field::-webkit-contacts-auto-fill-button,
-.phone-control-field::-webkit-contacts-auto-fill-button {
-  display: none;
-  pointer-events: none;
-  visibility: hidden;
 }
 
 .customer-action-buttons {
