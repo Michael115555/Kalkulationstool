@@ -1429,7 +1429,7 @@ const addOfferContent = (layout, data, generatedAt, senderLines) => {
 
 const TEMPLATE = {
   x: 54,
-  top: 790,
+  top: 812,
   width: PAGE_WIDTH - 108,
   border: [0.78, 0.81, 0.86],
   faintBorder: [0.78, 0.81, 0.86],
