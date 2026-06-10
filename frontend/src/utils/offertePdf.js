@@ -360,6 +360,15 @@ const formatOfferDate = (generatedAt) =>
     year: 'numeric'
   }).format(new Date(generatedAt))
 
+const addDays = (dateValue, days) => {
+  const date = new Date(dateValue)
+  date.setDate(date.getDate() + days)
+
+  return date
+}
+
+const formatOfferValidUntilDate = (generatedAt) => formatOfferDate(addDays(generatedAt, 30))
+
 const formatOfferNumber = (projectId, generatedAt) => {
   const year = new Date(generatedAt).getFullYear()
   const suffix = isFilled(projectId) ? String(projectId).padStart(2, '0') : '00'
@@ -665,7 +674,7 @@ const addRecipientAndSummary = (layout, data) => {
     bold: true,
     color: COLORS.accentDark
   })
-  layout.drawText('inkl. MwSt.', summaryX + 14, topY - 67, {
+  layout.drawText('inkl. MWST', summaryX + 14, topY - 67, {
     size: 9.5,
     color: COLORS.softText
   })
@@ -1263,10 +1272,11 @@ const addAppCalculationPanel = (layout, data, offerNumber) => {
   layout.y = topY - panelHeight - 22
 }
 
-const addAppConditions = (layout, data, offerNumber) => {
+const addAppConditions = (layout, data, offerNumber, generatedAt) => {
+  const validUntilDate = formatOfferValidUntilDate(generatedAt)
   const rows = [
-    { label: 'Mehrwertsteuer', value: 'Preise inkl. MwSt., sofern nicht anders vereinbart.' },
-    { label: 'Gültigkeit', value: 'Diese Offerte ist 30 Tage ab Offertdatum gültig.' },
+    { label: 'Mehrwertsteuer', value: 'Preise inkl. MWST, sofern nicht anders vereinbart.' },
+    { label: 'Gültigkeit', value: `Diese Offerte ist gültig bis ${validUntilDate}.` },
     ...data.conditionRows
   ]
 
@@ -1325,7 +1335,7 @@ const addToolStyleOfferContent = (layout, data, generatedAt, senderLines) => {
 
   addAppPositionsTable(layout, data, offerNumber)
   addAppCalculationPanel(layout, data, offerNumber)
-  addAppConditions(layout, data, offerNumber)
+  addAppConditions(layout, data, offerNumber, generatedAt)
   addAppSignature(layout, data, senderLines, offerNumber)
 }
 
@@ -1333,6 +1343,7 @@ const addOfferContent = (layout, data, generatedAt, senderLines) => {
   const customerContact = data.customer.contact || data.customer.name || ''
   const tableRows = getOfferTableRows(data)
   const offerNumber = addDocumentHeader(layout, senderLines, data, generatedAt)
+  const validUntilDate = formatOfferValidUntilDate(generatedAt)
 
   addRecipientAndSummary(layout, data)
 
@@ -1362,11 +1373,11 @@ const addOfferContent = (layout, data, generatedAt, senderLines) => {
   const detailRows = [
     {
       label: 'Mehrwertsteuer',
-      value: 'Preise inkl. MwSt., sofern nicht anders vereinbart.'
+      value: 'Preise inkl. MWST, sofern nicht anders vereinbart.'
     },
     {
       label: 'Gültigkeit',
-      value: 'Diese Offerte ist 30 Tage ab Offertdatum gültig.'
+      value: `Diese Offerte ist gültig bis ${validUntilDate}.`
     },
     ...rentAndServiceRows,
     ...data.conditionRows
@@ -1442,6 +1453,8 @@ const TEMPLATE_ROW_HEIGHT = 19
 const TEMPLATE_BLANK_ROW_HEIGHT = TEMPLATE_ROW_HEIGHT
 const TEMPLATE_TOTALS_SPACER_HEIGHT = TEMPLATE_BLANK_ROW_HEIGHT
 const TEMPLATE_TOTAL_ROW_HEIGHT = 21
+const TEMPLATE_DETAIL_TITLE_HEIGHT = 20
+const TEMPLATE_DETAIL_ROW_HEIGHT = 20
 const TEMPLATE_CONDITIONS_BASE_HEIGHT = TEMPLATE_BLANK_ROW_HEIGHT + 20 + 18 + 18
 const TEMPLATE_ACCEPTANCE_HEIGHT = TEMPLATE_BLANK_ROW_HEIGHT + 20 + 24 + TEMPLATE_BLANK_ROW_HEIGHT
 
@@ -1566,8 +1579,38 @@ const getTemplateTotalsHeight = (adjustmentRows) =>
   adjustmentRows.length * TEMPLATE_ROW_HEIGHT +
   TEMPLATE_TOTAL_ROW_HEIGHT
 
-const getTemplateConditionsHeight = (hasServiceLine) =>
-  TEMPLATE_CONDITIONS_BASE_HEIGHT + (hasServiceLine ? 18 : 0)
+const getTemplateDetailRows = (rows) =>
+  rows
+    .map((row) => ({
+      label: sanitizeText(row.label),
+      value: sanitizeText(row.value)
+    }))
+    .filter((row) => isFilled(row.label) || isFilled(row.value))
+
+const getTemplateDetailSections = (data) =>
+  [
+    { title: 'Mietoptionen', rows: getTemplateDetailRows(data.rentRows) },
+    { title: 'Servicekonditionen', rows: getTemplateDetailRows(data.serviceRows) }
+  ].filter((section) => section.rows.length > 0)
+
+const getTemplateDetailSectionHeight = (section) =>
+  TEMPLATE_BLANK_ROW_HEIGHT +
+  TEMPLATE_DETAIL_TITLE_HEIGHT +
+  Math.ceil(section.rows.length / 2) * TEMPLATE_DETAIL_ROW_HEIGHT
+
+const isTemplatePageTop = (y) => Math.abs(y - TEMPLATE.top) < 0.01
+
+const drawTemplateSectionSpacer = (layout, y, options = {}) => {
+  if (isTemplatePageTop(y)) {
+    return y
+  }
+
+  drawTemplateFullRow(layout, y, TEMPLATE_BLANK_ROW_HEIGHT, '', {
+    strokeColor: options.strokeColor
+  })
+
+  return y - TEMPLATE_BLANK_ROW_HEIGHT
+}
 
 const drawTemplateLineRow = (layout, topY, row, height = 19) => {
   let x = TEMPLATE.x
@@ -1677,24 +1720,70 @@ const drawTemplateTotalRow = (layout, topY, label, value, options = {}) => {
   })
 }
 
+const formatTemplateDetailText = (row) => {
+  if (!isFilled(row.label)) {
+    return row.value
+  }
+
+  if (!isFilled(row.value)) {
+    return row.label
+  }
+
+  return `${row.label}: ${row.value}`
+}
+
+const drawTemplateDetailSection = (layout, y, section) => {
+  y = drawTemplateSectionSpacer(layout, y, {
+    strokeColor: TEMPLATE.faintBorder
+  })
+
+  drawTemplateFullRow(layout, y, TEMPLATE_DETAIL_TITLE_HEIGHT, section.title, {
+    size: 10,
+    bold: true,
+    color: COLORS.ink
+  })
+  y -= TEMPLATE_DETAIL_TITLE_HEIGHT
+
+  const columnWidth = TEMPLATE.width / 2
+
+  for (let index = 0; index < section.rows.length; index += 2) {
+    const leftRow = section.rows[index]
+    const rightRow = section.rows[index + 1]
+
+    drawTemplateCell(layout, TEMPLATE.x, y, columnWidth, TEMPLATE_DETAIL_ROW_HEIGHT, {
+      text: formatTemplateDetailText(leftRow),
+      size: 8.2,
+      maxLines: 1,
+      strokeColor: TEMPLATE.faintBorder
+    })
+    drawTemplateCell(layout, TEMPLATE.x + columnWidth, y, columnWidth, TEMPLATE_DETAIL_ROW_HEIGHT, {
+      text: rightRow ? formatTemplateDetailText(rightRow) : '',
+      size: 8.2,
+      maxLines: 1,
+      strokeColor: TEMPLATE.faintBorder
+    })
+    y -= TEMPLATE_DETAIL_ROW_HEIGHT
+  }
+
+  return y
+}
+
 const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   const sender = getTemplateSenderRows(senderLines)
   const recipient = getTemplateRecipientRows(data)
   const offerNumber = formatOfferNumber(data.projektId, generatedAt)
+  const validUntilDate = formatOfferValidUntilDate(generatedAt)
   const totalAmount = formatTableAmount(getTotalAmount(data))
   const rows = getTemplateRows(data)
   const displayRows = rows
   const adjustmentRows = getTemplateAdjustmentRows(data)
+  const detailSections = getTemplateDetailSections(data)
   const templateTotalsHeight = getTemplateTotalsHeight(adjustmentRows)
   const x = TEMPLATE.x
   const w = TEMPLATE.width
   const leftW = w * 0.5
   const rightW = w - leftW
   const rightX = x + leftW
-  const serviceLine = [...data.rentRows, ...data.serviceRows]
-    .slice(0, 2)
-    .map((row) => `${row.label}: ${row.value}`)
-    .join(' | ')
   let y = TEMPLATE.top
 
   drawTemplateCell(layout, x, y, leftW, 46, {
@@ -1792,7 +1881,7 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     bold: true
   })
   drawTemplateCell(layout, rightX + metaRightLabelW, y, metaRightValueW, 18, {
-    text: '30 Tage',
+    text: validUntilDate,
     size: 8.2,
     align: 'right'
   })
@@ -1842,12 +1931,16 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   })
   y -= TEMPLATE_TOTAL_ROW_HEIGHT
 
-  y = ensureTemplatePageSpace(layout, y, getTemplateConditionsHeight(isFilled(serviceLine)), {
-    tableHeader: false
+  detailSections.forEach((section) => {
+    y = ensureTemplatePageSpace(layout, y, getTemplateDetailSectionHeight(section), {
+      tableHeader: false
+    })
+    y = drawTemplateDetailSection(layout, y, section)
   })
 
-  drawTemplateFullRow(layout, y, TEMPLATE_BLANK_ROW_HEIGHT, '')
-  y -= TEMPLATE_BLANK_ROW_HEIGHT
+  y = ensureTemplatePageSpace(layout, y, TEMPLATE_CONDITIONS_BASE_HEIGHT, { tableHeader: false })
+
+  y = drawTemplateSectionSpacer(layout, y)
   drawTemplateFullRow(layout, y, 20, 'Bedingungen', {
     size: 10,
     bold: true,
@@ -1858,23 +1951,14 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     size: 8.2
   })
   y -= 18
-  drawTemplateFullRow(layout, y, 18, 'Alle Preise in CHF, inkl. MwSt. Preisänderungen vorbehalten.', {
+  drawTemplateFullRow(layout, y, 18, 'Alle Preise in CHF, inkl. MWST; Preisänderungen nach Ablauf der Angebotsfrist vorbehalten.', {
     size: 8.2
   })
   y -= 18
 
-  if (isFilled(serviceLine)) {
-    drawTemplateFullRow(layout, y, 18, serviceLine, {
-      size: 7.8,
-      maxLines: 1
-    })
-    y -= 18
-  }
-
   y = ensureTemplatePageSpace(layout, y, TEMPLATE_ACCEPTANCE_HEIGHT, { tableHeader: false })
 
-  drawTemplateFullRow(layout, y, TEMPLATE_BLANK_ROW_HEIGHT, '')
-  y -= TEMPLATE_BLANK_ROW_HEIGHT
+  y = drawTemplateSectionSpacer(layout, y)
   drawTemplateFullRow(layout, y, 20, 'Annahme der Offerte', {
     size: 10,
     bold: true,

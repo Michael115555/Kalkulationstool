@@ -690,7 +690,7 @@ export const buildOfferteDocumentHtml = (options) => {
       ` : ''}
 
       <p class="footer-note">
-        Preise inkl. MwSt., sofern nicht anders vereinbart. Gültigkeit und Detailkonditionen gemäss definitiver Offerte.
+        Preise inkl. MWST, sofern nicht anders vereinbart. Gültigkeit und Detailkonditionen gemäss definitiver Offerte.
       </p>
     </main>
   </body>

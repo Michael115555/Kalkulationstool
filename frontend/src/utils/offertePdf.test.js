@@ -1,6 +1,13 @@
 import { describe, expect, test } from 'vitest'
 import { buildOffertePdfBytes, buildOffertePdfFilename } from './offertePdf'
 
+const toPdfHex = (value) => Buffer.from(value, 'latin1').toString('hex')
+
+const getPdfStreams = (bytes) =>
+  [...new TextDecoder().decode(bytes).matchAll(/stream\n([\s\S]*?)\nendstream/g)].map(
+    (match) => match[1]
+  )
+
 const createProjektFixture = () => ({
   id: 17,
   name: 'Canon Projekt',
@@ -110,5 +117,102 @@ describe('offertePdf', () => {
     const pageCount = Number(pdfText.match(/\/Count (\d+)/)?.[1] ?? 0)
 
     expect(pageCount).toBeGreaterThan(1)
+  })
+
+  test('weist ein fixes Gültigkeitsdatum und klares Preisänderungs-Wording aus', () => {
+    const bytes = buildOffertePdfBytes({
+      generatedAt: '2026-06-08T10:00:00.000Z',
+      kunde: {
+        firmenname: 'Demo Kunden AG',
+        strasse: 'Kundenstrasse 8',
+        plz: '5000',
+        ort: 'Aarau'
+      },
+      projekt: createProjektFixture()
+    })
+    const pdfText = new TextDecoder().decode(bytes)
+
+    expect(pdfText).toContain(toPdfHex('8. Juli 2026'))
+    expect(pdfText).toContain(toPdfHex('inkl. MWST'))
+    expect(pdfText).toContain(
+      toPdfHex('Preisänderungen nach Ablauf der Angebotsfrist vorbehalten.')
+    )
+  })
+
+  test('platziert Mietoptionen als eigenen Block vor den Bedingungen', () => {
+    const bytes = buildOffertePdfBytes({
+      generatedAt: '2026-06-08T10:00:00.000Z',
+      kunde: {
+        firmenname: 'Demo Kunden AG',
+        strasse: 'Kundenstrasse 8',
+        plz: '5000',
+        ort: 'Aarau'
+      },
+      projekt: createProjektFixture()
+    })
+    const pdfText = new TextDecoder().decode(bytes)
+    const rentSectionIndex = pdfText.indexOf(toPdfHex('Mietoptionen'))
+    const conditionsIndex = pdfText.indexOf(toPdfHex('Bedingungen'))
+
+    expect(rentSectionIndex).toBeGreaterThan(-1)
+    expect(conditionsIndex).toBeGreaterThan(-1)
+    expect(rentSectionIndex).toBeLessThan(conditionsIndex)
+    expect(pdfText).toContain(toPdfHex('Miete 48 Monate'))
+  })
+
+  test('zeichnet keinen leeren Abstand vor einem Block am Anfang einer neuen Seite', () => {
+    const createBreakFixture = (positionCount) => {
+      const projekt = createProjektFixture()
+
+      projekt.calculation.displaySnapshot.positions.rows = Array.from(
+        { length: positionCount },
+        (_, index) => ({
+          values: {
+            kategorie: 'Zubehör',
+            bezeichnung: `Demo Position ${index + 1}`,
+            menge: '1',
+            vp: '100.00',
+            total: '100.00'
+          }
+        })
+      )
+      projekt.calculation.displaySnapshot.serviceConditions.fields = [
+        { key: 'servicePauschaleMonat', label: 'Servicepauschale/Mt.', value: 'CHF 500.00' },
+        { key: 'inklusiveKopienSW', label: 'inkl. Kopien s/w', value: "5'000" },
+        { key: 'inklusiveKopienColor', label: 'inkl. Kopien color', value: "5'000" },
+        { key: 'preisZusatzPrintSW', label: 'jeder weitere Print s/w', value: 'Rp. 5.00' },
+        { key: 'preisZusatzPrintColor', label: 'jeder weitere Print color', value: 'Rp. 5.00' },
+        { key: 'scanpauschaleAuswahl', label: 'Scanpauschale Betrag', value: 'Fr. 15.00' }
+      ]
+
+      return projekt
+    }
+
+    let acceptanceStream = ''
+
+    for (let positionCount = 1; positionCount <= 40; positionCount += 1) {
+      const bytes = buildOffertePdfBytes({
+        generatedAt: '2026-06-08T10:00:00.000Z',
+        kunde: {
+          firmenname: 'Demo Kunden AG',
+          strasse: 'Kundenstrasse 8',
+          plz: '5000',
+          ort: 'Aarau'
+        },
+        projekt: createBreakFixture(positionCount)
+      })
+      const streams = getPdfStreams(bytes)
+      const acceptancePageIndex = streams.findIndex((stream) =>
+        stream.includes(toPdfHex('Annahme der Offerte'))
+      )
+
+      if (acceptancePageIndex > 0) {
+        acceptanceStream = streams[acceptancePageIndex]
+        break
+      }
+    }
+
+    expect(acceptanceStream).not.toBe('')
+    expect(acceptanceStream).not.toContain('54.00 793.00 487.28 19.00 re S')
   })
 })
