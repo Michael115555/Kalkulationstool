@@ -160,6 +160,36 @@ describe('offertePdf', () => {
     expect(pdfText).toContain(toPdfHex('Miete 48 Monate'))
   })
 
+  test('blendet Servicekonditionen optional aus', () => {
+    const baseOptions = {
+      generatedAt: '2026-06-08T10:00:00.000Z',
+      kunde: {
+        firmenname: 'Demo Kunden AG',
+        strasse: 'Kundenstrasse 8',
+        plz: '5000',
+        ort: 'Aarau'
+      },
+      projekt: createProjektFixture()
+    }
+    const hiddenText = new TextDecoder().decode(
+      buildOffertePdfBytes({
+        ...baseOptions,
+        includeServiceConditions: false
+      })
+    )
+    const visibleText = new TextDecoder().decode(
+      buildOffertePdfBytes({
+        ...baseOptions,
+        includeServiceConditions: true
+      })
+    )
+
+    expect(hiddenText).not.toContain(toPdfHex('Servicekonditionen'))
+    expect(hiddenText).not.toContain(toPdfHex('Servicepauschale/Mt.'))
+    expect(visibleText).toContain(toPdfHex('Servicekonditionen'))
+    expect(visibleText).toContain(toPdfHex('Servicepauschale/Mt.'))
+  })
+
   test('zeichnet keinen leeren Abstand vor einem Block am Anfang einer neuen Seite', () => {
     const createBreakFixture = (positionCount) => {
       const projekt = createProjektFixture()

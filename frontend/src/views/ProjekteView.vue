@@ -282,7 +282,8 @@ const createOfferte = async (projekt) => {
     const pdfBytes = buildOffertePdfBytes({
       projekt: fullProjekt,
       kunde,
-      verkaeuferName: getProjektVerkaeufer(projekt)
+      verkaeuferName: getProjektVerkaeufer(projekt),
+      includeServiceConditions: false
     })
 
     openPdfInNewTab(offerteWindow, pdfBytes)
