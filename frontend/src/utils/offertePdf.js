@@ -1605,6 +1605,25 @@ const drawTemplateSectionSpacer = (layout, y, options = {}) => {
     return y
   }
 
+  if (options.skipTopBorder) {
+    const bottomY = y - TEMPLATE_BLANK_ROW_HEIGHT
+    const lineWidth = options.lineWidth ?? 0.45
+    const strokeColor = options.strokeColor ?? TEMPLATE.border
+
+    layout.drawLine(TEMPLATE.x, y, TEMPLATE.x, bottomY, lineWidth, strokeColor)
+    layout.drawLine(
+      TEMPLATE.x + TEMPLATE.width,
+      y,
+      TEMPLATE.x + TEMPLATE.width,
+      bottomY,
+      lineWidth,
+      strokeColor
+    )
+    layout.drawLine(TEMPLATE.x, bottomY, TEMPLATE.x + TEMPLATE.width, bottomY, lineWidth, strokeColor)
+
+    return bottomY
+  }
+
   drawTemplateFullRow(layout, y, TEMPLATE_BLANK_ROW_HEIGHT, '', {
     strokeColor: options.strokeColor
   })
@@ -1695,20 +1714,37 @@ const addTemplatePageNumbers = (layout) => {
 
 const drawTemplateTotalRow = (layout, topY, label, value, options = {}) => {
   const valueWidth = templateColumns.at(-1).width
-  const labelWidth = TEMPLATE.width - valueWidth
-  const valueX = TEMPLATE.x + labelWidth
+  const valueX = TEMPLATE.x + TEMPLATE.width - valueWidth
   const rowHeight = options.height ?? 19
   const fontSize = options.bold ? 9.2 : 8.4
   const bold = Boolean(options.bold)
   const color = options.color ?? COLORS.ink
   const paddingX = 4
   const textY = topY - (rowHeight - (fontSize + 2.2)) / 2 - fontSize
+  const lineColor = options.lineColor ?? TEMPLATE.faintBorder
+  const strokeColor = options.strokeColor ?? TEMPLATE.faintBorder
+  const lineWidth = options.lineWidth ?? 0.45
 
-  drawTemplateCell(layout, TEMPLATE.x, topY, TEMPLATE.width, rowHeight, {
-    strokeColor: TEMPLATE.faintBorder
+  layout.drawRect(TEMPLATE.x, topY - rowHeight, TEMPLATE.width, rowHeight, {
+    strokeColor,
+    lineWidth
   })
-  layout.drawLine(valueX, topY, valueX, topY - rowHeight, 0.45, TEMPLATE.faintBorder)
-  layout.drawRightText(label, valueX - paddingX, textY, {
+  if (options.showValueSeparator !== false) {
+    layout.drawLine(valueX, topY, valueX, topY - rowHeight, lineWidth, strokeColor)
+  }
+
+  if (options.topLine) {
+    layout.drawLine(
+      TEMPLATE.x,
+      topY,
+      TEMPLATE.x + TEMPLATE.width,
+      topY,
+      options.topLineWidth ?? 0.65,
+      lineColor
+    )
+  }
+
+  layout.drawText(label, TEMPLATE.x + paddingX, textY, {
     size: fontSize,
     bold,
     color
@@ -1718,6 +1754,17 @@ const drawTemplateTotalRow = (layout, topY, label, value, options = {}) => {
     bold,
     color
   })
+
+  if (options.bottomLine) {
+    layout.drawLine(
+      TEMPLATE.x,
+      topY - rowHeight,
+      TEMPLATE.x + TEMPLATE.width,
+      topY - rowHeight,
+      options.bottomLineWidth ?? 0.65,
+      lineColor
+    )
+  }
 }
 
 const formatTemplateDetailText = (row) => {
@@ -1732,9 +1779,10 @@ const formatTemplateDetailText = (row) => {
   return `${row.label}: ${row.value}`
 }
 
-const drawTemplateDetailSection = (layout, y, section) => {
+const drawTemplateDetailSection = (layout, y, section, options = {}) => {
   y = drawTemplateSectionSpacer(layout, y, {
-    strokeColor: TEMPLATE.faintBorder
+    strokeColor: TEMPLATE.faintBorder,
+    skipTopBorder: options.skipTopBorder
   })
 
   drawTemplateFullRow(layout, y, TEMPLATE_DETAIL_TITLE_HEIGHT, section.title, {
@@ -1916,31 +1964,49 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   })
   y -= TEMPLATE_TOTALS_SPACER_HEIGHT
 
-  drawTemplateTotalRow(layout, y, 'Zwischensumme:', getTemplateSubtotal(data))
+  drawTemplateTotalRow(layout, y, 'Zwischensumme', getTemplateSubtotal(data), {
+    topLine: true,
+    showValueSeparator: false
+  })
   y -= TEMPLATE_ROW_HEIGHT
 
   adjustmentRows.forEach((row) => {
-    drawTemplateTotalRow(layout, y, `${row.label}:`, row.value)
+    drawTemplateTotalRow(layout, y, row.label, row.value, {
+      showValueSeparator: false
+    })
     y -= TEMPLATE_ROW_HEIGHT
   })
 
-  drawTemplateTotalRow(layout, y, 'Gesamtbetrag:', totalAmount, {
+  drawTemplateTotalRow(layout, y, 'GESAMT', formatTotalAmount(totalAmount) || 'CHF -', {
     bold: true,
     color: COLORS.accentDark,
-    height: TEMPLATE_TOTAL_ROW_HEIGHT
+    height: TEMPLATE_TOTAL_ROW_HEIGHT,
+    topLine: true,
+    bottomLine: true,
+    topLineWidth: 0.85,
+    bottomLineWidth: 0.85,
+    lineColor: COLORS.ink,
+    showValueSeparator: false
   })
   y -= TEMPLATE_TOTAL_ROW_HEIGHT
+
+  let shouldPreserveTotalBottomLine = true
 
   detailSections.forEach((section) => {
     y = ensureTemplatePageSpace(layout, y, getTemplateDetailSectionHeight(section), {
       tableHeader: false
     })
-    y = drawTemplateDetailSection(layout, y, section)
+    y = drawTemplateDetailSection(layout, y, section, {
+      skipTopBorder: shouldPreserveTotalBottomLine
+    })
+    shouldPreserveTotalBottomLine = false
   })
 
   y = ensureTemplatePageSpace(layout, y, TEMPLATE_CONDITIONS_BASE_HEIGHT, { tableHeader: false })
 
-  y = drawTemplateSectionSpacer(layout, y)
+  y = drawTemplateSectionSpacer(layout, y, {
+    skipTopBorder: shouldPreserveTotalBottomLine
+  })
   drawTemplateFullRow(layout, y, 20, 'Bedingungen', {
     size: 10,
     bold: true,

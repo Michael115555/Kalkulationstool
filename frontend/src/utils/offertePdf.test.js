@@ -80,6 +80,7 @@ describe('offertePdf', () => {
     expect(pdfText.startsWith('%PDF-1.4')).toBe(true)
     expect(pdfText).toContain('/Type /Page')
     expect(pdfText).toContain('/Helvetica-Bold')
+    expect(pdfText).toContain(toPdfHex('GESAMT'))
   })
 
   test('erstellt einen sprechenden Dateinamen', () => {
