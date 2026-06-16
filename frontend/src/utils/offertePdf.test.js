@@ -81,6 +81,10 @@ describe('offertePdf', () => {
     expect(pdfText).toContain('/Type /Page')
     expect(pdfText).toContain('/Helvetica-Bold')
     expect(pdfText).toContain(toPdfHex('GESAMT'))
+    expect(pdfText).toContain(toPdfHex('Demo Verkäufer'))
+    expect(pdfText).toContain(toPdfHex('Alex Beispiel'))
+    expect(pdfText).not.toContain(toPdfHex('Verkäufer:'))
+    expect(pdfText).not.toContain(toPdfHex('Kontaktperson:'))
   })
 
   test('erstellt einen sprechenden Dateinamen', () => {

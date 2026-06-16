@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
-import { buildOfferteDocumentHtml, escapeHtml } from './offerteDocument'
+import { createOfferteDocumentData } from './offerteDocument'
 
-const createHtmlProjektFixture = () => ({
+const createProjektFixture = () => ({
   id: 17,
   name: 'Canon Projekt',
   total: 33340.27,
@@ -55,14 +55,8 @@ const createHtmlProjektFixture = () => ({
 })
 
 describe('offerteDocument', () => {
-  test('escaped Kundendaten im Offerten-HTML', () => {
-    expect(escapeHtml('<script>alert("x")</script>')).toBe(
-      '&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;'
-    )
-  })
-
-  test('erstellt eine kundenfähige Offerte ohne interne Einkaufspreise', () => {
-    const html = buildOfferteDocumentHtml({
+  test('erstellt kundenfähige Offertendaten ohne interne Einkaufspreise', () => {
+    const data = createOfferteDocumentData({
       generatedAt: '2026-06-08T10:00:00.000Z',
       kunde: {
         firmenname: 'Demo Kunden AG',
@@ -72,21 +66,34 @@ describe('offerteDocument', () => {
         ort: 'Aarau'
       },
       verkaeuferName: 'Demo Verkäufer',
-      projekt: createHtmlProjektFixture()
+      projekt: createProjektFixture()
     })
 
-    expect(html).toContain('Canon imageForce C5140')
-    expect(html).toContain('Demo Kunden AG')
-    expect(html).toContain('Kundenstrasse 8')
-    expect(html).toContain('5000 Aarau')
-    expect(html).toContain('CHF 33’340.27')
-    expect(html).toContain('Miete 48 Monate')
-    expect(html).not.toContain('Einkaufspreis')
-    expect(html).not.toContain('CHF 5’487.79')
+    expect(data.title).toBe('Canon imageForce C5140')
+    expect(data.customer).toEqual({
+      name: 'Demo Kunden AG',
+      contact: 'Alex Beispiel',
+      address: 'Kundenstrasse 8',
+      location: '5000 Aarau'
+    })
+    expect(data.sellerName).toBe('Demo Verkäufer')
+    expect(data.priceRows).toContainEqual(
+      expect.objectContaining({
+        label: 'Nettopreis',
+        value: 'CHF 33’340.27',
+        isTotal: true
+      })
+    )
+    expect(data.rentRows).toContainEqual({
+      label: 'Miete 48 Monate',
+      value: 'CHF 794.00 / Monat'
+    })
+    expect(JSON.stringify(data)).not.toContain('Einkaufspreis')
+    expect(JSON.stringify(data)).not.toContain('CHF 5’487.79')
   })
 
-  test('blendet Servicekonditionen optional aus dem Offerten-HTML aus', () => {
-    const html = buildOfferteDocumentHtml({
+  test('blendet Servicekonditionen optional aus den Offertendaten aus', () => {
+    const data = createOfferteDocumentData({
       generatedAt: '2026-06-08T10:00:00.000Z',
       kunde: {
         firmenname: 'Demo Kunden AG',
@@ -94,12 +101,14 @@ describe('offerteDocument', () => {
         plz: '5000',
         ort: 'Aarau'
       },
-      projekt: createHtmlProjektFixture(),
+      projekt: createProjektFixture(),
       includeServiceConditions: false
     })
 
-    expect(html).toContain('Miete 48 Monate')
-    expect(html).not.toContain('Servicekonditionen')
-    expect(html).not.toContain('Servicepauschale/Mt.')
+    expect(data.rentRows).toContainEqual({
+      label: 'Miete 48 Monate',
+      value: 'CHF 794.00 / Monat'
+    })
+    expect(data.serviceRows).toEqual([])
   })
 })

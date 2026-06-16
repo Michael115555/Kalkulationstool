@@ -2,29 +2,14 @@ import { createOfferteDocumentData } from './offerteDocument'
 
 const PAGE_WIDTH = 595.28
 const PAGE_HEIGHT = 841.89
-const MARGIN_LEFT = 42
-const MARGIN_RIGHT = 42
-const TOP_Y = 788
 const BOTTOM_Y = 54
-const DEFAULT_LINE_HEIGHT = 16
 const DEFAULT_FONT_SIZE = 12
-const HEADING_FONT_SIZE = 16
-const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT
-const CONTENT_RIGHT = PAGE_WIDTH - MARGIN_RIGHT
 
 const COLORS = {
-  accent: [0.05, 0.43, 0.99],
   accentDark: [0.05, 0.43, 0.99],
-  accentSoft: [0.91, 0.96, 1],
-  accentBorder: [0.62, 0.8, 1],
   ink: [0.12, 0.16, 0.22],
   muted: [0.33, 0.37, 0.43],
   softText: [0.43, 0.47, 0.52],
-  border: [0.82, 0.84, 0.87],
-  softBorder: [0.9, 0.91, 0.93],
-  softBg: [0.97, 0.98, 0.98],
-  tableHeader: [0.965, 0.972, 0.982],
-  tableStripe: [0.985, 0.988, 0.992],
   white: [1, 1, 1]
 }
 
@@ -386,20 +371,12 @@ class PdfLayout {
   constructor() {
     this.pages = []
     this.currentPage = null
-    this.y = TOP_Y
     this.addPage()
   }
 
   addPage() {
     this.currentPage = []
     this.pages.push(this.currentPage)
-    this.y = TOP_Y
-  }
-
-  ensureSpace(height) {
-    if (this.y - height < BOTTOM_Y) {
-      this.addPage()
-    }
   }
 
   addRaw(operation) {
@@ -437,89 +414,6 @@ class PdfLayout {
 
       this.addRaw(`q ${colorOperator(options.strokeColor, 'RG')} ${lineWidth.toFixed(2)} w ${x.toFixed(2)} ${y.toFixed(2)} ${width.toFixed(2)} ${height.toFixed(2)} re S Q`)
     }
-  }
-
-  addTextLines(lines, options = {}) {
-    const x = options.x ?? MARGIN_LEFT
-    const size = options.size ?? DEFAULT_FONT_SIZE
-    const lineHeight = options.lineHeight ?? DEFAULT_LINE_HEIGHT
-    const bold = Boolean(options.bold)
-    const color = options.color ?? COLORS.ink
-
-    this.ensureSpace(lines.length * lineHeight)
-
-    lines.forEach((line) => {
-      this.drawText(line, x, this.y, { size, bold, color })
-      this.y -= lineHeight
-    })
-  }
-
-  addParagraph(text, options = {}) {
-    const x = options.x ?? MARGIN_LEFT
-    const width = options.width ?? CONTENT_WIDTH
-    const size = options.size ?? DEFAULT_FONT_SIZE
-    const lineHeight = options.lineHeight ?? DEFAULT_LINE_HEIGHT
-    const bold = Boolean(options.bold)
-    const after = options.after ?? 12
-    const color = options.color ?? COLORS.ink
-    const lines = wrapText(text, width, size, bold)
-
-    this.ensureSpace(lines.length * lineHeight + after)
-    lines.forEach((line) => {
-      this.drawText(line, x, this.y, { size, bold, color })
-      this.y -= lineHeight
-    })
-    this.y -= after
-  }
-
-  addHeading(text, options = {}) {
-    const size = options.size ?? HEADING_FONT_SIZE
-    const before = options.before ?? 0
-    const after = options.after ?? 18
-    const color = options.color ?? COLORS.ink
-
-    this.ensureSpace(before + size + after)
-    this.y -= before
-    this.drawText(text, MARGIN_LEFT, this.y, { size, bold: true, color })
-    this.y -= after
-  }
-
-  addSubheading(text, options = {}) {
-    const before = options.before ?? 0
-    const after = options.after ?? 14
-    const size = options.size ?? 12
-
-    this.ensureSpace(before + 24 + after)
-    this.y -= before
-    this.drawRect(MARGIN_LEFT, this.y - 2, 24, 2, {
-      fillColor: COLORS.accent
-    })
-    this.drawText(text, MARGIN_LEFT + 34, this.y - 6, {
-      size,
-      bold: true,
-      color: COLORS.ink
-    })
-    this.y -= after
-  }
-
-  addBullet(text, options = {}) {
-    const x = options.x ?? MARGIN_LEFT
-    const textX = x + 10
-    const width = options.width ?? PAGE_WIDTH - textX - MARGIN_RIGHT
-    const size = options.size ?? DEFAULT_FONT_SIZE
-    const lineHeight = options.lineHeight ?? 14
-    const lines = wrapText(text, width, size)
-
-    this.ensureSpace(lines.length * lineHeight)
-    this.drawText('•', x, this.y, { size })
-    lines.forEach((line, index) => {
-      this.drawText(line, textX, this.y - index * lineHeight, { size })
-    })
-    this.y -= lines.length * lineHeight
-  }
-
-  addSpacer(height) {
-    this.y -= height
   }
 }
 
@@ -580,187 +474,11 @@ const createPdfBytes = (pages) => {
   return new TextEncoder().encode(output)
 }
 
-const getRecipientLines = (data) => [
-  data.customer.name,
-  data.customer.contact,
-  data.customer.address,
-  data.customer.location
-].filter(isFilled)
-
 const getTotalAmount = (data) => {
   const totalRow = data.priceRows.find((row) => row.isTotal)
   const amount = formatTableAmount(totalRow?.value ?? '')
 
   return amount ? formatTotalAmount(amount) : ''
-}
-
-const addDocumentHeader = (layout, senderLines, data, generatedAt) => {
-  const offerNumber = formatOfferNumber(data.projektId, generatedAt)
-  const senderName = senderLines[0] ?? ''
-  const senderDetails = senderLines.slice(1)
-
-  layout.drawRect(MARGIN_LEFT, TOP_Y - 48, 4, 50, {
-    fillColor: COLORS.accent
-  })
-  layout.drawText(senderName, MARGIN_LEFT + 14, TOP_Y, {
-    size: 15,
-    bold: true,
-    color: COLORS.ink
-  })
-
-  senderDetails.forEach((line, index) => {
-    layout.drawText(line, MARGIN_LEFT + 14, TOP_Y - 17 - index * 13, {
-      size: 9.5,
-      color: COLORS.muted
-    })
-  })
-
-  layout.drawRightText('Offerte', CONTENT_RIGHT, TOP_Y, {
-    size: 20,
-    bold: true,
-    color: COLORS.ink
-  })
-  layout.drawRightText(`Nr. ${offerNumber}`, CONTENT_RIGHT, TOP_Y - 23, {
-    size: 10,
-    color: COLORS.muted
-  })
-  layout.drawRightText(formatOfferDate(generatedAt), CONTENT_RIGHT, TOP_Y - 38, {
-    size: 10,
-    color: COLORS.muted
-  })
-  layout.drawLine(MARGIN_LEFT, TOP_Y - 62, CONTENT_RIGHT, TOP_Y - 62, 0.65, COLORS.border)
-  layout.y = TOP_Y - 88
-
-  return offerNumber
-}
-
-const addRecipientAndSummary = (layout, data) => {
-  const recipientLines = getRecipientLines(data)
-  const displayedRecipientLines = recipientLines.length > 0
-    ? recipientLines
-    : ['Kunde noch nicht erfasst']
-  const topY = layout.y
-  const summaryWidth = 190
-  const summaryX = CONTENT_RIGHT - summaryWidth
-  const summaryHeight = 86
-  const totalAmount = getTotalAmount(data) || 'CHF -'
-
-  layout.drawText('Empfänger', MARGIN_LEFT, topY, {
-    size: 9,
-    bold: true,
-    color: COLORS.accent
-  })
-
-  displayedRecipientLines.forEach((line, index) => {
-    layout.drawText(line, MARGIN_LEFT, topY - 18 - index * 15, {
-      size: index === 0 ? 12 : 11,
-      bold: index === 0,
-      color: COLORS.ink
-    })
-  })
-
-  layout.drawRect(summaryX, topY - summaryHeight, summaryWidth, summaryHeight, {
-    fillColor: COLORS.accentSoft,
-    strokeColor: COLORS.accentBorder,
-    lineWidth: 0.55
-  })
-  layout.drawText('Nettopreis', summaryX + 14, topY - 22, {
-    size: 9.5,
-    bold: true,
-    color: COLORS.muted
-  })
-  layout.drawRightText(totalAmount, summaryX + summaryWidth - 14, topY - 47, {
-    size: 16,
-    bold: true,
-    color: COLORS.accentDark
-  })
-  layout.drawText('inkl. MWST', summaryX + 14, topY - 67, {
-    size: 9.5,
-    color: COLORS.softText
-  })
-  layout.drawRightText('30 Tage gültig', summaryX + summaryWidth - 14, topY - 67, {
-    size: 9.5,
-    color: COLORS.softText
-  })
-
-  layout.y = topY - Math.max(summaryHeight + 20, 22 + displayedRecipientLines.length * 15)
-}
-
-const offerTableColumns = [
-  { key: 'pos', label: 'Pos', width: 44, align: 'right' },
-  { key: 'description', label: 'Beschreibung', width: CONTENT_WIDTH - 44 - 122, align: 'left' },
-  { key: 'amount', label: 'Betrag', width: 122, align: 'right' }
-]
-
-const drawOfferTableHeader = (layout) => {
-  const headerHeight = 26
-  let x = MARGIN_LEFT
-
-  layout.ensureSpace(headerHeight + 32)
-  layout.drawRect(MARGIN_LEFT, layout.y - headerHeight, CONTENT_WIDTH, headerHeight, {
-    fillColor: COLORS.tableHeader
-  })
-  layout.drawRect(MARGIN_LEFT, layout.y - 2, CONTENT_WIDTH, 2, {
-    fillColor: COLORS.accent
-  })
-
-  offerTableColumns.forEach((column) => {
-    const textY = layout.y - 17
-    const textX = x + 8
-
-    if (column.align === 'right') {
-      layout.drawRightText(column.label, x + column.width - 8, textY, {
-        size: 10,
-        bold: true,
-        color: COLORS.ink
-      })
-    } else {
-      layout.drawText(column.label, textX, textY, {
-        size: 10,
-        bold: true,
-        color: COLORS.ink
-      })
-    }
-
-    x += column.width
-  })
-
-  layout.y -= headerHeight
-}
-
-const getPositionDescription = (row) =>
-  [row.bezeichnung, row.kategorie].filter(isFilled).join(' - ')
-
-const getOfferTableRows = (data) => {
-  const positionRows = data.positionRows.map((row, index) => ({
-    pos: String(index + 1),
-    description: getPositionDescription(row),
-    amount: formatTableAmount(row.total),
-    type: 'position'
-  }))
-
-  const adjustmentRows = data.priceRows
-    .filter((row) => !row.isTotal)
-    .filter((row) => positionRows.length === 0 || row.label !== 'Geräte- und Zubehörpaket')
-    .map((row) => ({
-      pos: '',
-      description: row.label,
-      amount: formatTableAmount(row.value),
-      type: 'adjustment'
-    }))
-
-  const totalRow = data.priceRows.find((row) => row.isTotal)
-
-  return [
-    ...positionRows,
-    ...adjustmentRows,
-    {
-      pos: '',
-      description: 'Total',
-      amount: formatTableAmount(totalRow?.value ?? ''),
-      type: 'total'
-    }
-  ].filter((row) => isFilled(row.description) || isFilled(row.amount))
 }
 
 const formatTotalAmount = (amount) => {
@@ -773,679 +491,15 @@ const formatTotalAmount = (amount) => {
   return /^CHF\s/i.test(text) ? text : `CHF ${text}`
 }
 
-const formatPanelAmount = (amount) => {
-  const text = sanitizeText(formatTableAmount(amount))
-
-  if (!text) {
-    return ''
-  }
-
-  if (text.startsWith('-')) {
-    return `- CHF ${text.replace(/^-\s*/, '')}`
-  }
-
-  return /^CHF\s/i.test(text) ? text : `CHF ${text}`
-}
-
-const drawContinuationHeader = (layout, options = {}) => {
-  const offerNumber = options.offerNumber ?? ''
-
-  layout.drawText(options.title ?? 'Offerte - Fortsetzung', MARGIN_LEFT, TOP_Y, {
-    size: 13,
-    bold: true,
-    color: COLORS.ink
-  })
-
-  if (isFilled(offerNumber)) {
-    layout.drawRightText(`Nr. ${offerNumber}`, CONTENT_RIGHT, TOP_Y, {
-      size: 10,
-      color: COLORS.muted
-    })
-  }
-
-  layout.drawLine(MARGIN_LEFT, TOP_Y - 20, CONTENT_RIGHT, TOP_Y - 20, 0.7, COLORS.border)
-  layout.y = TOP_Y - 42
-}
-
-const addOfferTable = (layout, rows, options = {}) => {
-  drawOfferTableHeader(layout)
-
-  if (rows.length === 0) {
-    const rowHeight = 30
-
-    layout.drawRect(MARGIN_LEFT, layout.y - rowHeight, CONTENT_WIDTH, rowHeight, {
-      fillColor: COLORS.softBg,
-      strokeColor: COLORS.softBorder,
-      lineWidth: 0.5
-    })
-    layout.drawText('Keine Positionen gespeichert.', MARGIN_LEFT + 8, layout.y - 20, {
-      size: 11,
-      color: COLORS.muted
-    })
-    layout.y -= rowHeight
-    return
-  }
-
-  rows.forEach((row, index) => {
-    const isTotal = row.type === 'total'
-    const isAdjustment = row.type === 'adjustment'
-    const rowLineHeight = 13
-    const descriptionSize = isTotal ? 11.5 : 10.3
-    const descriptionLines = wrapText(
-      row.description,
-      offerTableColumns[1].width - 14,
-      descriptionSize,
-      isTotal
-    )
-    const rowHeight = isTotal
-      ? 34
-      : Math.max(isAdjustment ? 25 : 28, 11 + descriptionLines.length * rowLineHeight)
-
-    if (layout.y - rowHeight < BOTTOM_Y) {
-      layout.addPage()
-      drawContinuationHeader(layout, options)
-      drawOfferTableHeader(layout)
-    }
-
-    const bottomY = layout.y - rowHeight
-    const fillColor = isTotal
-      ? COLORS.accent
-      : index % 2 === 0
-        ? COLORS.tableStripe
-        : undefined
-    const textY = layout.y - (isTotal ? 21 : 18)
-    const posRightX = MARGIN_LEFT + offerTableColumns[0].width - 8
-    const descriptionX = MARGIN_LEFT + offerTableColumns[0].width + 12
-    const amountRightX = CONTENT_RIGHT - 8
-
-    if (fillColor) {
-      layout.drawRect(MARGIN_LEFT, bottomY, CONTENT_WIDTH, rowHeight, {
-        fillColor
-      })
-    }
-
-    if (!isTotal) {
-      layout.drawLine(MARGIN_LEFT, bottomY, CONTENT_RIGHT, bottomY, 0.45, COLORS.softBorder)
-    }
-
-    if (isFilled(row.pos)) {
-      layout.drawRightText(row.pos, posRightX, textY, {
-        size: 10.5,
-        color: COLORS.softText
-      })
-    }
-
-    descriptionLines.forEach((line, lineIndex) => {
-      layout.drawText(line, descriptionX, textY - lineIndex * rowLineHeight, {
-        size: descriptionSize,
-        bold: isTotal,
-        color: isTotal ? COLORS.white : isAdjustment ? COLORS.muted : COLORS.ink
-      })
-    })
-
-    layout.drawRightText(isTotal ? formatTotalAmount(row.amount) : row.amount, amountRightX, textY, {
-      size: isTotal ? 12.5 : 10.5,
-      bold: true,
-      color: isTotal ? COLORS.white : COLORS.ink
-    })
-
-    layout.y -= rowHeight
-  })
-}
-
-const addSimpleLines = (layout, lines, options = {}) => {
-  const size = options.size ?? DEFAULT_FONT_SIZE
-  const lineHeight = options.lineHeight ?? DEFAULT_LINE_HEIGHT
-  const color = options.color ?? COLORS.ink
-
-  lines.filter(isFilled).forEach((line) => {
-    const wrappedLines = wrapText(line, CONTENT_WIDTH, size)
-
-    layout.ensureSpace(wrappedLines.length * lineHeight)
-    wrappedLines.forEach((wrappedLine) => {
-      layout.drawText(wrappedLine, MARGIN_LEFT, layout.y, { size, color })
-      layout.y -= lineHeight
-    })
-  })
-}
-
-const addDetailRows = (layout, rows, options = {}) => {
-  const x = options.x ?? MARGIN_LEFT
-  const width = options.width ?? CONTENT_WIDTH
-  const labelWidth = options.labelWidth ?? 150
-  const valueX = x + labelWidth
-  const valueWidth = width - labelWidth
-
-  rows
-    .filter((row) => isFilled(row.label) && isFilled(row.value))
-    .forEach((row) => {
-      const valueLines = wrapText(row.value, valueWidth, 10.8)
-      const rowHeight = Math.max(27, 10 + valueLines.length * 14)
-
-      layout.ensureSpace(rowHeight)
-      const textY = layout.y - 18
-
-      layout.drawText(row.label, x, textY, {
-        size: 9.5,
-        bold: true,
-        color: COLORS.muted
-      })
-      valueLines.forEach((line, index) => {
-        layout.drawText(line, valueX, textY - index * 14, {
-          size: 10.8,
-          color: COLORS.ink
-        })
-      })
-      layout.drawLine(x, layout.y - rowHeight, x + width, layout.y - rowHeight, 0.45, COLORS.softBorder)
-      layout.y -= rowHeight
-    })
-}
-
-const getProjectRowValue = (data, key) =>
-  data.projectRows.find((row) => row.label === key)?.value ?? ''
-
-const drawAppSectionTitle = (layout, title) => {
-  layout.ensureSpace(34)
-  layout.drawText(title, MARGIN_LEFT, layout.y, {
-    size: 12.5,
-    bold: true,
-    color: COLORS.ink
-  })
-  layout.y -= 22
-}
-
-const drawReadonlyField = (layout, { label, value, x, y, width, valueAlign = 'left' }) => {
-  const fieldHeight = 30
-  const labelY = y + fieldHeight + 12
-  const valueY = y + 10
-
-  layout.drawText(label, x, labelY, {
-    size: 9.2,
-    color: COLORS.ink
-  })
-  layout.drawRect(x, y, width, fieldHeight, {
-    fillColor: COLORS.white,
-    strokeColor: COLORS.border,
-    lineWidth: 0.55
-  })
-
-  if (valueAlign === 'right') {
-    layout.drawRightText(value || '-', x + width - 8, valueY, {
-      size: 10.3,
-      color: COLORS.ink
-    })
-    return
-  }
-
-  const lines = wrapText(value || '-', width - 14, 9.4).slice(0, 2)
-  lines.forEach((line, index) => {
-    layout.drawText(line, x + 7, valueY - index * 10.5, {
-      size: 9.4,
-      color: COLORS.ink
-    })
-  })
-}
-
-const drawReadonlyAmount = (layout, text, rightX, y, options = {}) => {
-  layout.drawRightText(formatPanelAmount(text) || '-', rightX, y, {
-    size: options.size ?? 9.8,
-    bold: Boolean(options.bold),
-    color: options.color ?? COLORS.ink
-  })
-}
-
-const addAppHeader = (layout, data, senderLines, generatedAt) => {
-  const offerNumber = formatOfferNumber(data.projektId, generatedAt)
-
-  layout.drawText('Offerte', MARGIN_LEFT, TOP_Y, {
-    size: 15,
-    bold: true,
-    color: COLORS.ink
-  })
-  layout.drawRightText(`Nr. ${offerNumber}`, CONTENT_RIGHT, TOP_Y, {
-    size: 9.8,
-    color: COLORS.muted
-  })
-  layout.drawRightText(formatOfferDate(generatedAt), CONTENT_RIGHT, TOP_Y - 15, {
-    size: 9.8,
-    color: COLORS.muted
-  })
-  layout.drawLine(MARGIN_LEFT, TOP_Y - 28, CONTENT_RIGHT, TOP_Y - 28, 0.55, COLORS.softBorder)
-
-  layout.y = TOP_Y - 55
-
-  const fieldGap = 9
-  const fieldWidth = (CONTENT_WIDTH - fieldGap * 2) / 3
-  const fieldY = layout.y - 42
-  const customerLines = getRecipientLines(data)
-  const customerValue = customerLines.length > 0 ? customerLines.join(' / ') : 'Ohne Kunde'
-
-  drawReadonlyField(layout, {
-    label: 'Kunde',
-    value: customerValue,
-    x: MARGIN_LEFT,
-    y: fieldY,
-    width: fieldWidth
-  })
-  drawReadonlyField(layout, {
-    label: 'Verkäufer',
-    value: data.sellerName || getProjectRowValue(data, 'Verkäufer') || senderLines[0] || '-',
-    x: MARGIN_LEFT + fieldWidth + fieldGap,
-    y: fieldY,
-    width: fieldWidth
-  })
-  drawReadonlyField(layout, {
-    label: 'Druckermodell',
-    value: getProjectRowValue(data, 'Modell') || data.title,
-    x: MARGIN_LEFT + fieldWidth * 2 + fieldGap * 2,
-    y: fieldY,
-    width: fieldWidth
-  })
-
-  layout.y = fieldY - 28
-
-  return offerNumber
-}
-
-const drawAppPositionsHeader = (layout) => {
-  const headerHeight = 25
-  const columns = [
-    { label: 'Kategorie', width: 0.17, align: 'left' },
-    { label: 'Bezeichnung', width: 0.45, align: 'left' },
-    { label: 'Menge', width: 0.08, align: 'right' },
-    { label: 'VP (CHF)', width: 0.14, align: 'right' },
-    { label: 'Total (CHF)', width: 0.16, align: 'right' }
-  ]
-  let x = MARGIN_LEFT
-
-  layout.drawRect(MARGIN_LEFT, layout.y - headerHeight, CONTENT_WIDTH, headerHeight, {
-    fillColor: COLORS.tableHeader,
-    strokeColor: COLORS.border,
-    lineWidth: 0.5
-  })
-
-  columns.forEach((column) => {
-    const width = CONTENT_WIDTH * column.width
-    const textY = layout.y - 16
-
-    if (column.align === 'right') {
-      layout.drawRightText(column.label, x + width - 7, textY, {
-        size: 9.2,
-        bold: true,
-        color: COLORS.muted
-      })
-    } else {
-      layout.drawText(column.label, x + 7, textY, {
-        size: 9.2,
-        bold: true,
-        color: COLORS.muted
-      })
-    }
-
-    x += width
-  })
-
-  layout.y -= headerHeight
-}
-
-const addAppPositionsTable = (layout, data, offerNumber) => {
-  const columns = [
-    { key: 'kategorie', width: 0.17, align: 'left' },
-    { key: 'bezeichnung', width: 0.45, align: 'left' },
-    { key: 'menge', width: 0.08, align: 'right' },
-    { key: 'einzelpreis', width: 0.14, align: 'right' },
-    { key: 'total', width: 0.16, align: 'right' }
-  ]
-  const rows = data.positionRows.length > 0
-    ? data.positionRows
-    : [{
-      kategorie: '',
-      bezeichnung: 'Keine Positionen gespeichert.',
-      menge: '',
-      einzelpreis: '',
-      total: ''
-    }]
-
-  drawAppSectionTitle(layout, 'Positionen')
-  drawAppPositionsHeader(layout)
-
-  rows.forEach((row, rowIndex) => {
-    const descriptionLines = wrapText(row.bezeichnung, CONTENT_WIDTH * columns[1].width - 14, 9.4)
-    const rowHeight = Math.max(31, 13 + descriptionLines.length * 12)
-
-    if (layout.y - rowHeight < BOTTOM_Y) {
-      layout.addPage()
-      drawContinuationHeader(layout, {
-        offerNumber,
-        title: 'Offerte - Positionen'
-      })
-      drawAppPositionsHeader(layout)
-    }
-
-    let x = MARGIN_LEFT
-    const bottomY = layout.y - rowHeight
-
-    layout.drawRect(MARGIN_LEFT, bottomY, CONTENT_WIDTH, rowHeight, {
-      fillColor: rowIndex % 2 === 0 ? COLORS.white : COLORS.tableStripe,
-      strokeColor: COLORS.border,
-      lineWidth: 0.45
-    })
-
-    columns.forEach((column) => {
-      const width = CONTENT_WIDTH * column.width
-      const rawValue = row[column.key] ?? ''
-      const value = column.key === 'einzelpreis' || column.key === 'total'
-        ? formatTableAmount(rawValue)
-        : rawValue
-      const textY = layout.y - 19
-
-      if (column.key === 'bezeichnung') {
-        descriptionLines.forEach((line, index) => {
-          layout.drawText(line, x + 7, textY - index * 12, {
-            size: 9.4,
-            color: COLORS.ink
-          })
-        })
-      } else if (column.align === 'right') {
-        layout.drawRightText(value, x + width - 7, textY, {
-          size: 9.4,
-          color: COLORS.ink
-        })
-      } else {
-        layout.drawText(value, x + 7, textY, {
-          size: 9.4,
-          color: COLORS.ink
-        })
-      }
-
-      x += width
-    })
-
-    layout.y -= rowHeight
-  })
-}
-
-const getPriceValue = (data, label) =>
-  data.priceRows.find((row) => row.label === label)?.value ?? ''
-
-const addAppCalculationPanel = (layout, data, offerNumber) => {
-  if (layout.y - 250 < BOTTOM_Y) {
-    layout.addPage()
-    drawContinuationHeader(layout, {
-      offerNumber,
-      title: 'Offerte - Kalkulation'
-    })
-  }
-
-  layout.addSpacer(24)
-  drawAppSectionTitle(layout, 'Kalkulation')
-
-  const panelGap = 14
-  const leftWidth = CONTENT_WIDTH * 0.64
-  const rightWidth = CONTENT_WIDTH - leftWidth - panelGap
-  const topY = layout.y
-  const leftX = MARGIN_LEFT
-  const rightX = MARGIN_LEFT + leftWidth + panelGap
-  const priceRows = [
-    ['Verkaufspreis', getPriceValue(data, 'Geräte- und Zubehörpaket')],
-    ['Eintauschrabatt', getPriceValue(data, 'Eintauschrabatt')],
-    ['Lieferung / Bereitstellung', getPriceValue(data, 'Lieferung / Bereitstellung')],
-    [data.priceRows.find((row) => row.label.startsWith('Restwert'))?.label ?? 'Restwert', data.priceRows.find((row) => row.label.startsWith('Restwert'))?.value ?? ''],
-    ['Nettopreis', getTotalAmount(data)]
-  ].filter((row) => isFilled(row[1]) || row[0] === 'Nettopreis')
-  const serviceRows = [...data.rentRows, ...data.serviceRows].slice(0, 8)
-  const leftHeight = 34 + priceRows.length * 31
-  const rightHeight = 34 + Math.max(serviceRows.length, 1) * 28
-  const panelHeight = Math.max(leftHeight, rightHeight)
-
-  layout.drawRect(leftX, topY - panelHeight, leftWidth, panelHeight, {
-    fillColor: COLORS.white,
-    strokeColor: COLORS.border,
-    lineWidth: 0.55
-  })
-  layout.drawRect(rightX, topY - panelHeight, rightWidth, panelHeight, {
-    fillColor: COLORS.white,
-    strokeColor: COLORS.border,
-    lineWidth: 0.55
-  })
-  layout.drawText('Preisübersicht', leftX + 12, topY - 20, {
-    size: 10.5,
-    bold: true,
-    color: COLORS.ink
-  })
-  layout.drawText('Miete / Service', rightX + 12, topY - 20, {
-    size: 10.5,
-    bold: true,
-    color: COLORS.ink
-  })
-  layout.drawLine(leftX, topY - 31, leftX + leftWidth, topY - 31, 0.45, COLORS.softBorder)
-  layout.drawLine(rightX, topY - 31, rightX + rightWidth, topY - 31, 0.45, COLORS.softBorder)
-
-  priceRows.forEach(([label, value], index) => {
-    const rowTop = topY - 34 - index * 31
-    const isNet = label === 'Nettopreis'
-
-    if (isNet) {
-      layout.drawRect(leftX + 7, rowTop - 29, leftWidth - 14, 27, {
-        fillColor: COLORS.accentSoft,
-        strokeColor: COLORS.accentBorder,
-        lineWidth: 0.5
-      })
-    }
-
-    layout.drawText(label, leftX + 14, rowTop - 19, {
-      size: isNet ? 10.2 : 9.6,
-      bold: isNet,
-      color: isNet ? COLORS.accentDark : COLORS.ink
-    })
-    drawReadonlyAmount(layout, value, leftX + leftWidth - 14, rowTop - 19, {
-      size: isNet ? 10.8 : 9.8,
-      bold: isNet,
-      color: isNet ? COLORS.accentDark : COLORS.ink
-    })
-
-    if (!isNet) {
-      layout.drawLine(leftX + 10, rowTop - 29, leftX + leftWidth - 10, rowTop - 29, 0.35, COLORS.softBorder)
-    }
-  })
-
-  const visibleServiceRows = serviceRows.length > 0
-    ? serviceRows
-    : [{ label: 'Service', value: 'Keine Servicekonditionen gespeichert.' }]
-
-  visibleServiceRows.forEach((row, index) => {
-    const rowTop = topY - 36 - index * 28
-    const labelLines = wrapText(row.label, rightWidth * 0.57, 8.7)
-
-    layout.drawText(labelLines[0] ?? row.label, rightX + 12, rowTop - 17, {
-      size: 8.7,
-      color: COLORS.muted
-    })
-    layout.drawRightText(row.value, rightX + rightWidth - 12, rowTop - 17, {
-      size: 8.9,
-      bold: true,
-      color: COLORS.ink
-    })
-    layout.drawLine(rightX + 10, rowTop - 25, rightX + rightWidth - 10, rowTop - 25, 0.35, COLORS.softBorder)
-  })
-
-  layout.y = topY - panelHeight - 22
-}
-
-const addAppConditions = (layout, data, offerNumber, generatedAt) => {
-  const validUntilDate = formatOfferValidUntilDate(generatedAt)
-  const rows = [
-    { label: 'Mehrwertsteuer', value: 'Preise inkl. MWST, sofern nicht anders vereinbart.' },
-    { label: 'Gültigkeit', value: `Diese Offerte ist gültig bis ${validUntilDate}.` },
-    ...data.conditionRows
-  ]
-
-  if (layout.y - 130 < BOTTOM_Y) {
-    layout.addPage()
-    drawContinuationHeader(layout, {
-      offerNumber,
-      title: 'Offerte - Konditionen'
-    })
-  }
-
-  drawAppSectionTitle(layout, 'Konditionen')
-  addDetailRows(layout, rows, {
-    labelWidth: 180
-  })
-}
-
-const addAppSignature = (layout, data, senderLines, offerNumber) => {
-  if (layout.y - 125 < BOTTOM_Y) {
-    layout.addPage()
-    drawContinuationHeader(layout, {
-      offerNumber,
-      title: 'Offerte - Annahme'
-    })
-  }
-
-  layout.addSpacer(24)
-  const signatureTop = layout.y
-  const signatureWidth = (CONTENT_WIDTH - 34) / 2
-  const rightX = MARGIN_LEFT + signatureWidth + 34
-  const customerContact = data.customer.contact || data.customer.name || ''
-
-  layout.drawText('Freundliche Grüsse', MARGIN_LEFT, signatureTop, {
-    size: 10.5,
-    color: COLORS.ink
-  })
-  layout.drawText('Auftraggeber', rightX, signatureTop, {
-    size: 10.5,
-    color: COLORS.ink
-  })
-  layout.drawLine(MARGIN_LEFT, signatureTop - 42, MARGIN_LEFT + signatureWidth, signatureTop - 42, 0.65, COLORS.border)
-  layout.drawLine(rightX, signatureTop - 42, rightX + signatureWidth, signatureTop - 42, 0.65, COLORS.border)
-  layout.drawText(senderLines[0] ?? '', MARGIN_LEFT, signatureTop - 58, {
-    size: 9.5,
-    color: COLORS.muted
-  })
-  layout.drawText(customerContact || data.customer.name || '', rightX, signatureTop - 58, {
-    size: 9.5,
-    color: COLORS.muted
-  })
-  layout.y = signatureTop - 90
-}
-
-const addToolStyleOfferContent = (layout, data, generatedAt, senderLines) => {
-  const offerNumber = addAppHeader(layout, data, senderLines, generatedAt)
-
-  addAppPositionsTable(layout, data, offerNumber)
-  addAppCalculationPanel(layout, data, offerNumber)
-  addAppConditions(layout, data, offerNumber, generatedAt)
-  addAppSignature(layout, data, senderLines, offerNumber)
-}
-
-const addOfferContent = (layout, data, generatedAt, senderLines) => {
-  const customerContact = data.customer.contact || data.customer.name || ''
-  const tableRows = getOfferTableRows(data)
-  const offerNumber = addDocumentHeader(layout, senderLines, data, generatedAt)
-  const validUntilDate = formatOfferValidUntilDate(generatedAt)
-
-  addRecipientAndSummary(layout, data)
-
-  layout.addHeading('Offerte', { size: 20, after: 24 })
-  layout.addParagraph(customerContact ? `Guten Tag ${customerContact}` : 'Guten Tag', {
-    after: 4
-  })
-  layout.addParagraph('Besten Dank für Ihre Anfrage. Wir haben die gewünschte Lösung kompakt für Sie zusammengestellt.', {
-    color: COLORS.muted,
-    after: 8
-  })
-  layout.addParagraph(
-    `Für ${data.title || 'die ausgewählte Lösung'} offerieren wir Ihnen folgende Zusammenstellung.`,
-    {
-      size: 12.5,
-      lineHeight: 17,
-      bold: true,
-      after: 12
-    }
-  )
-
-  layout.addSubheading('Angebotene Positionen', { after: 12 })
-  addOfferTable(layout, tableRows, { offerNumber })
-  layout.addSpacer(20)
-
-  const rentAndServiceRows = [...data.rentRows, ...data.serviceRows]
-  const detailRows = [
-    {
-      label: 'Mehrwertsteuer',
-      value: 'Preise inkl. MWST, sofern nicht anders vereinbart.'
-    },
-    {
-      label: 'Gültigkeit',
-      value: `Diese Offerte ist gültig bis ${validUntilDate}.`
-    },
-    ...rentAndServiceRows,
-    ...data.conditionRows
-  ]
-
-  if (layout.y - 150 < BOTTOM_Y) {
-    layout.addPage()
-    drawContinuationHeader(layout, {
-      offerNumber,
-      title: 'Offerte - Konditionen'
-    })
-  }
-
-  layout.addSubheading('Konditionen', { after: 16 })
-  addDetailRows(layout, detailRows)
-
-  layout.addSpacer(22)
-
-  if (layout.y - 190 < BOTTOM_Y) {
-    layout.addPage()
-    drawContinuationHeader(layout, {
-      offerNumber,
-      title: 'Offerte - Annahme'
-    })
-  }
-
-  layout.addSubheading('Annahme', { after: 16 })
-  layout.addParagraph(
-    'Mit Ihrer Unterschrift bestätigen Sie die Annahme dieser Offerte und beauftragen die Umsetzung zu den oben genannten Konditionen.',
-    {
-      color: COLORS.muted,
-      after: 28
-    }
-  )
-  layout.ensureSpace(95)
-  const signatureTop = layout.y
-  const signatureWidth = 188
-  const signatureRightX = MARGIN_LEFT + CONTENT_WIDTH - signatureWidth
-
-  layout.drawText('Freundliche Grüsse', MARGIN_LEFT, signatureTop, {
-    size: DEFAULT_FONT_SIZE,
-    color: COLORS.ink
-  })
-  layout.drawText('Auftraggeber', signatureRightX, signatureTop, {
-    size: DEFAULT_FONT_SIZE,
-    color: COLORS.ink
-  })
-  layout.drawLine(MARGIN_LEFT, signatureTop - 42, MARGIN_LEFT + signatureWidth, signatureTop - 42, 0.65, COLORS.border)
-  layout.drawLine(signatureRightX, signatureTop - 42, signatureRightX + signatureWidth, signatureTop - 42, 0.65, COLORS.border)
-  layout.drawText(senderLines[0] ?? '', MARGIN_LEFT, signatureTop - 58, {
-    size: 10,
-    color: COLORS.muted
-  })
-  layout.drawText(customerContact || data.customer.name || '', signatureRightX, signatureTop - 58, {
-    size: 10,
-    color: COLORS.muted
-  })
-  layout.y = signatureTop - 95
-}
-
 const TEMPLATE = {
   x: 54,
   top: 812,
   width: PAGE_WIDTH - 108,
-  border: [0.78, 0.81, 0.86],
-  faintBorder: [0.78, 0.81, 0.86],
+  border: [0.86, 0.88, 0.92],
+  faintBorder: [0.9, 0.92, 0.95],
   headerFill: COLORS.accentDark,
-  lightFill: [0.985, 0.988, 0.992]
+  lightFill: [0.985, 0.988, 0.992],
+  lineWidth: 0.32
 }
 
 const TEMPLATE_TABLE_HEADER_HEIGHT = 28
@@ -1471,7 +525,7 @@ const drawTemplateCell = (layout, x, topY, width, height, options = {}) => {
   layout.drawRect(x, topY - height, width, height, {
     fillColor: options.fillColor,
     strokeColor: options.strokeColor ?? TEMPLATE.border,
-    lineWidth: options.lineWidth ?? 0.45
+    lineWidth: options.lineWidth ?? TEMPLATE.lineWidth
   })
 
   if (!isFilled(options.text)) {
@@ -1607,7 +661,7 @@ const drawTemplateSectionSpacer = (layout, y, options = {}) => {
 
   if (options.skipTopBorder) {
     const bottomY = y - TEMPLATE_BLANK_ROW_HEIGHT
-    const lineWidth = options.lineWidth ?? 0.45
+    const lineWidth = options.lineWidth ?? TEMPLATE.lineWidth
     const strokeColor = options.strokeColor ?? TEMPLATE.border
 
     layout.drawLine(TEMPLATE.x, y, TEMPLATE.x, bottomY, lineWidth, strokeColor)
@@ -1723,7 +777,7 @@ const drawTemplateTotalRow = (layout, topY, label, value, options = {}) => {
   const textY = topY - (rowHeight - (fontSize + 2.2)) / 2 - fontSize
   const lineColor = options.lineColor ?? TEMPLATE.faintBorder
   const strokeColor = options.strokeColor ?? TEMPLATE.faintBorder
-  const lineWidth = options.lineWidth ?? 0.45
+  const lineWidth = options.lineWidth ?? TEMPLATE.lineWidth
 
   layout.drawRect(TEMPLATE.x, topY - rowHeight, TEMPLATE.width, rowHeight, {
     strokeColor,
@@ -1832,6 +886,8 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   const leftW = w * 0.5
   const rightW = w - leftW
   const rightX = x + leftW
+  const sellerLine = [data.sellerName, sender.contact].filter(isFilled).map(sanitizeText).join(' / ')
+  const recipientContactLine = sanitizeText(recipient.contact)
   let y = TEMPLATE.top
 
   drawTemplateCell(layout, x, y, leftW, 46, {
@@ -1854,6 +910,18 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   })
   y -= 46
 
+  if (isFilled(sellerLine) || isFilled(recipientContactLine)) {
+    drawTemplateCell(layout, x, y, leftW, 18, {
+      text: sellerLine,
+      size: 8.2
+    })
+    drawTemplateCell(layout, rightX, y, rightW, 18, {
+      text: recipientContactLine,
+      size: 8.2
+    })
+    y -= 18
+  }
+
   drawTemplateCell(layout, x, y, leftW, 18, {
     text: sender.address,
     size: 8.2
@@ -1873,18 +941,6 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     size: 8.2
   })
   y -= 18
-
-  if (isFilled(sender.contact)) {
-    drawTemplateCell(layout, x, y, leftW, 18, {
-      text: sender.contact,
-      size: 8.2
-    })
-    drawTemplateCell(layout, rightX, y, rightW, 18, {
-      text: '',
-      size: 8.2
-    })
-    y -= 18
-  }
 
   drawTemplateFullRow(layout, y, TEMPLATE_BLANK_ROW_HEIGHT, '')
   y -= TEMPLATE_BLANK_ROW_HEIGHT
@@ -1983,9 +1039,9 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     height: TEMPLATE_TOTAL_ROW_HEIGHT,
     topLine: true,
     bottomLine: true,
-    topLineWidth: 0.85,
-    bottomLineWidth: 0.85,
-    lineColor: COLORS.ink,
+    topLineWidth: 0.55,
+    bottomLineWidth: 0.55,
+    lineColor: COLORS.muted,
     showValueSeparator: false
   })
   y -= TEMPLATE_TOTAL_ROW_HEIGHT
