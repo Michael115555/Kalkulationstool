@@ -1033,7 +1033,7 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     y -= TEMPLATE_ROW_HEIGHT
   })
 
-  drawTemplateTotalRow(layout, y, 'GESAMT', formatTotalAmount(totalAmount) || 'CHF -', {
+  drawTemplateTotalRow(layout, y, 'GESAMTSUMME', formatTotalAmount(totalAmount) || 'CHF -', {
     bold: true,
     color: COLORS.accentDark,
     height: TEMPLATE_TOTAL_ROW_HEIGHT,

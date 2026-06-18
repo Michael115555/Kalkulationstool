@@ -121,7 +121,7 @@ const normalizeManualEinkaufspreis = (position) => {
           <th scope="col" class="text-end">Menge</th>
           <th scope="col" class="text-end price-header">VP (CHF)</th>
           <th scope="col" class="text-end price-header">EP (CHF)</th>
-          <th scope="col" class="text-end total-header">Total (CHF)</th>
+          <th scope="col" class="text-end total-header">Gesamtsumme (CHF)</th>
           <th scope="col" class="text-center">Aktion</th>
         </tr>
       </thead>
@@ -260,7 +260,7 @@ const normalizeManualEinkaufspreis = (position) => {
               class="form-control control-field text-end readonly-price"
               readonly
               tabindex="-1"
-              aria-label="Positionstotal"
+              aria-label="Positionsgesamtsumme"
             />
           </td>
 

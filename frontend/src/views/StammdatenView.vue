@@ -18,7 +18,7 @@
             <table class="table align-middle mb-0 table-bordered customers-table">
               <thead>
                 <tr>
-                  <th scope="col">Kundenname</th>
+                  <th scope="col">Firma</th>
                   <th scope="col">Ansprechperson</th>
                   <th scope="col">Strasse</th>
                   <th scope="col">PLZ / Ort</th>
@@ -38,9 +38,9 @@
                     <input
                       v-model="customer.name"
                       class="form-control control-field"
-                      placeholder="Kundenname"
+                      placeholder="Firma"
                       maxlength="255"
-                      aria-label="Kundenname"
+                      aria-label="Firma"
                       @input="scheduleCustomerAutoSave(customer)"
                     />
                   </td>
@@ -180,7 +180,7 @@
           </h2>
 
           <p class="confirm-delete-text">
-            Möchtest du „{{ customerToDelete.name || 'Ohne Kundennamen' }}“ wirklich löschen?
+            Möchtest du „{{ customerToDelete.name || 'Ohne Firma' }}“ wirklich löschen?
           </p>
         </div>
 
@@ -386,7 +386,7 @@ function getCustomerSaveButtonTitle(customer) {
   }
 
   if (customer.isNew && !customer.name.trim()) {
-    return 'Kundenname eingeben, um zu speichern'
+    return 'Firma eingeben, um zu speichern'
   }
 
   if (!isCustomerPostalCodeValid(customer)) {

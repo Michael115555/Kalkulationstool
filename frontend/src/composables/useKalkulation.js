@@ -1429,7 +1429,7 @@ export const useKalkulation = (options = {}) => {
           { key: 'menge', label: 'Menge' },
           { key: 'vp', label: 'VP (CHF)' },
           { key: 'ep', label: 'EP (CHF)' },
-          { key: 'total', label: 'Total (CHF)' }
+          { key: 'total', label: 'Gesamtsumme (CHF)' }
         ],
         rows: positions.value.map((position, index) => ({
           index: index + 1,

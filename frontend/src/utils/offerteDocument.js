@@ -52,7 +52,7 @@ const getProjectTitle = (projekt, displaySnapshot) => {
 
 const getProjectFieldRows = ({ projekt, kunde, verkaeuferName, displaySnapshot }) => {
   const calculation = projekt?.calculation ?? {}
-  const kundenname = isFilled(kunde?.firmenname)
+  const firma = isFilled(kunde?.firmenname)
     ? kunde.firmenname
     : getDisplayFieldValue(displaySnapshot, 'project', 'kunde', calculation.kundeName)
   const verkaeufer = isFilled(verkaeuferName)
@@ -62,7 +62,7 @@ const getProjectFieldRows = ({ projekt, kunde, verkaeuferName, displaySnapshot }
   return [
     {
       label: 'Kunde',
-      value: kundenname
+      value: firma
     },
     {
       label: 'Kontakt',

@@ -397,7 +397,7 @@ const validateSwissPhone = (value, fieldName = 'Telefon') => {
  * Validiert Kunde Payload
  */
 const validateKundePayload = (payload = {}) => {
-  const firmenname = validateString(payload.firmenname, 'Kundenname', 1, 255)
+  const firmenname = validateString(payload.firmenname, 'Firma', 1, 255)
   const kontaktname = validateOptionalString(payload.kontaktname, 'Kontaktname', 255)
   const strasse = validateOptionalString(payload.strasse, 'Strasse', 255)
   const plz = validateOptionalDigits(payload.plz, 'PLZ', 32)
