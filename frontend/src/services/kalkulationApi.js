@@ -3,6 +3,22 @@ const DEFAULT_API_BASE_URL = 'http://localhost:3001'
 const responseCache = new Map()
 const pendingRequests = new Map()
 
+const buildQueryString = (params = {}) => {
+  const searchParams = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === null || value === undefined || value === '') {
+      return
+    }
+
+    searchParams.set(key, String(value))
+  })
+
+  const queryString = searchParams.toString()
+
+  return queryString ? `?${queryString}` : ''
+}
+
 export const createKalkulationApi = (
   baseUrl = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL
 ) => {
@@ -12,10 +28,26 @@ export const createKalkulationApi = (
     responseCache.get(getCacheKey(path, method))
 
   const clearCache = (paths) => {
-    paths.forEach((path) => {
-      responseCache.delete(getCacheKey(path))
-      pendingRequests.delete(getCacheKey(path))
-    })
+    const clearMatchingEntries = (store) => {
+      Array.from(store.keys()).forEach((key) => {
+        const shouldClear = paths.some((path) =>
+          key.startsWith(getCacheKey(path))
+        )
+
+        if (shouldClear) {
+          store.delete(key)
+        }
+      })
+    }
+
+    clearMatchingEntries(responseCache)
+    clearMatchingEntries(pendingRequests)
+  }
+
+  const listPath = (path, params) => {
+    const queryString = buildQueryString(params)
+
+    return `${path}${queryString}`
   }
 
   const clearCustomerCache = () => {
@@ -88,7 +120,7 @@ export const createKalkulationApi = (
 
   return {
     getKatalog: () => cachedRequestJson('/api/katalog'),
-    getKunden: () => cachedRequestJson('/api/kunden'),
+    getKunden: (params) => cachedRequestJson(listPath('/api/kunden', params)),
     getVerkaeufer: () => cachedRequestJson('/api/verkaeufer'),
     createKunde: (payload) =>
       requestJson('/api/kunden', {
@@ -114,7 +146,8 @@ export const createKalkulationApi = (
         return result
       }),
     getKonfigurationen: () => cachedRequestJson('/api/konfigurationen'),
-    getProjekte: () => cachedRequestJson('/api/projekte'),
+    getKonfiguration: (id) => cachedRequestJson(`/api/konfigurationen/${id}`),
+    getProjekte: (params) => cachedRequestJson(listPath('/api/projekte', params)),
     createKonfiguration: (payload) =>
       requestJson('/api/konfigurationen', {
         method: 'POST',
@@ -172,11 +205,11 @@ export const createKalkulationApi = (
     },
     prefetchRouteData: (routeName) => {
       if (routeName === 'stammdaten') {
-        return prefetchPaths(['/api/kunden', '/api/verkaeufer'])
+        return prefetchPaths(['/api/kunden?page=1&pageSize=10', '/api/verkaeufer'])
       }
 
       if (routeName === 'projekte') {
-        return prefetchPaths(['/api/projekte', '/api/kunden', '/api/verkaeufer'])
+        return prefetchPaths(['/api/projekte?page=1&pageSize=10'])
       }
 
       if (routeName === 'projektEditor') {

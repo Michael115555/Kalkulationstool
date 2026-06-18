@@ -7,6 +7,7 @@ import { buildOffertePdfBytes } from '../utils/offertePdf'
 
 const api = createKalkulationApi()
 const LOADING_INDICATOR_DELAY = 140
+const PROJECT_PAGE_SIZE = 10
 
 const isLoading = ref(false)
 const hasLoadedProjekte = ref(false)
@@ -14,19 +15,23 @@ const errorMessage = ref('')
 const projekte = ref([])
 const kunden = ref([])
 const verkaeufer = ref([])
+const projectPage = ref(1)
+const projectTotal = ref(0)
 const projectOverlay = ref(null)
 const projectEditorView = ref(null)
 const isCreatingOfferteProjektId = ref(null)
 const generatedPdfUrls = new Set()
 let loadingIndicatorTimer = null
 
-const sortedProjekte = computed(() =>
-  [...projekte.value].sort((a, b) => {
-    const idA = Number(a.id ?? 0)
-    const idB = Number(b.id ?? 0)
-
-    return idB - idA
-  })
+const sortedProjekte = computed(() => projekte.value)
+const projectTotalPages = computed(() =>
+  Math.max(1, Math.ceil(projectTotal.value / PROJECT_PAGE_SIZE))
+)
+const projectRangeStart = computed(() =>
+  projectTotal.value === 0 ? 0 : (projectPage.value - 1) * PROJECT_PAGE_SIZE + 1
+)
+const projectRangeEnd = computed(() =>
+  Math.min(projectTotal.value, projectPage.value * PROJECT_PAGE_SIZE)
 )
 
 const getKundeId = (projekt) =>
@@ -36,8 +41,8 @@ const getKundeId = (projekt) =>
   null
 
 const getKunde = (projekt) =>
-  kunden.value.find((kunde) => Number(kunde.id) === Number(getKundeId(projekt))) ??
   projekt.kunde ??
+  kunden.value.find((kunde) => Number(kunde.id) === Number(getKundeId(projekt))) ??
   null
 
 const getProjektKunde = (projekt) =>
@@ -70,6 +75,16 @@ const getProjektName = (projekt) => {
 }
 
 const getProjektVerkaeufer = (projekt) => {
+  if (projekt.verkaeufer?.name) {
+    return projekt.verkaeufer.name
+  }
+
+  const embeddedVerkaeufer = projekt.kunde?.verkaeufer
+
+  if (embeddedVerkaeufer) {
+    return `${embeddedVerkaeufer.vorname ?? ''} ${embeddedVerkaeufer.nachname ?? ''}`.trim()
+  }
+
   const kunde = getKunde(projekt)
   const verkaeuferId =
     kunde?.verkaeuferId ??
@@ -83,6 +98,9 @@ const getProjektVerkaeufer = (projekt) => {
 
   return eintrag?.name ?? 'Kein Verkäufer'
 }
+
+const getProjectNumber = (index) =>
+  Math.max(projectTotal.value - ((projectPage.value - 1) * PROJECT_PAGE_SIZE + index), 1)
 
 const getPositionenCount = (projekt) =>
   projekt.positionsCount ??
@@ -101,19 +119,23 @@ const loadProjekte = async () => {
   errorMessage.value = ''
 
   try {
-    const [
-      loadedProjekte,
-      loadedKunden,
-      loadedVerkaeufer
-    ] = await Promise.all([
-      api.getProjekte(),
-      api.getKunden(),
-      api.getVerkaeufer()
-    ])
+    const loadedProjekte = await api.getProjekte({
+      page: projectPage.value,
+      pageSize: PROJECT_PAGE_SIZE
+    })
 
-    projekte.value = loadedProjekte
-    kunden.value = loadedKunden
-    verkaeufer.value = loadedVerkaeufer
+    if (
+      loadedProjekte.total > 0 &&
+      !loadedProjekte.items.length &&
+      projectPage.value > 1
+    ) {
+      projectPage.value = Math.max(1, Math.ceil(loadedProjekte.total / PROJECT_PAGE_SIZE))
+      await loadProjekte()
+      return
+    }
+
+    projekte.value = loadedProjekte.items
+    projectTotal.value = loadedProjekte.total
     hasLoadedProjekte.value = true
   } catch (error) {
     errorMessage.value = `Projekte konnten nicht geladen werden: ${error.message}`
@@ -124,20 +146,7 @@ const loadProjekte = async () => {
 }
 
 const hydrateProjekteFromCache = () => {
-  const cachedData = api.getCachedRouteData('projekte')
-
-  if (!cachedData) {
-    return false
-  }
-
-  projekte.value = cachedData.projekte
-  kunden.value = cachedData.kunden
-  verkaeufer.value = cachedData.verkaeufer
-  hasLoadedProjekte.value = true
-  isLoading.value = false
-  errorMessage.value = ''
-
-  return true
+  return false
 }
 
 const projektToDelete = ref(null)
@@ -193,12 +202,7 @@ const editProjekt = (projekt) => {
 }
 
 const getFullProjektForOfferte = async (projekt) => {
-  const konfigurationen = await api.getKonfigurationen()
-
-  return (
-    konfigurationen.find((konfiguration) => Number(konfiguration.id) === Number(projekt.id)) ??
-    projekt
-  )
+  return api.getKonfiguration(projekt.id)
 }
 
 const escapeStatusHtml = (value) =>
@@ -308,6 +312,7 @@ const closeProjectOverlay = () => {
 
 const handleProjectSaved = async () => {
   closeProjectOverlay()
+  projectPage.value = 1
   await loadProjekte()
 }
 
@@ -332,18 +337,32 @@ const confirmDeleteProjekt = async () => {
 
   try {
     await api.deleteKonfiguration(projektToDelete.value.id)
-
-    projekte.value = projekte.value.filter(
-      (projekt) => projekt.id !== projektToDelete.value.id
-    )
-
     projektToDelete.value = null
     errorMessage.value = ''
+    await loadProjekte()
   } catch (error) {
     errorMessage.value = `Projekt konnte nicht gelöscht werden: ${error.message}`
   } finally {
     isDeletingProjekt.value = false
   }
+}
+
+const goToPreviousProjectPage = async () => {
+  if (projectPage.value <= 1 || isLoading.value) {
+    return
+  }
+
+  projectPage.value -= 1
+  await loadProjekte()
+}
+
+const goToNextProjectPage = async () => {
+  if (projectPage.value >= projectTotalPages.value || isLoading.value) {
+    return
+  }
+
+  projectPage.value += 1
+  await loadProjekte()
 }
 
 const hasHydratedProjekte = hydrateProjekteFromCache()
@@ -399,7 +418,7 @@ onBeforeUnmount(() => {
                   class="project-table-row"
                 >
                   <td class="text-end project-number-cell">
-                    {{ sortedProjekte.length - index }}
+                    {{ getProjectNumber(index) }}
                   </td>
 
                   <td>{{ getProjektName(projekt) }}</td>
@@ -479,6 +498,42 @@ onBeforeUnmount(() => {
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <div
+            v-if="hasLoadedProjekte && !errorMessage"
+            class="project-pagination"
+            aria-label="Projektseiten"
+          >
+            <div class="project-pagination-summary">
+              {{ projectRangeStart }}-{{ projectRangeEnd }} von {{ projectTotal }} Projekten
+            </div>
+
+            <div class="project-pagination-controls">
+              <button
+                type="button"
+                class="project-pagination-button"
+                aria-label="Vorherige Projektseite"
+                :disabled="projectPage <= 1 || isLoading"
+                @click="goToPreviousProjectPage"
+              >
+                <i class="pi pi-chevron-left" aria-hidden="true"></i>
+              </button>
+
+              <span class="project-pagination-page">
+                Seite {{ projectPage }} von {{ projectTotalPages }}
+              </span>
+
+              <button
+                type="button"
+                class="project-pagination-button"
+                aria-label="Nächste Projektseite"
+                :disabled="projectPage >= projectTotalPages || isLoading"
+                @click="goToNextProjectPage"
+              >
+                <i class="pi pi-chevron-right" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -769,6 +824,65 @@ onBeforeUnmount(() => {
   border-radius: 0.2rem;
   outline: 2px solid var(--kt-color-primary-border-subtle);
   outline-offset: 0.2rem;
+}
+
+.project-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  min-height: 3rem;
+  margin-top: 0.75rem;
+  color: var(--kt-color-text-secondary);
+  font-size: var(--kt-font-size-sm);
+  font-weight: 500;
+}
+
+.project-pagination-summary,
+.project-pagination-page {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.project-pagination-controls {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.project-pagination-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--kt-color-border);
+  border-radius: var(--kt-border-radius-sm);
+  background: var(--kt-color-bg-white);
+  color: var(--kt-color-text-secondary);
+  transition:
+    background-color var(--kt-transition-fast),
+    border-color var(--kt-transition-fast),
+    color var(--kt-transition-fast);
+}
+
+.project-pagination-button:hover:not(:disabled),
+.project-pagination-button:focus-visible:not(:disabled) {
+  border-color: var(--kt-color-text-light);
+  background: var(--kt-color-bg-light);
+  color: var(--kt-color-text-primary);
+}
+
+.project-pagination-button:focus-visible {
+  outline: 2px solid var(--kt-color-primary-border-subtle);
+  outline-offset: 0.18rem;
+}
+
+.project-pagination-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .project-workspace-overlay {

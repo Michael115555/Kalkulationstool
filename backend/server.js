@@ -15,9 +15,60 @@ const prisma = new PrismaClient()
 const port = Number(process.env.PORT || 3001)
 const MAX_JSON_BODY_BYTES = 1024 * 1024
 const DEMO_VERKAEUFER_EMAIL = 'demo.verkaeufer@local'
+const DEFAULT_PAGE_SIZE = 10
+const MAX_PAGE_SIZE = 100
 
 const amountFromDb = (value) => Number(value ?? 0) / 100
 const amountToDb = (value) => Math.round(Number(value ?? 0) * 100)
+
+const parsePositiveQueryInteger = (searchParams, name, fallback) => {
+  const value = searchParams.get(name)
+
+  if (value === null || value === '') {
+    return fallback
+  }
+
+  const parsed = Number(value)
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new ApiError(`${name} muss eine positive Ganzzahl sein`, 400)
+  }
+
+  return parsed
+}
+
+const getListQuery = (url) => {
+  const page = parsePositiveQueryInteger(url.searchParams, 'page', 1)
+  const requestedPageSize = parsePositiveQueryInteger(
+    url.searchParams,
+    'pageSize',
+    DEFAULT_PAGE_SIZE
+  )
+  const pageSize = Math.min(requestedPageSize, MAX_PAGE_SIZE)
+  const query = String(url.searchParams.get('query') ?? '').trim()
+  const enabled =
+    url.searchParams.has('page') ||
+    url.searchParams.has('pageSize') ||
+    url.searchParams.has('query')
+
+  if (query.length > 100) {
+    throw new ApiError('query ist zu lang (Maximum 100 Zeichen)', 400)
+  }
+
+  return {
+    enabled,
+    page,
+    pageSize,
+    query
+  }
+}
+
+const createPage = ({ items, total, page, pageSize }) => ({
+  items,
+  total,
+  page,
+  pageSize
+})
 
 const sendJson = (response, statusCode, payload) => {
   response.writeHead(statusCode, {
@@ -216,8 +267,49 @@ const serializeKunde = (kunde) => ({
     : null
 })
 
-const getKunden = async () => {
+const createKundenWhere = (query) => {
+  if (!query) {
+    return {}
+  }
+
+  return {
+    OR: [
+      { firmenname: { contains: query } },
+      { kontaktname: { contains: query } },
+      { strasse: { contains: query } },
+      { plz: { contains: query } },
+      { ort: { contains: query } }
+    ]
+  }
+}
+
+const getKunden = async (options = {}) => {
+  const where = createKundenWhere(options.query)
+
+  if (options.paginated) {
+    const [total, kunden] = await prisma.$transaction([
+      prisma.kunde.count({ where }),
+      prisma.kunde.findMany({
+        where,
+        orderBy: { firmenname: 'asc' },
+        skip: (options.page - 1) * options.pageSize,
+        take: options.pageSize,
+        include: {
+          verkaeufer: true
+        }
+      })
+    ])
+
+    return createPage({
+      items: kunden.map(serializeKunde),
+      total,
+      page: options.page,
+      pageSize: options.pageSize
+    })
+  }
+
   const kunden = await prisma.kunde.findMany({
+    where,
     orderBy: { firmenname: 'asc' },
     include: {
       verkaeufer: true
@@ -334,6 +426,10 @@ const serializeKonfiguration = (konfiguration) => ({
   id: konfiguration.id,
   name: konfiguration.name,
   kundeId: konfiguration.kundeId,
+  kunde: konfiguration.kunde ? serializeKunde(konfiguration.kunde) : null,
+  verkaeufer: konfiguration.kunde?.verkaeufer
+    ? serializeVerkaeufer(konfiguration.kunde.verkaeufer)
+    : null,
   druckermodellId: konfiguration.druckermodellId,
   druckerVarianteId: konfiguration.druckerVarianteId,
   total: amountFromDb(konfiguration.total),
@@ -354,11 +450,15 @@ const isCountedProjectPosition = (position) =>
 const serializeProjektSummary = (konfiguration) => {
   const calculation = parseSnapshot(konfiguration)
   const positions = Array.isArray(calculation.positions) ? calculation.positions : []
+  const kunde = konfiguration.kunde ?? null
+  const verkaeufer = kunde?.verkaeufer ?? null
 
   return {
     id: konfiguration.id,
     name: konfiguration.name,
     kundeId: konfiguration.kundeId,
+    kunde: kunde ? serializeKunde(kunde) : null,
+    verkaeufer: verkaeufer ? serializeVerkaeufer(verkaeufer) : null,
     druckermodellId: konfiguration.druckermodellId,
     druckerVarianteId: konfiguration.druckerVarianteId,
     total: amountFromDb(konfiguration.total),
@@ -374,6 +474,40 @@ const serializeProjektSummary = (konfiguration) => {
   }
 }
 
+const createProjekteWhere = (query) => {
+  if (!query) {
+    return {}
+  }
+
+  return {
+    OR: [
+      { name: { contains: query } },
+      {
+        kunde: {
+          is: {
+            firmenname: { contains: query }
+          }
+        }
+      },
+      {
+        kunde: {
+          is: {
+            kontaktname: { contains: query }
+          }
+        }
+      }
+    ]
+  }
+}
+
+const projectSummaryInclude = {
+  kunde: {
+    include: {
+      verkaeufer: true
+    }
+  }
+}
+
 const getKonfigurationen = async () => {
   const konfigurationen = await prisma.konfiguration.findMany({
     orderBy: [{ druckermodellId: 'asc' }, { erstelltAm: 'asc' }]
@@ -382,9 +516,44 @@ const getKonfigurationen = async () => {
   return konfigurationen.map(serializeKonfiguration)
 }
 
-const getProjekte = async () => {
+const getKonfiguration = async (id) => {
+  validateInteger(id, 'Konfiguration ID')
+
+  const konfiguration = await prisma.konfiguration.findUniqueOrThrow({
+    where: { id },
+    include: projectSummaryInclude
+  })
+
+  return serializeKonfiguration(konfiguration)
+}
+
+const getProjekte = async (options = {}) => {
+  const where = createProjekteWhere(options.query)
+
+  if (options.paginated) {
+    const [total, konfigurationen] = await prisma.$transaction([
+      prisma.konfiguration.count({ where }),
+      prisma.konfiguration.findMany({
+        where,
+        orderBy: [{ id: 'desc' }],
+        skip: (options.page - 1) * options.pageSize,
+        take: options.pageSize,
+        include: projectSummaryInclude
+      })
+    ])
+
+    return createPage({
+      items: konfigurationen.map(serializeProjektSummary),
+      total,
+      page: options.page,
+      pageSize: options.pageSize
+    })
+  }
+
   const konfigurationen = await prisma.konfiguration.findMany({
-    orderBy: [{ druckermodellId: 'asc' }, { erstelltAm: 'asc' }]
+    where,
+    orderBy: [{ druckermodellId: 'asc' }, { erstelltAm: 'asc' }],
+    include: projectSummaryInclude
   })
 
   return konfigurationen.map(serializeProjektSummary)
@@ -456,7 +625,18 @@ const handleRequest = async (request, response) => {
     }
 
     if (request.method === 'GET' && url.pathname === '/api/kunden') {
-      sendJson(response, 200, await getKunden())
+      const listQuery = getListQuery(url)
+
+      sendJson(
+        response,
+        200,
+        await getKunden({
+          paginated: listQuery.enabled,
+          page: listQuery.page,
+          pageSize: listQuery.pageSize,
+          query: listQuery.query
+        })
+      )
       return
     }
 
@@ -466,7 +646,18 @@ const handleRequest = async (request, response) => {
     }
 
     if (request.method === 'GET' && url.pathname === '/api/projekte') {
-      sendJson(response, 200, await getProjekte())
+      const listQuery = getListQuery(url)
+
+      sendJson(
+        response,
+        200,
+        await getProjekte({
+          paginated: listQuery.enabled,
+          page: listQuery.page,
+          pageSize: listQuery.pageSize,
+          query: listQuery.query
+        })
+      )
       return
     }
 
@@ -499,6 +690,11 @@ const handleRequest = async (request, response) => {
     }
 
     const konfigurationMatch = url.pathname.match(/^\/api\/konfigurationen\/(\d+)$/)
+
+    if (konfigurationMatch && request.method === 'GET') {
+      sendJson(response, 200, await getKonfiguration(Number(konfigurationMatch[1])))
+      return
+    }
 
     if (konfigurationMatch && request.method === 'PUT') {
       sendJson(

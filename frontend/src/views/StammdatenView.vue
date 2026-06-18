@@ -30,114 +30,45 @@
                 <tr
                   v-for="customer in customers"
                   :key="customer.id"
+                  class="customer-table-row"
                   :class="{ 'customer-active-row': isActiveCustomer(customer) }"
                   @click="rememberCustomerForCalculation(customer)"
                   @focusin="rememberCustomerForCalculation(customer)"
                 >
-                  <td>
-                    <input
-                      v-model="customer.name"
-                      class="form-control control-field"
-                      placeholder="Firma"
-                      maxlength="255"
-                      aria-label="Firma"
-                      @input="scheduleCustomerAutoSave(customer)"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      v-model="customer.contactPerson"
-                      class="form-control control-field"
-                      placeholder="Ansprechperson"
-                      maxlength="255"
-                      aria-label="Ansprechperson"
-                      @input="scheduleCustomerAutoSave(customer)"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      v-model="customer.street"
-                      class="form-control control-field"
-                      placeholder="Strasse"
-                      maxlength="255"
-                      autocomplete="new-password"
-                      aria-label="Strasse"
-                      @input="scheduleCustomerAutoSave(customer)"
-                    />
-                  </td>
-                  <td>
-                    <div class="customer-location-fields">
-                      <input
-                        v-model="customer.postalCode"
-                        class="form-control control-field postal-code-control-field"
-                        placeholder="PLZ"
-                        maxlength="32"
-                        inputmode="numeric"
-                        pattern="[0-9]*"
-                        autocomplete="new-password"
-                        aria-label="PLZ"
-                        @input="handlePostalCodeInput(customer)"
-                      />
-                      <input
-                        v-model="customer.city"
-                        class="form-control control-field"
-                        placeholder="Ort"
-                        maxlength="255"
-                        autocomplete="new-password"
-                        aria-label="Ort"
-                        @input="scheduleCustomerAutoSave(customer)"
-                      />
-                    </div>
-                  </td>
-                  <td>
-                    <select
-                      v-model="customer.salespersonId"
-                      class="form-select control-field"
-                      aria-label="Verkäufer"
-                      @change="scheduleCustomerAutoSave(customer)"
-                    >
-                      <option v-if="!salespeople.length" value="">Demo Verkäufer</option>
-                      <option
-                        v-for="salesperson in salespeople"
-                        :key="salesperson.id"
-                        :value="salesperson.id"
-                      >
-                        {{ salesperson.name }}
-                      </option>
-                    </select>
-                  </td>
+                  <td>{{ customer.name || 'Ohne Firma' }}</td>
+                  <td>{{ formatCustomerValue(customer.contactPerson) }}</td>
+                  <td>{{ formatCustomerValue(customer.street) }}</td>
+                  <td>{{ formatCustomerLocation(customer) }}</td>
+                  <td>{{ getCustomerSalespersonName(customer) }}</td>
                   <td class="text-center align-middle">
                     <div class="customer-action-buttons">
-                      <span
-                        v-if="!customer.isSaving && !isCustomerDirty(customer)"
-                        class="customer-save-state is-saved"
-                        :title="getCustomerSaveButtonTitle(customer)"
-                        aria-label="Kunde gespeichert"
-                      >
-                        <i class="pi pi-check" aria-hidden="true"></i>
-                      </span>
-
                       <button
-                        v-else
                         type="button"
-                        :class="['customer-row-button', 'customer-save-button', getCustomerSaveButtonClass(customer)]"
-                        :aria-label="getCustomerSaveButtonTitle(customer)"
-                        :title="getCustomerSaveButtonTitle(customer)"
-                        :disabled="customer.isSaving || !canSaveCustomer(customer)"
-                        @click.stop="saveCustomerNow(customer)"
+                        class="table-edit-button"
+                        aria-label="Kunde bearbeiten"
+                        title="Kunde bearbeiten"
+                        @click.stop="editCustomer(customer)"
                       >
-                        <i :class="getCustomerSaveIconClass(customer)" aria-hidden="true"></i>
+                        <i class="pi pi-pencil" aria-hidden="true"></i>
                       </button>
 
                       <button
                         type="button"
                         class="table-delete-button"
                         aria-label="Kunde löschen"
-                        :disabled="customer.isDeleting || (customers.length === 1 && customer.isNew)"
+                        title="Kunde löschen"
+                        :disabled="customer.isDeleting"
                         @click.stop="askDeleteCustomer(customer)"
                       >
                         <i class="pi pi-trash" aria-hidden="true"></i>
                       </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="customers.length === 0" class="customer-empty-table-row">
+                  <td colspan="6">
+                    <div class="customer-empty-table-text">
+                      Noch keine Kunden vorhanden.
                     </div>
                   </td>
                 </tr>
@@ -158,6 +89,42 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <div
+            v-if="hasLoadedCustomers && !customerError"
+            class="customer-pagination"
+            aria-label="Kundenseiten"
+          >
+            <div class="customer-pagination-summary">
+              {{ customerRangeStart }}-{{ customerRangeEnd }} von {{ customerTotal }} Kunden
+            </div>
+
+            <div class="customer-pagination-controls">
+              <button
+                type="button"
+                class="customer-pagination-button"
+                aria-label="Vorherige Kundenseite"
+                :disabled="customerPage <= 1 || isLoadingCustomers"
+                @click="goToPreviousCustomerPage"
+              >
+                <i class="pi pi-chevron-left" aria-hidden="true"></i>
+              </button>
+
+              <span class="customer-pagination-page">
+                Seite {{ customerPage }} von {{ customerTotalPages }}
+              </span>
+
+              <button
+                type="button"
+                class="customer-pagination-button"
+                aria-label="Nächste Kundenseite"
+                :disabled="customerPage >= customerTotalPages || isLoadingCustomers"
+                @click="goToNextCustomerPage"
+              >
+                <i class="pi pi-chevron-right" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -205,11 +172,137 @@
         </div>
       </div>
     </div>
+
+    <div
+      v-if="customerDraft"
+      class="customer-dialog-backdrop"
+      @click.self="cancelCustomerDialog"
+    >
+      <form
+        class="customer-dialog"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="customerDialogTitle"
+        @submit.prevent="saveCustomerDialog"
+      >
+        <div class="customer-dialog-content">
+          <h2 class="customer-dialog-title">
+            {{ customerDialogTitle }}
+          </h2>
+
+          <div v-if="customerDialogError" class="alert alert-danger mb-0">
+            {{ customerDialogError }}
+          </div>
+
+          <div class="customer-dialog-grid">
+            <label class="customer-dialog-field">
+              <span>Firma</span>
+              <input
+                v-model="customerDraft.name"
+                class="form-control control-field"
+                maxlength="255"
+                autocomplete="organization"
+                autofocus
+                @input="clearCustomerDialogError"
+              />
+            </label>
+
+            <label class="customer-dialog-field">
+              <span>Ansprechperson</span>
+              <input
+                v-model="customerDraft.contactPerson"
+                class="form-control control-field"
+                maxlength="255"
+                autocomplete="name"
+                @input="clearCustomerDialogError"
+              />
+            </label>
+
+            <label class="customer-dialog-field customer-dialog-field-wide">
+              <span>Strasse</span>
+              <input
+                v-model="customerDraft.street"
+                class="form-control control-field"
+                maxlength="255"
+                autocomplete="street-address"
+                @input="clearCustomerDialogError"
+              />
+            </label>
+
+            <label class="customer-dialog-field">
+              <span>PLZ</span>
+              <input
+                v-model="customerDraft.postalCode"
+                class="form-control control-field postal-code-control-field"
+                maxlength="32"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                autocomplete="postal-code"
+                @input="handleCustomerDraftPostalCodeInput"
+              />
+            </label>
+
+            <label class="customer-dialog-field">
+              <span>Ort</span>
+              <input
+                v-model="customerDraft.city"
+                class="form-control control-field"
+                maxlength="255"
+                autocomplete="address-level2"
+                @input="clearCustomerDialogError"
+              />
+            </label>
+
+            <label class="customer-dialog-field customer-dialog-field-wide">
+              <span>Verkäufer</span>
+              <select
+                v-model="customerDraft.salespersonId"
+                class="form-select control-field"
+                @change="clearCustomerDialogError"
+              >
+                <option v-if="!salespeople.length" value="">Demo Verkäufer</option>
+                <option
+                  v-for="salesperson in salespeople"
+                  :key="salesperson.id"
+                  :value="salesperson.id"
+                >
+                  {{ salesperson.name }}
+                </option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="customer-dialog-actions">
+          <button
+            type="button"
+            class="customer-dialog-button customer-dialog-button-secondary"
+            :disabled="isSavingCustomerDialog"
+            @click="cancelCustomerDialog"
+          >
+            <span>Abbrechen</span>
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+
+          <button
+            type="submit"
+            class="customer-dialog-button customer-dialog-button-primary"
+            :disabled="isSavingCustomerDialog || !canSaveCustomer(customerDraft)"
+          >
+            <i
+              :class="isSavingCustomerDialog ? 'pi pi-spinner pi-spin' : 'pi pi-save'"
+              aria-hidden="true"
+            ></i>
+            <span>{{ customerDialogSaveLabel }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
   </section>
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { createKalkulationApi } from '../services/kalkulationApi'
 import {
   forgetSelectedCustomerId,
@@ -220,6 +313,7 @@ import {
 const api = createKalkulationApi()
 const LOADING_INDICATOR_DELAY = 140
 const DEMO_VERKAEUFER_EMAIL = 'demo.verkaeufer@local'
+const CUSTOMER_PAGE_SIZE = 10
 
 const customers = ref([])
 const salespeople = ref([])
@@ -229,10 +323,37 @@ const customerError = ref('')
 const customerToDelete = ref(null)
 const isDeletingCustomer = ref(false)
 const activeCustomerId = ref(getRememberedSelectedCustomerId())
+const customerPage = ref(1)
+const customerTotal = ref(0)
+const customerDraft = ref(null)
+const customerDialogError = ref('')
+const isSavingCustomerDialog = ref(false)
 let loadingIndicatorTimer = null
-const autoSaveTimers = new Map()
-const AUTO_SAVE_DELAY = 550
-let isCustomerViewMounted = false
+
+const customerTotalPages = computed(() =>
+  Math.max(1, Math.ceil(customerTotal.value / CUSTOMER_PAGE_SIZE))
+)
+const customerRangeStart = computed(() =>
+  customerTotal.value === 0 ? 0 : (customerPage.value - 1) * CUSTOMER_PAGE_SIZE + 1
+)
+const customerRangeEnd = computed(() =>
+  Math.min(customerTotal.value, customerPage.value * CUSTOMER_PAGE_SIZE)
+)
+const isEditingCustomerDialog = computed(() =>
+  Boolean(customerDraft.value?.persistedId)
+)
+const customerDialogTitle = computed(() => {
+  if (!isEditingCustomerDialog.value) {
+    return 'Neuer Kunde'
+  }
+
+  const customerName = String(customerDraft.value?.name ?? '').trim()
+
+  return customerName ? `Kunde bearbeiten: ${customerName}` : 'Kunde bearbeiten'
+})
+const customerDialogSaveLabel = computed(() =>
+  isEditingCustomerDialog.value ? 'Änderungen speichern' : 'Kunde speichern'
+)
 
 function createId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -247,9 +368,6 @@ function createDraftCustomer() {
     id: createId(),
     persistedId: null,
     isNew: true,
-    isSaving: false,
-    hasPendingSave: false,
-    isDeleting: false,
     name: '',
     contactPerson: '',
     street: '',
@@ -265,20 +383,37 @@ function mapApiCustomer(customer) {
     id: customer.id,
     persistedId: customer.id,
     isNew: false,
-    isSaving: false,
-    hasPendingSave: false,
     isDeleting: false,
     name: customer.firmenname ?? '',
     contactPerson: customer.kontaktname ?? '',
     street: customer.strasse ?? '',
     postalCode: customer.plz ?? '',
     city: customer.ort ?? '',
-    salespersonId: customer.verkaeuferId ?? ''
+    salespersonId: customer.verkaeuferId ?? '',
+    salespersonName: customer.verkaeufer
+      ? `${customer.verkaeufer.vorname ?? ''} ${customer.verkaeufer.nachname ?? ''}`.trim()
+      : ''
   }
 
   mappedCustomer.original = createCustomerSnapshot(mappedCustomer)
 
   return mappedCustomer
+}
+
+function createEditableCustomer(customer) {
+  return {
+    id: createId(),
+    persistedId: customer.persistedId,
+    isNew: false,
+    name: customer.name,
+    contactPerson: customer.contactPerson,
+    street: customer.street,
+    postalCode: customer.postalCode,
+    city: customer.city,
+    salespersonId: customer.salespersonId || '',
+    salespersonName: customer.salespersonName || '',
+    original: { ...customer.original }
+  }
 }
 
 function createCustomerSnapshot(customer) {
@@ -288,17 +423,6 @@ function createCustomerSnapshot(customer) {
     street: customer.street.trim(),
     postalCode: customer.postalCode.trim(),
     city: customer.city.trim(),
-    salespersonId: customer.salespersonId || ''
-  }
-}
-
-function createCustomerInputSnapshot(customer) {
-  return {
-    name: customer.name,
-    contactPerson: customer.contactPerson,
-    street: customer.street,
-    postalCode: customer.postalCode,
-    city: customer.city,
     salespersonId: customer.salespersonId || ''
   }
 }
@@ -314,7 +438,36 @@ function createCustomerPayload(customer) {
   }
 }
 
+function formatCustomerValue(value) {
+  return String(value ?? '').trim() || '-'
+}
+
+function formatCustomerLocation(customer) {
+  const location = [customer.postalCode, customer.city]
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean)
+    .join(' ')
+
+  return location || '-'
+}
+
+function getCustomerSalespersonName(customer) {
+  if (customer.salespersonName) {
+    return customer.salespersonName
+  }
+
+  const salesperson = salespeople.value.find(
+    (entry) => Number(entry.id) === Number(customer.salespersonId)
+  )
+
+  return salesperson?.name ?? 'Kein Verkäufer'
+}
+
 function isCustomerDirty(customer) {
+  if (!customer) {
+    return false
+  }
+
   if (customer.isNew) {
     return true
   }
@@ -324,7 +477,8 @@ function isCustomerDirty(customer) {
 
 function canSaveCustomer(customer) {
   return Boolean(
-    customer.name.trim() &&
+    customer &&
+      customer.name.trim() &&
       isCustomerDirty(customer) &&
       isCustomerPostalCodeValid(customer)
   )
@@ -334,15 +488,81 @@ function isCustomerPostalCodeValid(customer) {
   return /^\d*$/.test(String(customer.postalCode ?? '').trim())
 }
 
-function handlePostalCodeInput(customer) {
+function normalizeCustomerPostalCode(customer) {
   customer.postalCode = String(customer.postalCode ?? '').replace(/\D/g, '')
-  scheduleCustomerAutoSave(customer)
 }
 
 function addCustomer() {
   const customer = createDraftCustomer()
   applyDemoSalesperson(customer)
-  customers.value.push(customer)
+  customerDraft.value = customer
+  customerDialogError.value = ''
+}
+
+function editCustomer(customer) {
+  rememberCustomerForCalculation(customer)
+  customerDraft.value = createEditableCustomer(customer)
+  customerDialogError.value = ''
+}
+
+function clearCustomerDialogError() {
+  customerDialogError.value = ''
+}
+
+function handleCustomerDraftPostalCodeInput() {
+  if (!customerDraft.value) {
+    return
+  }
+
+  normalizeCustomerPostalCode(customerDraft.value)
+  clearCustomerDialogError()
+}
+
+function cancelCustomerDialog() {
+  if (isSavingCustomerDialog.value) {
+    return
+  }
+
+  customerDraft.value = null
+  customerDialogError.value = ''
+}
+
+async function saveCustomerDialog() {
+  const customer = customerDraft.value
+
+  if (!customer || isSavingCustomerDialog.value) {
+    return
+  }
+
+  if (!canSaveCustomer(customer)) {
+    customerDialogError.value = !customer.name.trim()
+      ? 'Bitte Firma erfassen.'
+      : 'Bitte Kundendaten prüfen.'
+    return
+  }
+
+  isSavingCustomerDialog.value = true
+  customerDialogError.value = ''
+  customerError.value = ''
+
+  try {
+    const savedCustomer = customer.isNew
+      ? await api.createKunde(createCustomerPayload(customer))
+      : await api.updateKunde(customer.persistedId, createCustomerPayload(customer))
+    rememberSelectedCustomerId(savedCustomer.id)
+    activeCustomerId.value = Number(savedCustomer.id)
+
+    if (customer.isNew) {
+      customerPage.value = 1
+    }
+
+    customerDraft.value = null
+    await loadCustomers()
+  } catch (error) {
+    customerDialogError.value = `Kunde konnte nicht gespeichert werden: ${error.message}`
+  } finally {
+    isSavingCustomerDialog.value = false
+  }
 }
 
 function filterDemoSalespeople(entries) {
@@ -356,8 +576,12 @@ function getDemoSalespersonId() {
 function applyDemoSalesperson(customer) {
   const demoSalespersonId = getDemoSalespersonId()
 
-  if (demoSalespersonId) {
+  if (demoSalespersonId && !customer.salespersonId) {
     customer.salespersonId = demoSalespersonId
+
+    if (customer.original) {
+      customer.original.salespersonId = demoSalespersonId
+    }
   }
 }
 
@@ -380,182 +604,7 @@ function isActiveCustomer(customer) {
   )
 }
 
-function getCustomerSaveButtonTitle(customer) {
-  if (customer.isSaving) {
-    return 'Kunde wird gespeichert'
-  }
-
-  if (customer.isNew && !customer.name.trim()) {
-    return 'Firma eingeben, um zu speichern'
-  }
-
-  if (!isCustomerPostalCodeValid(customer)) {
-    return 'PLZ darf nur Zahlen enthalten'
-  }
-
-  if (customer.hasPendingSave || isCustomerDirty(customer)) {
-    return 'Kunde speichern'
-  }
-
-  return 'Kunde gespeichert'
-}
-
-function getCustomerSaveButtonClass(customer) {
-  if (customer.isSaving) {
-    return 'is-saving'
-  }
-
-  if (customer.hasPendingSave || (isCustomerDirty(customer) && customer.name.trim())) {
-    return 'is-dirty'
-  }
-
-  return 'is-saved'
-}
-
-function getCustomerSaveIconClass(customer) {
-  if (customer.isSaving) {
-    return ['pi', 'pi-spinner', 'pi-spin']
-  }
-
-  if (customer.hasPendingSave || (isCustomerDirty(customer) && customer.name.trim())) {
-    return ['pi', 'pi-save']
-  }
-
-  return ['pi', 'pi-check']
-}
-
-function clearCustomerAutoSave(customer) {
-  window.clearTimeout(autoSaveTimers.get(customer.id))
-  autoSaveTimers.delete(customer.id)
-}
-
-function scheduleCustomerAutoSave(customer) {
-  clearCustomerAutoSave(customer)
-
-  if (!isCustomerViewMounted || !customer.name.trim()) {
-    return
-  }
-
-  autoSaveTimers.set(
-    customer.id,
-    window.setTimeout(() => {
-      autoSaveTimers.delete(customer.id)
-      saveCustomer(customer)
-    }, AUTO_SAVE_DELAY)
-  )
-}
-
-function queueFollowUpCustomerSave(customer) {
-  if (!customer.hasPendingSave && !isCustomerDirty(customer)) {
-    return
-  }
-
-  if (isCustomerViewMounted) {
-    scheduleCustomerAutoSave(customer)
-    return
-  }
-
-  if (customer.hasPendingSave) {
-    customer.hasPendingSave = false
-    saveCustomer(customer)
-  }
-}
-
-function saveCustomerNow(customer) {
-  clearCustomerAutoSave(customer)
-  saveCustomer(customer)
-}
-
-function createCustomerSnapshotFromApi(customer) {
-  return {
-    name: (customer.firmenname ?? '').trim(),
-    contactPerson: (customer.kontaktname ?? '').trim(),
-    street: (customer.strasse ?? '').trim(),
-    postalCode: (customer.plz ?? '').trim(),
-    city: (customer.ort ?? '').trim(),
-    salespersonId: customer.verkaeuferId || ''
-  }
-}
-
-function createCustomerInputSnapshotFromApi(customer) {
-  return {
-    name: customer.firmenname ?? '',
-    contactPerson: customer.kontaktname ?? '',
-    street: customer.strasse ?? '',
-    postalCode: customer.plz ?? '',
-    city: customer.ort ?? '',
-    salespersonId: customer.verkaeuferId ?? ''
-  }
-}
-
-function createCustomerSnapshotFromInputSnapshot(snapshot, savedCustomer) {
-  return {
-    name: String(snapshot.name ?? '').trim(),
-    contactPerson: String(snapshot.contactPerson ?? '').trim(),
-    street: String(snapshot.street ?? '').trim(),
-    postalCode: String(snapshot.postalCode ?? '').trim(),
-    city: String(snapshot.city ?? '').trim(),
-    salespersonId: savedCustomer.verkaeuferId || snapshot.salespersonId || ''
-  }
-}
-
-function applySavedCustomer(customer, savedCustomer, savedInputSnapshot) {
-  const hasLocalInputChanges =
-    JSON.stringify(createCustomerInputSnapshot(customer)) !== JSON.stringify(savedInputSnapshot)
-  const savedApiInputSnapshot = createCustomerInputSnapshotFromApi(savedCustomer)
-  const serverNormalizedInput =
-    JSON.stringify(savedApiInputSnapshot) !== JSON.stringify(savedInputSnapshot)
-
-  customer.persistedId = savedCustomer.id
-  customer.isNew = false
-  customer.original = createCustomerSnapshotFromInputSnapshot(savedInputSnapshot, savedCustomer)
-
-  if (hasLocalInputChanges || serverNormalizedInput) {
-    return
-  }
-
-  customer.name = savedCustomer.firmenname ?? ''
-  customer.contactPerson = savedCustomer.kontaktname ?? ''
-  customer.street = savedCustomer.strasse ?? ''
-  customer.postalCode = savedCustomer.plz ?? ''
-  customer.city = savedCustomer.ort ?? ''
-  customer.salespersonId = savedCustomer.verkaeuferId ?? ''
-  customer.original = createCustomerSnapshotFromApi(savedCustomer)
-}
-
-async function saveCustomer(customer) {
-  if (!canSaveCustomer(customer)) {
-    return
-  }
-
-  if (customer.isSaving) {
-    customer.hasPendingSave = true
-    return
-  }
-
-  customer.isSaving = true
-  customer.hasPendingSave = false
-  customerError.value = ''
-
-  try {
-    const savedInputSnapshot = createCustomerInputSnapshot(customer)
-    const savedCustomer = customer.isNew
-      ? await api.createKunde(createCustomerPayload(customer))
-      : await api.updateKunde(customer.persistedId, createCustomerPayload(customer))
-
-    applySavedCustomer(customer, savedCustomer, savedInputSnapshot)
-    rememberSelectedCustomerId(savedCustomer.id)
-    activeCustomerId.value = Number(savedCustomer.id)
-  } catch (error) {
-    customerError.value = `Kunde konnte nicht gespeichert werden: ${error.message}`
-  } finally {
-    customer.isSaving = false
-    queueFollowUpCustomerSave(customer)
-  }
-}
-
 function askDeleteCustomer(customer) {
-  clearCustomerAutoSave(customer)
   customerToDelete.value = customer
 }
 
@@ -574,12 +623,6 @@ async function confirmDeleteCustomer() {
 
   const customer = customerToDelete.value
 
-  if (customer.isNew) {
-    removeDraftCustomer(customer)
-    customerToDelete.value = null
-    return
-  }
-
   customer.isDeleting = true
   isDeletingCustomer.value = true
   customerError.value = ''
@@ -590,26 +633,13 @@ async function confirmDeleteCustomer() {
     if (Number(activeCustomerId.value) === Number(customer.persistedId)) {
       activeCustomerId.value = null
     }
-    customers.value = customers.value.filter((entry) => entry.id !== customer.id)
-
-    if (!customers.value.length) {
-      customers.value.push(createDraftCustomer())
-    }
-
     customerToDelete.value = null
+    await loadCustomers()
   } catch (error) {
     customerError.value = `Kunde konnte nicht gelöscht werden: ${error.message}`
   } finally {
     customer.isDeleting = false
     isDeletingCustomer.value = false
-  }
-}
-
-function removeDraftCustomer(customer) {
-  customers.value = customers.value.filter((entry) => entry.id !== customer.id)
-
-  if (!customers.value.length) {
-    customers.value.push(createDraftCustomer())
   }
 }
 
@@ -623,22 +653,37 @@ async function loadCustomers() {
   customerError.value = ''
 
   try {
+    const customerRequest = api.getKunden({
+      page: customerPage.value,
+      pageSize: CUSTOMER_PAGE_SIZE
+    })
+    const salespeopleRequest = salespeople.value.length
+      ? Promise.resolve(salespeople.value)
+      : api.getVerkaeufer().then(filterDemoSalespeople)
     const [loadedCustomers, loadedSalespeople] = await Promise.all([
-      api.getKunden(),
-      api.getVerkaeufer()
+      customerRequest,
+      salespeopleRequest
     ])
 
-    customers.value = loadedCustomers.map(mapApiCustomer)
-    salespeople.value = filterDemoSalespeople(loadedSalespeople)
+    if (
+      loadedCustomers.total > 0 &&
+      !loadedCustomers.items.length &&
+      customerPage.value > 1
+    ) {
+      customerPage.value = Math.max(1, Math.ceil(loadedCustomers.total / CUSTOMER_PAGE_SIZE))
+      await loadCustomers()
+      return
+    }
+
+    customers.value = loadedCustomers.items.map(mapApiCustomer)
+    salespeople.value = loadedSalespeople
+    customerTotal.value = loadedCustomers.total
     applyDemoSalespersonToCustomers()
     hasLoadedCustomers.value = true
 
-    if (!customers.value.length) {
-      customers.value.push(createDraftCustomer())
-    }
   } catch (error) {
     customerError.value = `Kunden konnten nicht geladen werden: ${error.message}`
-    customers.value = [createDraftCustomer()]
+    customers.value = []
     hasLoadedCustomers.value = true
   } finally {
     window.clearTimeout(loadingIndicatorTimer)
@@ -647,48 +692,37 @@ async function loadCustomers() {
 }
 
 function hydrateCustomersFromCache() {
-  const cachedData = api.getCachedRouteData('stammdaten')
+  return false
+}
 
-  if (!cachedData) {
-    return false
+async function goToPreviousCustomerPage() {
+  if (customerPage.value <= 1 || isLoadingCustomers.value) {
+    return
   }
 
-  customers.value = cachedData.kunden.map(mapApiCustomer)
-  salespeople.value = filterDemoSalespeople(cachedData.verkaeufer)
-  applyDemoSalespersonToCustomers()
-  hasLoadedCustomers.value = true
-  isLoadingCustomers.value = false
-  customerError.value = ''
+  customerPage.value -= 1
+  await loadCustomers()
+}
 
-  if (!customers.value.length) {
-    customers.value.push(createDraftCustomer())
+async function goToNextCustomerPage() {
+  if (customerPage.value >= customerTotalPages.value || isLoadingCustomers.value) {
+    return
   }
 
-  return true
+  customerPage.value += 1
+  await loadCustomers()
 }
 
 const hasHydratedCustomers = hydrateCustomersFromCache()
 
 onMounted(() => {
-  isCustomerViewMounted = true
-
   if (!hasHydratedCustomers) {
     loadCustomers()
   }
 })
 
 onBeforeUnmount(() => {
-  isCustomerViewMounted = false
-
   window.clearTimeout(loadingIndicatorTimer)
-  autoSaveTimers.forEach((timer) => window.clearTimeout(timer))
-  autoSaveTimers.clear()
-
-  customers.value
-    .filter((customer) => canSaveCustomer(customer))
-    .forEach((customer) => {
-      saveCustomer(customer)
-    })
 })
 </script>
 
@@ -722,7 +756,7 @@ onBeforeUnmount(() => {
 
 .customers-table {
   width: 100%;
-  min-width: 72rem;
+  min-width: 58rem;
   margin-bottom: 0;
   border-style: hidden;
   table-layout: fixed;
@@ -744,6 +778,10 @@ onBeforeUnmount(() => {
   border-color: var(--kt-color-border);
 }
 
+.customers-table tbody .customer-table-row:hover td {
+  background-color: var(--kt-color-bg-light);
+}
+
 .customers-table.table-bordered > :not(caption) > * > * {
   border-color: var(--kt-color-border);
 }
@@ -757,7 +795,7 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(1),
 .customers-table td:nth-child(1) {
-  width: 19%;
+  width: 25%;
 }
 
 .customers-table th:nth-child(2),
@@ -767,12 +805,12 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(3),
 .customers-table td:nth-child(3) {
-  width: 22%;
+  width: 23%;
 }
 
 .customers-table th:nth-child(4),
 .customers-table td:nth-child(4) {
-  width: 20%;
+  width: 14%;
 }
 
 .customers-table th:nth-child(5),
@@ -782,17 +820,10 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(6),
 .customers-table td:nth-child(6) {
-  width: 5rem;
-  min-width: 5rem;
-  max-width: 5rem;
+  width: 5.1rem;
+  min-width: 5.1rem;
+  max-width: 5.1rem;
   text-align: center;
-}
-
-.customers-table input,
-.customers-table select {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
 }
 
 .control-field {
@@ -806,21 +837,6 @@ onBeforeUnmount(() => {
   line-height: 1.2;
 }
 
-.customers-table .form-select.control-field {
-  overflow: hidden;
-  padding-right: 2rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.customer-location-fields {
-  display: grid;
-  grid-template-columns: minmax(4.3rem, 0.72fr) minmax(6.5rem, 1.28fr);
-  gap: 0.32rem;
-  width: 100%;
-  min-width: 0;
-}
-
 .postal-code-control-field {
   font-variant-numeric: tabular-nums;
 }
@@ -829,61 +845,29 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
+  gap: 0.15rem;
 }
 
-.customer-row-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  transition: color 0.15s ease;
+.customers-table .table-edit-button,
+.customers-table .table-delete-button {
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
-.customer-save-button {
+.customers-table .table-edit-button .pi,
+.customers-table .table-delete-button .pi {
+  font-size: 0.95rem;
+}
+
+.customer-empty-table-row td {
+  padding: 0.8rem 1rem;
+}
+
+.customer-empty-table-text {
   color: var(--kt-color-text-tertiary);
-}
-
-.customer-save-state {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  color: var(--kt-color-text-light);
-  font-size: 1rem;
-}
-
-.customer-save-button.is-dirty,
-.customer-save-button.is-saving {
-  color: var(--kt-color-success);
-}
-
-.customer-save-button:disabled {
-  opacity: 1;
-}
-
-.customer-save-button:hover:not(:disabled),
-.customer-save-button:focus-visible:not(:disabled) {
-  color: var(--kt-color-success-dark);
-}
-
-.customer-row-button:focus-visible {
-  border-radius: 0.2rem;
-  outline-offset: 0.2rem;
-}
-
-.customer-row-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.customer-row-button .pi {
-  font-size: 1rem;
+  font-size: var(--kt-font-size-md);
+  font-weight: 500;
+  text-align: center;
 }
 
 .customer-add-table-row td {
@@ -939,6 +923,192 @@ onBeforeUnmount(() => {
   border-radius: 0.2rem;
   outline: 2px solid var(--kt-color-primary-border-subtle);
   outline-offset: 0.2rem;
+}
+
+.customer-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  min-height: 3rem;
+  margin-top: 0.75rem;
+  color: var(--kt-color-text-secondary);
+  font-size: var(--kt-font-size-sm);
+  font-weight: 500;
+}
+
+.customer-pagination-summary,
+.customer-pagination-page {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.customer-pagination-controls {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.customer-pagination-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--kt-color-border);
+  border-radius: var(--kt-border-radius-sm);
+  background: var(--kt-color-bg-white);
+  color: var(--kt-color-text-secondary);
+  transition:
+    background-color var(--kt-transition-fast),
+    border-color var(--kt-transition-fast),
+    color var(--kt-transition-fast);
+}
+
+.customer-pagination-button:hover:not(:disabled),
+.customer-pagination-button:focus-visible:not(:disabled) {
+  border-color: var(--kt-color-text-light);
+  background: var(--kt-color-bg-light);
+  color: var(--kt-color-text-primary);
+}
+
+.customer-pagination-button:focus-visible {
+  outline: 2px solid var(--kt-color-primary-border-subtle);
+  outline-offset: 0.18rem;
+}
+
+.customer-pagination-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.customer-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(var(--bs-dark-rgb), 0.46);
+  backdrop-filter: blur(0.15rem);
+}
+
+.customer-dialog {
+  display: grid;
+  gap: 1rem;
+  width: min(42rem, 100%);
+  max-height: min(44rem, calc(100vh - 2rem));
+  padding: 1.25rem;
+  border: 1px solid var(--kt-color-border);
+  border-radius: 0.42rem;
+  background: var(--kt-color-bg-white);
+  box-shadow: 0 1.5rem 4rem rgba(var(--bs-dark-rgb), 0.24);
+  overflow-y: auto;
+}
+
+.customer-dialog-content {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.customer-dialog-title {
+  margin: 0;
+  color: var(--kt-color-text-primary);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.customer-dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.customer-dialog-field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  color: var(--kt-color-text-secondary);
+  font-size: var(--kt-font-size-sm);
+  font-weight: 600;
+  line-height: var(--kt-line-height-tight);
+}
+
+.customer-dialog-field-wide {
+  grid-column: 1 / -1;
+}
+
+.customer-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  margin-top: 0.3rem;
+}
+
+.customer-dialog-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.58rem 1.15rem;
+  border-radius: var(--kt-border-radius-sm);
+  font-size: var(--kt-font-size-md);
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition:
+    background-color var(--kt-transition-fast),
+    border-color var(--kt-transition-fast),
+    color var(--kt-transition-fast);
+}
+
+.customer-dialog-button-secondary {
+  border: 1px solid var(--kt-color-border);
+  background: var(--kt-color-bg-white);
+  color: var(--kt-color-text-secondary);
+}
+
+.customer-dialog-button-secondary:hover:not(:disabled),
+.customer-dialog-button-secondary:focus-visible:not(:disabled) {
+  background: var(--kt-color-bg-light);
+  border-color: var(--kt-color-text-light);
+}
+
+.customer-dialog-button-primary {
+  min-width: 11.5rem;
+  border: 1px solid var(--kt-color-primary);
+  background: var(--kt-color-primary);
+  color: var(--kt-color-bg-white);
+}
+
+.customer-dialog-button-primary:hover:not(:disabled),
+.customer-dialog-button-primary:focus-visible:not(:disabled) {
+  border-color: var(--kt-color-primary-dark);
+  background: var(--kt-color-primary-dark);
+}
+
+.customer-dialog-button:focus-visible {
+  outline: 2px solid var(--kt-color-primary-border-subtle);
+  outline-offset: 0.2rem;
+}
+
+.customer-dialog-button-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.customer-dialog-button-primary:disabled {
+  border-color: var(--kt-color-border);
+  background: var(--kt-color-bg-light);
+  color: var(--kt-color-text-light);
+  cursor: not-allowed;
+  opacity: 1;
 }
 
 .confirm-delete-backdrop {
@@ -1037,6 +1207,20 @@ onBeforeUnmount(() => {
   .customer-page-card-body {
     padding-right: 1rem;
     padding-left: 1rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .customer-dialog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .customer-dialog-button {
+    width: 100%;
   }
 }
 </style>
