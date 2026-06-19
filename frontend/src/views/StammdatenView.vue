@@ -287,6 +287,7 @@
                 type="email"
                 maxlength="255"
                 autocomplete="email"
+                placeholder="name@beispiel.ch"
                 :aria-invalid="hasCustomerEmailError(customerDraft)"
                 @input="clearCustomerDialogError"
               />
@@ -309,23 +310,6 @@
               />
             </label>
 
-            <label class="customer-dialog-field customer-dialog-field-wide">
-              <span>Verkäufer</span>
-              <select
-                v-model="customerDraft.salespersonId"
-                class="form-select control-field"
-                @change="clearCustomerDialogError"
-              >
-                <option v-if="!salespeople.length" value="">Demo Verkäufer</option>
-                <option
-                  v-for="salesperson in salespeople"
-                  :key="salesperson.id"
-                  :value="salesperson.id"
-                >
-                  {{ salesperson.name }}
-                </option>
-              </select>
-            </label>
           </div>
         </div>
 

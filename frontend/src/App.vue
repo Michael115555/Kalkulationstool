@@ -113,6 +113,14 @@ onMounted(async () => {
           </ul>
 
           <div class="d-flex topbar-actions justify-content-lg-end">
+            <div
+              class="topbar-user-status"
+              aria-label="Angemeldet als Demo Verkäufer"
+              title="Angemeldet als Demo Verkäufer"
+            >
+              <span class="topbar-user-avatar" aria-hidden="true">DV</span>
+              <span class="topbar-user-name">Demo Verkäufer</span>
+            </div>
           </div>
         </div>
       </div>
@@ -174,6 +182,48 @@ onMounted(async () => {
 .topbar-collapse {
   height: 100%;
   align-items: stretch;
+}
+
+.topbar-actions {
+  align-items: center;
+}
+
+.topbar-user-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 2.25rem;
+  max-width: 100%;
+  padding: 0.25rem 0;
+  color: var(--kt-color-text-secondary);
+  font-size: var(--kt-font-size-sm);
+  font-weight: 500;
+  line-height: var(--kt-line-height-tight);
+  white-space: nowrap;
+}
+
+.topbar-user-avatar {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--kt-color-primary-border-subtle);
+  border-radius: 50%;
+  background: var(--kt-color-primary);
+  color: var(--kt-color-bg-white);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.topbar-user-name {
+  overflow: hidden;
+  color: var(--kt-color-text-primary);
+  text-overflow: ellipsis;
 }
 
 .app-nav {
@@ -269,6 +319,10 @@ onMounted(async () => {
   .topbar-actions {
     margin-top: 0.75rem;
     justify-content: flex-start !important;
+  }
+
+  .topbar-user-status {
+    justify-content: flex-start;
   }
 }
 </style>
