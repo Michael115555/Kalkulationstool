@@ -518,7 +518,8 @@
 }
 
 .service-conditions-card,
-.offer-conditions-card {
+.offer-conditions-card,
+.internal-project-card {
   width: 100%;
   margin-top: 1rem;
   padding: 1.15rem;
@@ -791,6 +792,31 @@
   background-color: var(--kt-color-bg-light);
 }
 
+.internal-project-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem 1rem;
+}
+
+.internal-project-field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  color: var(--kt-color-text-secondary);
+  font-size: var(--kt-font-size-sm);
+  font-weight: 600;
+  line-height: var(--kt-line-height-tight);
+}
+
+.internal-project-field-wide {
+  grid-column: 1 / -1;
+}
+
+.internal-project-note {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
 .calculated-price-input {
   font-weight: 500;
 }
@@ -918,6 +944,10 @@
 
   .conditions-value-label {
     text-align: left;
+  }
+
+  .internal-project-fields {
+    grid-template-columns: 1fr;
   }
 
   .kalkulation-view .net-row {

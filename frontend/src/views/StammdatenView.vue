@@ -253,6 +253,37 @@
               />
             </label>
 
+            <label class="customer-dialog-field">
+              <span>E-Mail</span>
+              <input
+                v-model="customerDraft.email"
+                class="form-control control-field"
+                :class="{ 'is-invalid': hasCustomerEmailError(customerDraft) }"
+                type="email"
+                maxlength="255"
+                autocomplete="email"
+                :aria-invalid="hasCustomerEmailError(customerDraft)"
+                @input="clearCustomerDialogError"
+              />
+            </label>
+
+            <label class="customer-dialog-field">
+              <span>Telefon</span>
+              <input
+                v-model="customerDraft.phone"
+                class="form-control control-field"
+                :class="{ 'is-invalid': hasCustomerPhoneError(customerDraft) }"
+                type="tel"
+                maxlength="32"
+                autocomplete="tel"
+                inputmode="tel"
+                placeholder="+41 79 123 45 67"
+                :aria-invalid="hasCustomerPhoneError(customerDraft)"
+                @blur="handleCustomerDraftPhoneBlur"
+                @input="clearCustomerDialogError"
+              />
+            </label>
+
             <label class="customer-dialog-field customer-dialog-field-wide">
               <span>Verkäufer</span>
               <select
@@ -304,6 +335,12 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { createKalkulationApi } from '../services/kalkulationApi'
+import {
+  getCustomerValidationError,
+  isEmailFormatValid,
+  isSwissPhoneFormatValid,
+  normalizeSwissPhone
+} from '../utils/customerValidation'
 import {
   forgetSelectedCustomerId,
   getRememberedSelectedCustomerId,
@@ -370,6 +407,8 @@ function createDraftCustomer() {
     isNew: true,
     name: '',
     contactPerson: '',
+    email: '',
+    phone: '',
     street: '',
     postalCode: '',
     city: '',
@@ -386,6 +425,8 @@ function mapApiCustomer(customer) {
     isDeleting: false,
     name: customer.firmenname ?? '',
     contactPerson: customer.kontaktname ?? '',
+    email: customer.email ?? '',
+    phone: customer.telefon ?? '',
     street: customer.strasse ?? '',
     postalCode: customer.plz ?? '',
     city: customer.ort ?? '',
@@ -407,6 +448,8 @@ function createEditableCustomer(customer) {
     isNew: false,
     name: customer.name,
     contactPerson: customer.contactPerson,
+    email: customer.email,
+    phone: customer.phone,
     street: customer.street,
     postalCode: customer.postalCode,
     city: customer.city,
@@ -420,6 +463,8 @@ function createCustomerSnapshot(customer) {
   return {
     name: customer.name.trim(),
     contactPerson: customer.contactPerson.trim(),
+    email: String(customer.email ?? '').trim(),
+    phone: normalizeSwissPhone(customer.phone),
     street: customer.street.trim(),
     postalCode: customer.postalCode.trim(),
     city: customer.city.trim(),
@@ -431,6 +476,8 @@ function createCustomerPayload(customer) {
   return {
     firmenname: customer.name.trim(),
     kontaktname: customer.contactPerson.trim() || null,
+    email: String(customer.email ?? '').trim() || null,
+    telefon: normalizeSwissPhone(customer.phone) || null,
     strasse: customer.street.trim() || null,
     plz: customer.postalCode.trim() || null,
     ort: customer.city.trim() || null,
@@ -480,12 +527,25 @@ function canSaveCustomer(customer) {
     customer &&
       customer.name.trim() &&
       isCustomerDirty(customer) &&
-      isCustomerPostalCodeValid(customer)
+      isCustomerPostalCodeValid(customer) &&
+      !getCustomerValidationError(customer)
   )
 }
 
 function isCustomerPostalCodeValid(customer) {
   return /^\d*$/.test(String(customer.postalCode ?? '').trim())
+}
+
+function hasCustomerEmailError(customer) {
+  const email = String(customer?.email ?? '').trim()
+
+  return Boolean(email && !isEmailFormatValid(email))
+}
+
+function hasCustomerPhoneError(customer) {
+  const phone = String(customer?.phone ?? '').trim()
+
+  return Boolean(phone && !isSwissPhoneFormatValid(phone))
 }
 
 function normalizeCustomerPostalCode(customer) {
@@ -518,6 +578,31 @@ function handleCustomerDraftPostalCodeInput() {
   clearCustomerDialogError()
 }
 
+function handleCustomerDraftPhoneBlur() {
+  if (!customerDraft.value) {
+    return
+  }
+
+  customerDraft.value.phone = normalizeSwissPhone(customerDraft.value.phone)
+  clearCustomerDialogError()
+}
+
+function getCustomerFormError(customer) {
+  if (!customer.name.trim()) {
+    return 'Bitte Firma erfassen.'
+  }
+
+  if (!isCustomerPostalCodeValid(customer)) {
+    return 'PLZ darf nur Zahlen enthalten.'
+  }
+
+  if (getCustomerValidationError(customer)) {
+    return 'Bitte Kundendaten prüfen.'
+  }
+
+  return ''
+}
+
 function cancelCustomerDialog() {
   if (isSavingCustomerDialog.value) {
     return
@@ -535,9 +620,7 @@ async function saveCustomerDialog() {
   }
 
   if (!canSaveCustomer(customer)) {
-    customerDialogError.value = !customer.name.trim()
-      ? 'Bitte Firma erfassen.'
-      : 'Bitte Kundendaten prüfen.'
+    customerDialogError.value = getCustomerFormError(customer) || 'Bitte Kundendaten prüfen.'
     return
   }
 
@@ -795,17 +878,17 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(1),
 .customers-table td:nth-child(1) {
-  width: 25%;
+  width: 26%;
 }
 
 .customers-table th:nth-child(2),
 .customers-table td:nth-child(2) {
-  width: 18%;
+  width: 20%;
 }
 
 .customers-table th:nth-child(3),
 .customers-table td:nth-child(3) {
-  width: 23%;
+  width: 24%;
 }
 
 .customers-table th:nth-child(4),
@@ -815,7 +898,7 @@ onBeforeUnmount(() => {
 
 .customers-table th:nth-child(5),
 .customers-table td:nth-child(5) {
-  width: 14%;
+  width: 11%;
 }
 
 .customers-table th:nth-child(6),

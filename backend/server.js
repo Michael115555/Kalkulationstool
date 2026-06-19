@@ -253,6 +253,8 @@ const serializeKunde = (kunde) => ({
   id: kunde.id,
   firmenname: kunde.firmenname,
   kontaktname: kunde.kontaktname,
+  email: kunde.email,
+  telefon: kunde.telefon,
   strasse: kunde.strasse,
   plz: kunde.plz,
   ort: kunde.ort,
@@ -276,6 +278,8 @@ const createKundenWhere = (query) => {
     OR: [
       { firmenname: { contains: query } },
       { kontaktname: { contains: query } },
+      { email: { contains: query } },
+      { telefon: { contains: query } },
       { strasse: { contains: query } },
       { plz: { contains: query } },
       { ort: { contains: query } }
@@ -336,6 +340,8 @@ const createKunde = async (payload) => {
     data: {
       firmenname: validated.firmenname,
       kontaktname: validated.kontaktname,
+      email: validated.email,
+      telefon: validated.telefon,
       strasse: validated.strasse,
       plz: validated.plz,
       ort: validated.ort,
@@ -359,6 +365,8 @@ const updateKunde = async (id, payload) => {
     data: {
       firmenname: validated.firmenname,
       kontaktname: validated.kontaktname,
+      email: validated.email,
+      telefon: validated.telefon,
       strasse: validated.strasse,
       plz: validated.plz,
       ort: validated.ort,

@@ -304,6 +304,13 @@ const validateCalculationSnapshot = (calculation) => {
       'Scanpauschale Auswahl',
       32
     ),
+    kundenkontakt: validateSnapshotString(calculation.kundenkontakt, 'Kundenkontakt', 100),
+    versand: validateSnapshotString(calculation.versand, 'Versand', 100),
+    interneBemerkung: validateSnapshotString(
+      calculation.interneBemerkung,
+      'Bemerkung',
+      1000
+    ),
     positions: positions.map(validateCalculationPosition),
     konditionenA3Mfp: konditionenA3Mfp.map(validateCalculationKondition),
     konditionenA3MfpVersion:
@@ -399,6 +406,8 @@ const validateSwissPhone = (value, fieldName = 'Telefon') => {
 const validateKundePayload = (payload = {}) => {
   const firmenname = validateString(payload.firmenname, 'Firma', 1, 255)
   const kontaktname = validateOptionalString(payload.kontaktname, 'Kontaktname', 255)
+  const email = validateEmail(payload.email, 'E-Mail', 255)
+  const telefon = validateSwissPhone(payload.telefon, 'Telefon')
   const strasse = validateOptionalString(payload.strasse, 'Strasse', 255)
   const plz = validateOptionalDigits(payload.plz, 'PLZ', 32)
   const ort = validateOptionalString(payload.ort, 'Ort', 255)
@@ -407,6 +416,8 @@ const validateKundePayload = (payload = {}) => {
   return {
     firmenname,
     kontaktname,
+    email,
+    telefon,
     strasse,
     plz,
     ort,

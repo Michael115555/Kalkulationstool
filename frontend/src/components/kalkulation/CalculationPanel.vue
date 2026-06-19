@@ -74,6 +74,34 @@ const scanpauschaleAuswahl = defineModel('scanpauschaleAuswahl', {
   type: String,
   required: true
 })
+const kundenkontakt = defineModel('kundenkontakt', {
+  type: String,
+  required: true
+})
+const versand = defineModel('versand', {
+  type: String,
+  required: true
+})
+const interneBemerkung = defineModel('interneBemerkung', {
+  type: String,
+  required: true
+})
+
+const kundenkontaktOptionen = [
+  { value: '', label: 'Keine Auswahl' },
+  { value: 'telefon', label: 'Telefon' },
+  { value: 'besuch', label: 'Besuch' },
+  { value: 'showroom', label: 'Showroom' },
+  { value: 'email', label: 'E-Mail' }
+]
+
+const versandOptionen = [
+  { value: '', label: 'Keine Auswahl' },
+  { value: 'post', label: 'Post' },
+  { value: 'per_mail', label: 'per Mail' },
+  { value: 'persoenlich_ueberbracht', label: 'persönlich überbracht' },
+  { value: 'per_mail_zurueck_an_verkaeufer', label: 'per Mail zurück an Verkäufer' }
+]
 
 const props = defineProps({
   verkaufspreis: {
@@ -629,6 +657,62 @@ const toggleDetailsPanel = (panelName) => {
             </tr>
           </tbody>
         </table>
+      </div>
+    </details>
+
+    <details
+      class="calculation-card collapsible-card internal-project-card"
+      :open="openDetailsPanel === 'internal'"
+    >
+      <summary
+        class="collapsible-card-summary"
+        @click.prevent="toggleDetailsPanel('internal')"
+      >
+        <span class="collapsible-card-title">Interne Projektdaten</span>
+      </summary>
+
+      <div class="internal-project-fields">
+        <label class="internal-project-field">
+          <span>Kundenkontakt</span>
+          <select
+            v-model="kundenkontakt"
+            class="form-select control-field"
+          >
+            <option
+              v-for="option in kundenkontaktOptionen"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+
+        <label class="internal-project-field">
+          <span>Versand</span>
+          <select
+            v-model="versand"
+            class="form-select control-field"
+          >
+            <option
+              v-for="option in versandOptionen"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+
+        <label class="internal-project-field internal-project-field-wide">
+          <span>Bemerkung</span>
+          <textarea
+            v-model="interneBemerkung"
+            class="form-control control-field internal-project-note"
+            rows="3"
+            maxlength="1000"
+          ></textarea>
+        </label>
       </div>
     </details>
   </div>

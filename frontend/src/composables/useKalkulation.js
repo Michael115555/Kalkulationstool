@@ -172,6 +172,9 @@ export const useKalkulation = (options = {}) => {
   const flatratePauschalBetrag = ref(formatAmount(0))
   const scanpauschaleMietMonate = ref('')
   const scanpauschaleAuswahl = ref('inkl')
+  const kundenkontakt = ref('')
+  const versand = ref('')
+  const interneBemerkung = ref('')
   const positions = ref([])
   const konditionenA3Mfp = ref([])
 
@@ -718,6 +721,9 @@ export const useKalkulation = (options = {}) => {
       flatratePauschalBetrag: flatratePauschalBetrag.value,
       scanpauschaleMietMonate: scanpauschaleMietMonate.value,
       scanpauschaleAuswahl: scanpauschaleAuswahl.value,
+      kundenkontakt: kundenkontakt.value,
+      versand: versand.value,
+      interneBemerkung: interneBemerkung.value,
       positions: clonePositions(positions.value),
       konditionenA3Mfp: cloneKonditionenA3Mfp(konditionenA3Mfp.value),
       konditionenA3MfpVersion: KONDITIONEN_A3_MFP_SELECTION_VERSION,
@@ -756,6 +762,9 @@ export const useKalkulation = (options = {}) => {
       flatratePauschalBetrag: normalizeComparableAmount(snapshot.flatratePauschalBetrag),
       scanpauschaleMietMonate: normalizeComparableAmount(snapshot.scanpauschaleMietMonate),
       scanpauschaleAuswahl: snapshot.scanpauschaleAuswahl,
+      kundenkontakt: snapshot.kundenkontakt ?? '',
+      versand: snapshot.versand ?? '',
+      interneBemerkung: snapshot.interneBemerkung ?? '',
       positions: snapshot.positions.map((position) => ({
         id: normalizeComparableId(position.id),
         zubehoerId: normalizeComparableId(position.zubehoerId),
@@ -823,6 +832,9 @@ export const useKalkulation = (options = {}) => {
       flatratePauschalBetrag: formatAmount(0),
       scanpauschaleMietMonate: getDefaultScanpauschaleMietMonate(),
       scanpauschaleAuswahl: 'inkl',
+      kundenkontakt: '',
+      versand: '',
+      interneBemerkung: '',
       positions: createDefaultPositions(),
       konditionenA3Mfp: createDefaultKonditionenA3Mfp(),
       konditionenA3MfpVersion: KONDITIONEN_A3_MFP_SELECTION_VERSION,
@@ -847,6 +859,9 @@ export const useKalkulation = (options = {}) => {
     flatratePauschalBetrag.value = formatAmount(0)
     scanpauschaleMietMonate.value = getDefaultScanpauschaleMietMonate()
     scanpauschaleAuswahl.value = 'inkl'
+    kundenkontakt.value = ''
+    versand.value = ''
+    interneBemerkung.value = ''
     positions.value = []
     konditionenA3Mfp.value = createDefaultKonditionenA3Mfp()
     naechsteId.value = 1
@@ -910,6 +925,9 @@ export const useKalkulation = (options = {}) => {
       scanpauschaleMietMonate:
         snapshot?.scanpauschaleMietMonate ?? getDefaultScanpauschaleMietMonate(),
       scanpauschaleAuswahl: snapshot?.scanpauschaleAuswahl ?? 'inkl',
+      kundenkontakt: snapshot?.kundenkontakt ?? '',
+      versand: snapshot?.versand ?? '',
+      interneBemerkung: snapshot?.interneBemerkung ?? '',
       positions: normalizedPositions,
       konditionenA3Mfp: normalizeKonditionenA3Mfp(
         snapshot?.konditionenA3Mfp,
@@ -1065,6 +1083,9 @@ export const useKalkulation = (options = {}) => {
     flatratePauschalBetrag.value = snapshot.flatratePauschalBetrag
     scanpauschaleMietMonate.value = snapshot.scanpauschaleMietMonate
     scanpauschaleAuswahl.value = snapshot.scanpauschaleAuswahl
+    kundenkontakt.value = snapshot.kundenkontakt
+    versand.value = snapshot.versand
+    interneBemerkung.value = snapshot.interneBemerkung
     positions.value = clonePositions(snapshot.positions)
     konditionenA3Mfp.value = cloneKonditionenA3Mfp(snapshot.konditionenA3Mfp)
     syncIncludedDeliveryConditions(snapshot.lieferungOption === INCLUDED_DELIVERY_OPTION)
@@ -1985,6 +2006,9 @@ export const useKalkulation = (options = {}) => {
       flatratePauschalBetrag,
       scanpauschaleMietMonate,
       scanpauschaleAuswahl,
+      kundenkontakt,
+      versand,
+      interneBemerkung,
       positions,
       konditionenA3Mfp,
       nettopreis
@@ -2085,6 +2109,9 @@ export const useKalkulation = (options = {}) => {
     normalizeScanpauschaleMietMonate,
     scanpauschaleAuswahl,
     normalizeScanpauschaleAuswahl,
+    kundenkontakt,
+    versand,
+    interneBemerkung,
     scanpauschaleBerechnet,
     recyclingGebuehrSwico,
     npkAbschlussgebuehr,

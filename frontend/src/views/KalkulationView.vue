@@ -86,6 +86,9 @@ const {
   normalizeScanpauschaleMietMonate,
   scanpauschaleAuswahl,
   normalizeScanpauschaleAuswahl,
+  kundenkontakt,
+  versand,
+  interneBemerkung,
   scanpauschaleBerechnet,
   recyclingGebuehrSwico,
   npkAbschlussgebuehr,
@@ -208,6 +211,9 @@ onBeforeRouteLeave(() => {
               v-model:flatrate-pauschal-betrag="flatratePauschalBetrag"
               v-model:scanpauschale-miet-monate="scanpauschaleMietMonate"
               v-model:scanpauschale-auswahl="scanpauschaleAuswahl"
+              v-model:kundenkontakt="kundenkontakt"
+              v-model:versand="versand"
+              v-model:interne-bemerkung="interneBemerkung"
               :verkaufspreis="verkaufspreis"
               :einkaufspreis="einkaufspreis"
               :eintausch-rabatt-betrag="eintauschRabattBetrag"
