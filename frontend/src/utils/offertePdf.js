@@ -945,7 +945,7 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   drawTemplateFullRow(layout, y, TEMPLATE_BLANK_ROW_HEIGHT, '')
   y -= TEMPLATE_BLANK_ROW_HEIGHT
 
-  drawTemplateFullRow(layout, y, 34, 'OFFERTE', {
+  drawTemplateFullRow(layout, y, 34, 'Offerte', {
     size: 19,
     bold: true,
     color: COLORS.accentDark
@@ -1033,7 +1033,7 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     y -= TEMPLATE_ROW_HEIGHT
   })
 
-  drawTemplateTotalRow(layout, y, 'GESAMTSUMME', formatTotalAmount(totalAmount) || 'CHF -', {
+  drawTemplateTotalRow(layout, y, 'Gesamtsumme', formatTotalAmount(totalAmount) || 'CHF -', {
     bold: true,
     color: COLORS.accentDark,
     height: TEMPLATE_TOTAL_ROW_HEIGHT,

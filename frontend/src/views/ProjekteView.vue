@@ -4,6 +4,7 @@ import ProjectEditorView from './KalkulationView.vue'
 import { createKalkulationApi } from '../services/kalkulationApi'
 import { formatAmount } from '../utils/numberFormat'
 import { buildOffertePdfBytes } from '../utils/offertePdf'
+import { useBodyScrollLock } from '../composables/useBodyScrollLock'
 
 const api = createKalkulationApi()
 const LOADING_INDICATOR_DELAY = 140
@@ -151,6 +152,9 @@ const hydrateProjekteFromCache = () => {
 
 const projektToDelete = ref(null)
 const isDeletingProjekt = ref(false)
+const isProjectModalOpen = computed(() =>
+  Boolean(projectOverlay.value || projektToDelete.value)
+)
 const projectOverlayTitle = computed(() => {
   if (projectOverlay.value?.mode !== 'edit') {
     return 'Neues Projekt'
@@ -160,6 +164,8 @@ const projectOverlayTitle = computed(() => {
 
   return projektName ? `Projekt bearbeiten: ${projektName}` : 'Projekt bearbeiten'
 })
+
+useBodyScrollLock(isProjectModalOpen)
 const getProjectEditorExposedValue = (key, fallback) => {
   const value = projectEditorView.value?.[key]
 

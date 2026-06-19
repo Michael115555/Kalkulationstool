@@ -80,7 +80,7 @@ describe('offertePdf', () => {
     expect(pdfText.startsWith('%PDF-1.4')).toBe(true)
     expect(pdfText).toContain('/Type /Page')
     expect(pdfText).toContain('/Helvetica-Bold')
-    expect(pdfText).toContain(toPdfHex('GESAMTSUMME'))
+    expect(pdfText).toContain(toPdfHex('Gesamtsumme'))
     expect(pdfText).toContain(toPdfHex('Demo Verkäufer'))
     expect(pdfText).toContain(toPdfHex('Alex Beispiel'))
     expect(pdfText).not.toContain(toPdfHex('Verkäufer:'))

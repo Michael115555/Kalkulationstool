@@ -5,6 +5,7 @@ import CalculationPanel from '../components/kalkulation/CalculationPanel.vue'
 import CalculationToolbar from '../components/kalkulation/CalculationToolbar.vue'
 import PositionsTable from '../components/kalkulation/PositionsTable.vue'
 import { useKalkulation } from '../composables/useKalkulation'
+import { useBodyScrollLock } from '../composables/useBodyScrollLock'
 
 const props = defineProps({
   projektId: {
@@ -17,6 +18,8 @@ const emit = defineEmits(['saved'])
 const isLeaveProjectEditDialogOpen = ref(false)
 const activeProjektId = computed(() => props.projektId)
 let pendingRouteLeaveResolve = null
+
+useBodyScrollLock(isLeaveProjectEditDialogOpen)
 
 const {
   isCatalogLoading,

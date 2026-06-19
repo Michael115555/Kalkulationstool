@@ -346,6 +346,7 @@ import {
   getRememberedSelectedCustomerId,
   rememberSelectedCustomerId
 } from '../utils/selectedCustomer'
+import { useBodyScrollLock } from '../composables/useBodyScrollLock'
 
 const api = createKalkulationApi()
 const LOADING_INDICATOR_DELAY = 140
@@ -391,6 +392,11 @@ const customerDialogTitle = computed(() => {
 const customerDialogSaveLabel = computed(() =>
   isEditingCustomerDialog.value ? 'Änderungen speichern' : 'Kunde speichern'
 )
+const isCustomerModalOpen = computed(() =>
+  Boolean(customerToDelete.value || customerDraft.value)
+)
+
+useBodyScrollLock(isCustomerModalOpen)
 
 function createId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
