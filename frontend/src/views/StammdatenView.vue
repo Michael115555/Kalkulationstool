@@ -870,7 +870,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 1rem;
   min-height: 2.5rem;
-  margin: 1.25rem 0 1.35rem;
+  margin: 1.75rem 0 1.35rem;
 }
 
 .customers-heading {

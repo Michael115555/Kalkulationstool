@@ -5,6 +5,7 @@ import { createKalkulationApi } from '../services/kalkulationApi'
 import { formatAmount } from '../utils/numberFormat'
 import { buildOffertePdfBytes } from '../utils/offertePdf'
 import { useBodyScrollLock } from '../composables/useBodyScrollLock'
+import { appConfig } from '../config/appConfig'
 
 const api = createKalkulationApi()
 const LOADING_INDICATOR_DELAY = 140
@@ -312,6 +313,7 @@ const createOfferte = async (projekt) => {
       projekt: fullProjekt,
       kunde,
       verkaeuferName: getProjektVerkaeufer(projekt),
+      senderLines: appConfig.offerSenderLines,
       includeServiceConditions: false
     })
 
@@ -710,7 +712,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 1rem;
   min-height: 2.5rem;
-  margin: 1.25rem 0 1.35rem;
+  margin: 1.75rem 0 1.35rem;
 }
 
 .projekte-heading {

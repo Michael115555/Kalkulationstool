@@ -2,6 +2,7 @@
 import { nextTick, onMounted, ref } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { createKalkulationApi } from './services/kalkulationApi'
+import { appConfig } from './config/appConfig'
 
 const navigationItems = [
   { to: '/projekte', name: 'projekte', label: 'Projekte', icon: 'pi pi-folder' },
@@ -12,6 +13,7 @@ const api = createKalkulationApi()
 const route = useRoute()
 const isNavigationOpen = ref(false)
 const isContentReady = ref(false)
+const appDisplayName = appConfig.displayName
 
 const toggleNavigation = () => {
   isNavigationOpen.value = !isNavigationOpen.value
@@ -72,7 +74,7 @@ onMounted(async () => {
     <nav class="topbar navbar navbar-expand-lg" aria-label="Hauptnavigation">
       <div class="container-fluid topbar-container px-3">
         <span class="navbar-brand app-brand mb-0">
-          Kalkulationstool
+          {{ appDisplayName }}
         </span>
 
         <button
@@ -89,8 +91,6 @@ onMounted(async () => {
           class="collapse navbar-collapse topbar-collapse"
           :class="{ show: isNavigationOpen }"
         >
-          <div class="d-none d-lg-block topbar-side-spacer"></div>
-
           <ul class="nav app-nav mx-lg-auto mb-3 mb-lg-0">
             <li
               v-for="item in navigationItems"
@@ -111,16 +111,16 @@ onMounted(async () => {
               </RouterLink>
             </li>
           </ul>
+        </div>
 
-          <div class="d-flex topbar-actions justify-content-lg-end">
-            <div
-              class="topbar-user-status"
-              aria-label="Angemeldet als Demo Verkäufer"
-              title="Angemeldet als Demo Verkäufer"
-            >
-              <span class="topbar-user-avatar" aria-hidden="true">DV</span>
-              <span class="topbar-user-name">Demo Verkäufer</span>
-            </div>
+        <div class="d-flex topbar-actions justify-content-end">
+          <div
+            class="topbar-user-status"
+            aria-label="Angemeldet als Demo Verkäufer"
+            title="Angemeldet als Demo Verkäufer"
+          >
+            <span class="topbar-user-avatar" aria-hidden="true">DV</span>
+            <span class="topbar-user-name">Demo Verkäufer</span>
           </div>
         </div>
       </div>
@@ -174,7 +174,6 @@ onMounted(async () => {
   line-height: var(--kt-line-height-tight);
 }
 
-.topbar-side-spacer,
 .topbar-actions {
   flex: 1 1 0;
 }
@@ -279,6 +278,38 @@ onMounted(async () => {
 
 .app-nav-link.active .nav-icon {
   color: var(--kt-color-primary);
+}
+
+@media (min-width: 992px) {
+  .topbar.navbar > .topbar-container.container-fluid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
+  .app-brand {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .topbar-collapse {
+    display: flex !important;
+    flex: 0 0 auto;
+    grid-column: 2;
+    justify-self: center;
+    min-width: 0;
+    width: max-content;
+  }
+
+  .app-nav {
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  .topbar-actions {
+    flex: 0 0 auto;
+    grid-column: 3;
+    justify-self: end;
+  }
 }
 
 @media (max-width: 991.98px) {

@@ -886,7 +886,7 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   const leftW = w * 0.5
   const rightW = w - leftW
   const rightX = x + leftW
-  const sellerLine = [data.sellerName, sender.contact].filter(isFilled).map(sanitizeText).join(' / ')
+  const sellerLine = sanitizeText(data.sellerName)
   const recipientContactLine = sanitizeText(recipient.contact)
   let y = TEMPLATE.top
 
@@ -941,6 +941,15 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     size: 8.2
   })
   y -= 18
+
+  if (isFilled(sender.contact)) {
+    drawTemplateCell(layout, x, y, leftW, 18, {
+      text: sender.contact,
+      size: 8.2
+    })
+    drawTemplateCell(layout, rightX, y, rightW, 18, {})
+    y -= 18
+  }
 
   drawTemplateFullRow(layout, y, TEMPLATE_BLANK_ROW_HEIGHT, '')
   y -= TEMPLATE_BLANK_ROW_HEIGHT
