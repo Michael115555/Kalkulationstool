@@ -5,6 +5,31 @@
         <div class="card-body customer-page-card-body">
           <div class="customer-toolbar">
             <h1 class="customers-heading mb-0">Kunden</h1>
+
+            <form class="customer-search-form" role="search" @submit.prevent="applyCustomerSearch">
+              <label class="visually-hidden" for="customer-search-input">
+                Kunden suchen
+              </label>
+              <input
+                id="customer-search-input"
+                v-model="customerSearchQuery"
+                type="search"
+                class="customer-search-input"
+                placeholder="Kunden suchen"
+                autocomplete="off"
+                @input="handleCustomerSearchInput"
+                @search="handleCustomerSearchInput"
+              >
+              <button
+                type="submit"
+                class="customer-search-button customer-search-button-last"
+                aria-label="Kunden suchen"
+                title="Kunden suchen"
+                :disabled="isLoadingCustomers"
+              >
+                <i class="pi pi-search" aria-hidden="true"></i>
+              </button>
+            </form>
           </div>
 
           <div v-if="isLoadingCustomers && !hasLoadedCustomers" class="alert alert-info mb-3">
@@ -68,7 +93,7 @@
                 <tr v-if="customers.length === 0" class="customer-empty-table-row">
                   <td colspan="6">
                     <div class="customer-empty-table-text">
-                      Noch keine Kunden vorhanden.
+                      {{ appliedCustomerSearchQuery ? 'Keine Kunden gefunden.' : 'Noch keine Kunden vorhanden.' }}
                     </div>
                   </td>
                 </tr>
@@ -363,10 +388,13 @@ const isDeletingCustomer = ref(false)
 const activeCustomerId = ref(getRememberedSelectedCustomerId())
 const customerPage = ref(1)
 const customerTotal = ref(0)
+const customerSearchQuery = ref('')
+const appliedCustomerSearchQuery = ref('')
 const customerDraft = ref(null)
 const customerDialogError = ref('')
 const isSavingCustomerDialog = ref(false)
 let loadingIndicatorTimer = null
+let customerLoadRequestId = 0
 
 const customerTotalPages = computed(() =>
   Math.max(1, Math.ceil(customerTotal.value / CUSTOMER_PAGE_SIZE))
@@ -733,9 +761,14 @@ async function confirmDeleteCustomer() {
 }
 
 async function loadCustomers() {
+  const requestId = customerLoadRequestId + 1
+  customerLoadRequestId = requestId
+  const requestedPage = customerPage.value
+  const requestedQuery = appliedCustomerSearchQuery.value
+
   window.clearTimeout(loadingIndicatorTimer)
   loadingIndicatorTimer = window.setTimeout(() => {
-    if (!hasLoadedCustomers.value) {
+    if (requestId === customerLoadRequestId) {
       isLoadingCustomers.value = true
     }
   }, LOADING_INDICATOR_DELAY)
@@ -743,8 +776,9 @@ async function loadCustomers() {
 
   try {
     const customerRequest = api.getKunden({
-      page: customerPage.value,
-      pageSize: CUSTOMER_PAGE_SIZE
+      page: requestedPage,
+      pageSize: CUSTOMER_PAGE_SIZE,
+      query: requestedQuery
     })
     const salespeopleRequest = salespeople.value.length
       ? Promise.resolve(salespeople.value)
@@ -754,10 +788,14 @@ async function loadCustomers() {
       salespeopleRequest
     ])
 
+    if (requestId !== customerLoadRequestId) {
+      return
+    }
+
     if (
       loadedCustomers.total > 0 &&
       !loadedCustomers.items.length &&
-      customerPage.value > 1
+      requestedPage > 1
     ) {
       customerPage.value = Math.max(1, Math.ceil(loadedCustomers.total / CUSTOMER_PAGE_SIZE))
       await loadCustomers()
@@ -771,12 +809,18 @@ async function loadCustomers() {
     hasLoadedCustomers.value = true
 
   } catch (error) {
+    if (requestId !== customerLoadRequestId) {
+      return
+    }
+
     customerError.value = `Kunden konnten nicht geladen werden: ${error.message}`
     customers.value = []
     hasLoadedCustomers.value = true
   } finally {
-    window.clearTimeout(loadingIndicatorTimer)
-    isLoadingCustomers.value = false
+    if (requestId === customerLoadRequestId) {
+      window.clearTimeout(loadingIndicatorTimer)
+      isLoadingCustomers.value = false
+    }
   }
 }
 
@@ -791,6 +835,22 @@ async function goToPreviousCustomerPage() {
 
   customerPage.value -= 1
   await loadCustomers()
+}
+
+async function applyCustomerSearch() {
+  const nextSearchQuery = customerSearchQuery.value.trim()
+
+  if (nextSearchQuery === appliedCustomerSearchQuery.value && customerPage.value === 1) {
+    return
+  }
+
+  appliedCustomerSearchQuery.value = nextSearchQuery
+  customerPage.value = 1
+  await loadCustomers()
+}
+
+function handleCustomerSearchInput() {
+  applyCustomerSearch()
 }
 
 async function goToNextCustomerPage() {
@@ -821,8 +881,12 @@ onBeforeUnmount(() => {
 }
 
 .customer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   min-height: 2.5rem;
-  margin: 1.25rem 0 0.75rem;
+  margin: 1.25rem 0 1.35rem;
 }
 
 .customers-heading {
@@ -835,6 +899,88 @@ onBeforeUnmount(() => {
   font-weight: 600;
   letter-spacing: 0;
   line-height: 2.35rem;
+}
+
+.customer-search-form {
+  display: inline-flex;
+  flex: 0 1 18rem;
+  align-items: center;
+  justify-content: flex-end;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.customer-search-input {
+  flex: 1 1 auto;
+  min-width: 11rem;
+  height: 2.5rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--kt-color-border);
+  border-right: 0;
+  border-radius: var(--kt-border-radius-sm) 0 0 var(--kt-border-radius-sm);
+  background: var(--kt-color-bg-white);
+  color: var(--kt-color-text-primary);
+  font-size: var(--kt-font-size-sm);
+  line-height: var(--kt-line-height-tight);
+  transition:
+    border-color var(--kt-transition-fast),
+    box-shadow var(--kt-transition-fast);
+}
+
+.customer-search-input::placeholder {
+  color: var(--kt-color-text-light);
+}
+
+.customer-search-input:focus {
+  position: relative;
+  z-index: 1;
+  border-color: var(--kt-color-primary-light);
+  outline: 0;
+  box-shadow: inset 0 0 0 1px var(--kt-color-primary-border-subtle);
+}
+
+.customer-search-button {
+  display: inline-flex;
+  flex: 0 0 2.5rem;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid var(--kt-color-border);
+  background: var(--kt-color-bg-white);
+  color: var(--kt-color-text-secondary);
+  transition:
+    background-color var(--kt-transition-fast),
+    border-color var(--kt-transition-fast),
+    color var(--kt-transition-fast);
+}
+
+.customer-search-button + .customer-search-button {
+  border-left: 0;
+}
+
+.customer-search-button-last {
+  border-radius: 0 var(--kt-border-radius-sm) var(--kt-border-radius-sm) 0;
+}
+
+.customer-search-button:hover:not(:disabled),
+.customer-search-button:focus-visible:not(:disabled) {
+  background: var(--kt-color-bg-light);
+  border-color: var(--kt-color-text-light);
+  color: var(--kt-color-text-primary);
+}
+
+.customer-search-button:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 0;
+  box-shadow: inset 0 0 0 1px var(--kt-color-primary-border-subtle);
+}
+
+.customer-search-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .customers-table-responsive {
@@ -1300,6 +1446,19 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 575.98px) {
+  .customer-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .customer-search-form {
+    width: 100%;
+  }
+
+  .customer-search-input {
+    min-width: 0;
+  }
+
   .customer-dialog-grid {
     grid-template-columns: 1fr;
   }

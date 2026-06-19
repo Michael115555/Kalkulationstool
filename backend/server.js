@@ -278,11 +278,19 @@ const createKundenWhere = (query) => {
     OR: [
       { firmenname: { contains: query } },
       { kontaktname: { contains: query } },
-      { email: { contains: query } },
-      { telefon: { contains: query } },
       { strasse: { contains: query } },
       { plz: { contains: query } },
-      { ort: { contains: query } }
+      { ort: { contains: query } },
+      {
+        verkaeufer: {
+          is: {
+            OR: [
+              { vorname: { contains: query } },
+              { nachname: { contains: query } }
+            ]
+          }
+        }
+      }
     ]
   }
 }
@@ -482,29 +490,103 @@ const serializeProjektSummary = (konfiguration) => {
   }
 }
 
+const createProjectAmountFilters = (query) => {
+  const normalized = String(query ?? '')
+    .trim()
+    .replace(/chf/gi, '')
+    .replace(/['’\s]/g, '')
+    .replace(',', '.')
+
+  const amountMatch = /^(\d+)(?:\.(\d{0,2}))?$/.exec(normalized)
+
+  if (!amountMatch) {
+    return []
+  }
+
+  const integerPart = amountMatch[1].replace(/^0+(?=\d)/, '')
+  const decimalPart = amountMatch[2]
+  const francs = Number(integerPart)
+
+  if (!Number.isSafeInteger(francs)) {
+    return []
+  }
+
+  if (decimalPart !== undefined) {
+    const minCents = francs * 100 + Number(decimalPart.padEnd(2, '0'))
+    const maxCents = francs * 100 + Number(decimalPart.padEnd(2, '9'))
+
+    return [{ total: { gte: minCents, lte: maxCents } }]
+  }
+
+  const maxIntegerDigits = 9
+  const prefix = Number(integerPart)
+
+  if (!Number.isSafeInteger(prefix) || integerPart.length > maxIntegerDigits) {
+    return [{ total: amountToDb(prefix) }]
+  }
+
+  return Array.from(
+    { length: maxIntegerDigits - integerPart.length + 1 },
+    (_, index) => {
+      const scale = 10 ** index
+
+      return {
+        total: {
+          gte: prefix * scale * 100,
+          lte: (prefix + 1) * scale * 100 - 1
+        }
+      }
+    }
+  )
+}
+
 const createProjekteWhere = (query) => {
   if (!query) {
     return {}
   }
 
-  return {
-    OR: [
-      { name: { contains: query } },
-      {
-        kunde: {
-          is: {
-            firmenname: { contains: query }
-          }
+  const amountFilters = createProjectAmountFilters(query)
+  const isNumericQuery = amountFilters.length > 0
+  const filters = [
+    { name: { contains: query } },
+    {
+      kunde: {
+        is: {
+          firmenname: { contains: query }
         }
-      },
-      {
-        kunde: {
-          is: {
-            kontaktname: { contains: query }
+      }
+    },
+    {
+      kunde: {
+        is: {
+          kontaktname: { contains: query }
+        }
+      }
+    },
+    {
+      kunde: {
+        is: {
+          verkaeufer: {
+            is: {
+              OR: [
+                { vorname: { contains: query } },
+                { nachname: { contains: query } }
+              ]
+            }
           }
         }
       }
-    ]
+    }
+  ]
+
+  if (!isNumericQuery) {
+    filters.push({ snapshotJson: { contains: query } })
+  }
+
+  filters.push(...amountFilters)
+
+  return {
+    OR: filters
   }
 }
 

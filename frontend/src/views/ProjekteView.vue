@@ -18,11 +18,14 @@ const kunden = ref([])
 const verkaeufer = ref([])
 const projectPage = ref(1)
 const projectTotal = ref(0)
+const projectSearchQuery = ref('')
+const appliedProjectSearchQuery = ref('')
 const projectOverlay = ref(null)
 const projectEditorView = ref(null)
 const isCreatingOfferteProjektId = ref(null)
 const generatedPdfUrls = new Set()
 let loadingIndicatorTimer = null
+let projectLoadRequestId = 0
 
 const sortedProjekte = computed(() => projekte.value)
 const projectTotalPages = computed(() =>
@@ -111,9 +114,14 @@ const getPositionenCount = (projekt) =>
   0
 
 const loadProjekte = async () => {
+  const requestId = projectLoadRequestId + 1
+  projectLoadRequestId = requestId
+  const requestedPage = projectPage.value
+  const requestedQuery = appliedProjectSearchQuery.value
+
   window.clearTimeout(loadingIndicatorTimer)
   loadingIndicatorTimer = window.setTimeout(() => {
-    if (!hasLoadedProjekte.value) {
+    if (requestId === projectLoadRequestId) {
       isLoading.value = true
     }
   }, LOADING_INDICATOR_DELAY)
@@ -121,14 +129,19 @@ const loadProjekte = async () => {
 
   try {
     const loadedProjekte = await api.getProjekte({
-      page: projectPage.value,
-      pageSize: PROJECT_PAGE_SIZE
+      page: requestedPage,
+      pageSize: PROJECT_PAGE_SIZE,
+      query: requestedQuery
     })
+
+    if (requestId !== projectLoadRequestId) {
+      return
+    }
 
     if (
       loadedProjekte.total > 0 &&
       !loadedProjekte.items.length &&
-      projectPage.value > 1
+      requestedPage > 1
     ) {
       projectPage.value = Math.max(1, Math.ceil(loadedProjekte.total / PROJECT_PAGE_SIZE))
       await loadProjekte()
@@ -139,10 +152,16 @@ const loadProjekte = async () => {
     projectTotal.value = loadedProjekte.total
     hasLoadedProjekte.value = true
   } catch (error) {
+    if (requestId !== projectLoadRequestId) {
+      return
+    }
+
     errorMessage.value = `Projekte konnten nicht geladen werden: ${error.message}`
   } finally {
-    window.clearTimeout(loadingIndicatorTimer)
-    isLoading.value = false
+    if (requestId === projectLoadRequestId) {
+      window.clearTimeout(loadingIndicatorTimer)
+      isLoading.value = false
+    }
   }
 }
 
@@ -362,6 +381,22 @@ const goToPreviousProjectPage = async () => {
   await loadProjekte()
 }
 
+const applyProjectSearch = async () => {
+  const nextSearchQuery = projectSearchQuery.value.trim()
+
+  if (nextSearchQuery === appliedProjectSearchQuery.value && projectPage.value === 1) {
+    return
+  }
+
+  appliedProjectSearchQuery.value = nextSearchQuery
+  projectPage.value = 1
+  await loadProjekte()
+}
+
+const handleProjectSearchInput = () => {
+  applyProjectSearch()
+}
+
 const goToNextProjectPage = async () => {
   if (projectPage.value >= projectTotalPages.value || isLoading.value) {
     return
@@ -393,6 +428,31 @@ onBeforeUnmount(() => {
         <div class="card-body projekte-page-card-body">
           <div class="projekte-toolbar">
             <h1 class="projekte-heading mb-0">Projekte</h1>
+
+            <form class="project-search-form" role="search" @submit.prevent="applyProjectSearch">
+              <label class="visually-hidden" for="project-search-input">
+                Projekte suchen
+              </label>
+              <input
+                id="project-search-input"
+                v-model="projectSearchQuery"
+                type="search"
+                class="project-search-input"
+                placeholder="Projekte suchen"
+                autocomplete="off"
+                @input="handleProjectSearchInput"
+                @search="handleProjectSearchInput"
+              >
+              <button
+                type="submit"
+                class="project-search-button project-search-button-last"
+                aria-label="Projekte suchen"
+                title="Projekte suchen"
+                :disabled="isLoading"
+              >
+                <i class="pi pi-search" aria-hidden="true"></i>
+              </button>
+            </form>
           </div>
 
           <div v-if="isLoading && !hasLoadedProjekte" class="alert alert-info mt-3 mb-0">
@@ -482,7 +542,7 @@ onBeforeUnmount(() => {
                 <tr v-if="sortedProjekte.length === 0" class="empty-position-row">
                   <td colspan="7">
                     <div class="project-empty-table-text">
-                      Noch keine Projekte vorhanden.
+                      {{ appliedProjectSearchQuery ? 'Keine Projekte gefunden.' : 'Noch keine Projekte vorhanden.' }}
                     </div>
                   </td>
                 </tr>
@@ -645,8 +705,12 @@ onBeforeUnmount(() => {
 }
 
 .projekte-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   min-height: 2.5rem;
-  margin: 1.25rem 0 0.75rem;
+  margin: 1.25rem 0 1.35rem;
 }
 
 .projekte-heading {
@@ -659,6 +723,88 @@ onBeforeUnmount(() => {
   font-weight: 600;
   letter-spacing: 0;
   line-height: 2.35rem;
+}
+
+.project-search-form {
+  display: inline-flex;
+  flex: 0 1 18rem;
+  align-items: center;
+  justify-content: flex-end;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.project-search-input {
+  flex: 1 1 auto;
+  min-width: 11rem;
+  height: 2.5rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--kt-color-border);
+  border-right: 0;
+  border-radius: var(--kt-border-radius-sm) 0 0 var(--kt-border-radius-sm);
+  background: var(--kt-color-bg-white);
+  color: var(--kt-color-text-primary);
+  font-size: var(--kt-font-size-sm);
+  line-height: var(--kt-line-height-tight);
+  transition:
+    border-color var(--kt-transition-fast),
+    box-shadow var(--kt-transition-fast);
+}
+
+.project-search-input::placeholder {
+  color: var(--kt-color-text-light);
+}
+
+.project-search-input:focus {
+  position: relative;
+  z-index: 1;
+  border-color: var(--kt-color-primary-light);
+  outline: 0;
+  box-shadow: inset 0 0 0 1px var(--kt-color-primary-border-subtle);
+}
+
+.project-search-button {
+  display: inline-flex;
+  flex: 0 0 2.5rem;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid var(--kt-color-border);
+  background: var(--kt-color-bg-white);
+  color: var(--kt-color-text-secondary);
+  transition:
+    background-color var(--kt-transition-fast),
+    border-color var(--kt-transition-fast),
+    color var(--kt-transition-fast);
+}
+
+.project-search-button + .project-search-button {
+  border-left: 0;
+}
+
+.project-search-button-last {
+  border-radius: 0 var(--kt-border-radius-sm) var(--kt-border-radius-sm) 0;
+}
+
+.project-search-button:hover:not(:disabled),
+.project-search-button:focus-visible:not(:disabled) {
+  background: var(--kt-color-bg-light);
+  border-color: var(--kt-color-text-light);
+  color: var(--kt-color-text-primary);
+}
+
+.project-search-button:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 0;
+  box-shadow: inset 0 0 0 1px var(--kt-color-primary-border-subtle);
+}
+
+.project-search-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .projekte-table-responsive {
@@ -997,6 +1143,19 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 575.98px) {
+  .projekte-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .project-search-form {
+    width: 100%;
+  }
+
+  .project-search-input {
+    min-width: 0;
+  }
+
   .project-workspace-header {
     flex-wrap: wrap;
     align-items: stretch;
