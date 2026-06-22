@@ -943,7 +943,7 @@ onBeforeUnmount(() => {
   content: '';
   flex: 1 1 0;
   max-width: 38rem;
-  border-top: 1px solid var(--kt-color-primary-border-subtle);
+  border-top: 1px solid var(--kt-color-border);
   opacity: 0.85;
 }
 
@@ -957,7 +957,7 @@ onBeforeUnmount(() => {
   border: 0;
   border-radius: 0.25rem;
   background: transparent;
-  color: var(--kt-color-primary);
+  color: var(--kt-color-text-secondary);
   font-size: var(--kt-font-size-md);
   font-weight: 500;
   line-height: var(--kt-line-height-tight);
@@ -971,7 +971,7 @@ onBeforeUnmount(() => {
 .project-add-button:hover,
 .project-add-button:focus-visible {
   background: var(--kt-color-bg-very-light);
-  color: var(--kt-color-primary-dark);
+  color: var(--kt-color-primary);
 }
 
 .project-add-button:focus-visible {
