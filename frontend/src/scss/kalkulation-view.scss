@@ -7,8 +7,10 @@
 
 .calculation-config-section {
   position: relative;
-  width: 100%;
-  padding: 2rem 0 2.2rem;
+  width: calc(100% + 2rem);
+  margin-inline: -1rem;
+  padding: 2rem 1rem 2.2rem;
+  background: var(--kt-color-bg-white);
 }
 
 .calculation-config-section::after {

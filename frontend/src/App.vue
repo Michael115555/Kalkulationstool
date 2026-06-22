@@ -140,7 +140,7 @@ onMounted(async () => {
 .app-content {
   min-height: calc(100vh - 4rem);
   padding: 0;
-  background: var(--kt-color-bg-white);
+  background: var(--kt-page-background);
 }
 
 .app-content-fade-enter-active {

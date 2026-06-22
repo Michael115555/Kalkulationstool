@@ -1137,11 +1137,12 @@ onBeforeUnmount(() => {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior-y: contain;
-  background: var(--kt-color-bg-white);
+  background: var(--kt-page-background);
 }
 
 .project-workspace-content :deep(.calculation-page-card-body) {
   min-height: calc(100vh - 4rem);
+  background: transparent;
 }
 
 @media (max-width: 575.98px) {

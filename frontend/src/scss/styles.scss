@@ -33,6 +33,7 @@
   --kt-color-bg-white: var(--bs-white);
   --kt-color-bg-light: var(--bs-tertiary-bg);
   --kt-color-bg-very-light: var(--kt-color-primary-bg-subtle);
+  --kt-page-background: rgba(var(--bs-primary-rgb), 0.02);
 
   /* ===== COLOR PALETTE - BORDERS & DIVIDERS ===== */
   --kt-color-border: var(--bs-border-color);
@@ -186,4 +187,11 @@ body {
 .table-offer-button .pi,
 .table-delete-button .pi {
   font-size: 1rem;
+}
+
+.projekte-view > .col-12 > .card,
+.stammdaten-view > .col-12 > .card,
+.kalkulation-view > .col-12 > .card {
+  background: transparent;
+  box-shadow: none !important;
 }
