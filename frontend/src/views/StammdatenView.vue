@@ -1121,7 +1121,7 @@ onBeforeUnmount(() => {
   border: 0;
   border-radius: 0.25rem;
   background: transparent;
-  color: var(--kt-color-text-secondary);
+  color: var(--kt-color-primary);
   font-size: var(--kt-font-size-md);
   font-weight: 500;
   line-height: var(--kt-line-height-tight);
@@ -1129,13 +1129,14 @@ onBeforeUnmount(() => {
 }
 
 .customer-add-button .pi {
+  color: inherit;
   font-size: 1rem;
 }
 
 .customer-add-button:hover,
 .customer-add-button:focus-visible {
   background: var(--kt-color-bg-very-light);
-  color: var(--kt-color-primary);
+  color: var(--kt-color-primary-dark);
 }
 
 .customer-add-button:focus-visible {
