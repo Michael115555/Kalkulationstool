@@ -27,7 +27,6 @@ const isCreatingOfferteProjektId = ref(null)
 const isCreatingRechnungProjektId = ref(null)
 const isOpeningRechnungProjektId = ref(null)
 const isUpdatingOfferteStatusProjektId = ref(null)
-const rechnungToDelete = ref(null)
 const isDeletingRechnung = ref(false)
 const generatedPdfUrls = new Set()
 let loadingIndicatorTimer = null
@@ -178,7 +177,7 @@ const hydrateProjekteFromCache = () => {
 const projektToDelete = ref(null)
 const isDeletingProjekt = ref(false)
 const isProjectModalOpen = computed(() =>
-  Boolean(projectOverlay.value || projektToDelete.value || rechnungToDelete.value)
+  Boolean(projectOverlay.value || projektToDelete.value)
 )
 const projectOverlayTitle = computed(() => {
   if (projectOverlay.value?.mode !== 'edit') {
@@ -378,7 +377,7 @@ const createOfferte = async (projekt) => {
 
 const openRechnung = async (projekt) => {
   if (!projekt?.rechnungErstellt || isOpeningRechnungProjektId.value) {
-    return
+    return false
   }
 
   isOpeningRechnungProjektId.value = projekt.id
@@ -397,6 +396,7 @@ const openRechnung = async (projekt) => {
       buildOfferteStatusHtml('Rechnung wird vorbereitet...')
     )
     openPdfInNewTab(rechnungWindow, await api.getRechnungPdf(projekt.id))
+    return true
   } catch (error) {
     errorMessage.value = `Rechnung konnte nicht angezeigt werden: ${error.message}`
 
@@ -406,6 +406,8 @@ const openRechnung = async (projekt) => {
         buildOfferteStatusHtml(`Rechnung konnte nicht angezeigt werden: ${error.message}`)
       )
     }
+
+    return false
   } finally {
     isOpeningRechnungProjektId.value = null
   }
@@ -417,7 +419,7 @@ const createRechnung = async (projekt) => {
     projekt.rechnungErstellt ||
     isCreatingRechnungProjektId.value
   ) {
-    return
+    return false
   }
 
   const generatedAt = new Date()
@@ -447,6 +449,7 @@ const createRechnung = async (projekt) => {
     })
     await loadProjekte()
     openPdfInNewTab(rechnungWindow, pdfBytes)
+    return true
   } catch (error) {
     errorMessage.value = `Rechnung konnte nicht erstellt werden: ${error.message}`
 
@@ -456,69 +459,34 @@ const createRechnung = async (projekt) => {
         buildOfferteStatusHtml(`Rechnung konnte nicht erstellt werden: ${error.message}`)
       )
     }
+
+    return false
   } finally {
     isCreatingRechnungProjektId.value = null
   }
 }
 
-const askDeleteRechnung = (projekt) => {
-  if (!projekt?.rechnungErstellt) {
-    return
-  }
-
-  rechnungToDelete.value = projekt
-}
-
-const cancelDeleteRechnung = () => {
-  if (isDeletingRechnung.value) {
-    return
-  }
-
-  rechnungToDelete.value = null
-}
-
-const confirmDeleteRechnung = async () => {
-  if (!rechnungToDelete.value || isDeletingRechnung.value) {
-    return
-  }
-
-  if (!rechnungToDelete.value.rechnungErstellt) {
-    rechnungToDelete.value = null
-    return
-  }
-
-  isDeletingRechnung.value = true
-
-  try {
-    await api.deleteRechnung(rechnungToDelete.value.id)
-    rechnungToDelete.value = null
-    errorMessage.value = ''
-    await loadProjekte()
-  } catch (error) {
-    errorMessage.value = `Rechnung konnte nicht gelöscht werden: ${error.message}`
-  } finally {
-    isDeletingRechnung.value = false
-  }
-}
-
 const updateOfferteUnterschrieben = async (projekt, event) => {
-  // If the projekt already has an invoice, the signed flag must not be changed.
-  if (!projekt || isUpdatingOfferteStatusProjektId.value) {
+  if (!projekt || isUpdatingOfferteStatusProjektId.value || isDeletingRechnung.value) {
     event.target.checked = Boolean(projekt?.offerteUnterschrieben)
     return
   }
 
-  if (projekt.rechnungErstellt) {
-    // Keep the switch visually checked and prevent changes when an invoice exists.
-    event.target.checked = true
+  const unterschrieben = Boolean(event.target.checked)
+
+  if (projekt.offerteUnterschrieben === unterschrieben) {
     return
   }
 
-  const unterschrieben = Boolean(event.target.checked)
   isUpdatingOfferteStatusProjektId.value = projekt.id
   errorMessage.value = ''
 
   try {
+    if (projekt.rechnungErstellt && !unterschrieben) {
+      isDeletingRechnung.value = true
+      await api.deleteRechnung(projekt.id)
+    }
+
     const offertePdfOptions = unterschrieben
       ? await getFixedOffertePdfOptions(projekt)
       : null
@@ -540,6 +508,7 @@ const updateOfferteUnterschrieben = async (projekt, event) => {
     errorMessage.value = `Offertenstatus konnte nicht geändert werden: ${error.message}`
   } finally {
     isUpdatingOfferteStatusProjektId.value = null
+    isDeletingRechnung.value = false
   }
 }
 
@@ -691,7 +660,9 @@ onBeforeUnmount(() => {
                   <th scope="col">Verkäufer</th>
                   <th scope="col" class="text-end">Positionen</th>
                   <th scope="col" class="text-end">Nettopreis CHF</th>
-                  <th scope="col" class="text-center">Offerte unterschrieben</th>
+                  <th scope="col" class="text-center">Offerte</th>
+                  <th scope="col" class="text-center">Unterschrieben</th>
+                  <th scope="col" class="text-center">Rechnung</th>
                   <th scope="col" class="text-center">Aktionen</th>
                 </tr>
               </thead>
@@ -706,11 +677,17 @@ onBeforeUnmount(() => {
                     {{ getProjectNumber(index) }}
                   </td>
 
-                  <td>{{ getProjektName(projekt) }}</td>
+                  <td :title="getProjektName(projekt)">
+                    {{ getProjektName(projekt) }}
+                  </td>
 
-                  <td>{{ getProjektKunde(projekt) }}</td>
+                  <td :title="getProjektKunde(projekt)">
+                    {{ getProjektKunde(projekt) }}
+                  </td>
 
-                  <td>{{ getProjektVerkaeufer(projekt) }}</td>
+                  <td :title="getProjektVerkaeufer(projekt)">
+                    {{ getProjektVerkaeufer(projekt) }}
+                  </td>
 
                   <td class="text-end project-number-cell">
                     {{ getPositionenCount(projekt) }}
@@ -720,118 +697,116 @@ onBeforeUnmount(() => {
                     {{ formatAmount(projekt.total ?? 0) }}
                   </td>
 
+                  <td class="project-offer-cell">
+                    <button
+                      type="button"
+                      class="table-offer-button"
+                      :aria-label="projekt.offerteUnterschrieben
+                        ? `Unterschriebene Offerte für ${getProjektName(projekt)} als PDF im neuen Tab anzeigen`
+                        : `Offerte für ${getProjektName(projekt)} als PDF im neuen Tab anzeigen`"
+                      :title="projekt.offerteUnterschrieben
+                        ? 'Unterschriebene Offerte als PDF anzeigen'
+                        : 'Offerte als PDF anzeigen'"
+                      :disabled="isCreatingOfferteProjektId === projekt.id"
+                      @click="createOfferte(projekt)"
+                    >
+                      <i
+                        :class="isCreatingOfferteProjektId === projekt.id
+                          ? 'pi pi-spin pi-spinner'
+                          : 'pi pi-file-pdf'"
+                        aria-hidden="true"
+                      ></i>
+                    </button>
+                  </td>
+
                   <td class="project-signed-cell">
-                    <div class="form-check form-switch project-signed-switch">
+                    <div class="form-check form-switch project-state-switch">
                       <input
                         type="checkbox"
                         role="switch"
-                        class="form-check-input project-signed-switch-input"
-                          :checked="projekt.offerteUnterschrieben"
-                          :disabled="isUpdatingOfferteStatusProjektId !== null || projekt.rechnungErstellt"
-                          :title="projekt.rechnungErstellt
-                            ? 'Offerte abgeschlossen — Status nach Rechnungserstellung gesperrt'
-                            : (projekt.offerteUnterschrieben
-                              ? 'Markierung als unterschrieben entfernen'
-                              : 'Offerte als unterschrieben markieren')"
-                          :aria-label="projekt.rechnungErstellt
-                            ? `Offerte für ${getProjektName(projekt)} ist abgeschlossen; Status gesperrt`
-                            : (projekt.offerteUnterschrieben
-                              ? `Markierung für ${getProjektName(projekt)} als unterschrieben entfernen`
-                              : `${getProjektName(projekt)} als unterschrieben markieren`)"
+                        class="form-check-input project-state-switch-input"
+                        :checked="projekt.offerteUnterschrieben"
+                        :disabled="isUpdatingOfferteStatusProjektId !== null || isDeletingRechnung"
+                        :title="projekt.offerteUnterschrieben
+                          ? 'Unterschrift entfernen'
+                          : 'Als unterschrieben markieren'"
+                        :aria-label="projekt.offerteUnterschrieben
+                          ? `Unterschrift für ${getProjektName(projekt)} entfernen`
+                          : `${getProjektName(projekt)} als unterschrieben markieren`"
                         @change="updateOfferteUnterschrieben(projekt, $event)"
                       >
                     </div>
                   </td>
 
-                  <td class="text-center align-middle">
+                  <td class="project-invoice-cell">
+                    <button
+                      v-if="projekt.offerteUnterschrieben && !projekt.rechnungErstellt"
+                      type="button"
+                      class="project-invoice-action-button"
+                      :aria-label="`Rechnung für ${getProjektName(projekt)} erstellen`"
+                      title="Rechnung erstellen"
+                      :disabled="isCreatingRechnungProjektId !== null"
+                      @click="createRechnung(projekt)"
+                    >
+                      <i
+                        :class="isCreatingRechnungProjektId === projekt.id
+                          ? 'pi pi-spin pi-spinner'
+                          : 'pi pi-receipt'"
+                        aria-hidden="true"
+                      ></i>
+                      <span>{{ isCreatingRechnungProjektId === projekt.id
+                        ? 'Wird erstellt…'
+                        : 'Erstellen' }}</span>
+                    </button>
+
+                    <button
+                      v-else-if="projekt.rechnungErstellt"
+                      type="button"
+                      class="project-invoice-pdf-button"
+                      :aria-label="`Rechnung für ${getProjektName(projekt)} als PDF im neuen Tab anzeigen`"
+                      title="Rechnung als PDF anzeigen"
+                      :disabled="isOpeningRechnungProjektId === projekt.id"
+                      @click="openRechnung(projekt)"
+                    >
+                      <i
+                        :class="isOpeningRechnungProjektId === projekt.id
+                          ? 'pi pi-spin pi-spinner'
+                          : 'pi pi-file-pdf'"
+                        aria-hidden="true"
+                      ></i>
+                      <span>Rechnung</span>
+                    </button>
+
+                    <span v-else class="project-invoice-empty" aria-hidden="true">—</span>
+                  </td>
+
+                  <td class="project-actions-cell">
                     <div class="project-action-list">
                       <button
                         type="button"
-                        class="table-offer-button"
-                        :aria-label="projekt.offerteUnterschrieben
-                          ? `Unterschriebene Offerte für ${getProjektName(projekt)} als PDF im neuen Tab anzeigen`
-                          : `Offerte für ${getProjektName(projekt)} als PDF im neuen Tab anzeigen`"
-                        :title="projekt.offerteUnterschrieben
-                          ? 'Unterschriebene Offerte als PDF anzeigen'
-                          : 'Offerte als PDF anzeigen'"
-                        :disabled="isCreatingOfferteProjektId === projekt.id"
-                        @click="createOfferte(projekt)"
-                      >
-                        <i
-                          :class="isCreatingOfferteProjektId === projekt.id ? 'pi pi-spin pi-spinner' : 'pi pi-file-pdf'"
-                          aria-hidden="true"
-                        ></i>
-                      </button>
-
-                      <button
-                        v-if="projekt.offerteUnterschrieben && !projekt.rechnungErstellt"
-                        type="button"
-                        class="project-create-invoice-button"
-                        :aria-label="`Rechnung für ${getProjektName(projekt)} erstellen`"
-                        title="Rechnung erstellen"
-                        :disabled="isCreatingRechnungProjektId !== null"
-                        @click="createRechnung(projekt)"
-                      >
-                        <i
-                          :class="isCreatingRechnungProjektId === projekt.id
-                            ? 'pi pi-spin pi-spinner'
-                            : 'pi pi-receipt'"
-                          aria-hidden="true"
-                        ></i>
-                        <span>{{ isCreatingRechnungProjektId === projekt.id
-                          ? 'Rechnung wird erstellt…'
-                          : 'Rechnung erstellen' }}</span>
-                      </button>
-
-                      <button
-                        v-else-if="projekt.rechnungErstellt"
-                        type="button"
-                        class="project-view-invoice-button"
-                        :aria-label="`Rechnung für ${getProjektName(projekt)} als PDF im neuen Tab anzeigen`"
-                        title="Rechnung als PDF anzeigen"
-                        :disabled="isOpeningRechnungProjektId === projekt.id"
-                        @click="openRechnung(projekt)"
-                      >
-                        <i
-                          :class="isOpeningRechnungProjektId === projekt.id
-                            ? 'pi pi-spin pi-spinner'
-                            : 'pi pi-receipt'"
-                          aria-hidden="true"
-                        ></i>
-                        <span>{{ isOpeningRechnungProjektId === projekt.id
-                          ? 'Rechnung wird geladen…'
-                          : 'Rechnung anzeigen' }}</span>
-                      </button>
-
-                      <button
-                        v-if="projekt.rechnungErstellt"
-                        type="button"
-                        class="table-delete-button"
-                        :aria-label="`Rechnung für ${getProjektName(projekt)} löschen`"
-                        title="Rechnung löschen"
-                        :disabled="isDeletingRechnung"
-                        @click="askDeleteRechnung(projekt)"
-                      >
-                        <i class="pi pi-trash" aria-hidden="true"></i>
-                      </button>
-
-                      <button
-                        v-if="!projekt.offerteUnterschrieben"
-                        type="button"
                         class="table-edit-button"
-                        aria-label="Projekt bearbeiten"
-                        title="Projekt bearbeiten"
+                        :aria-label="projekt.offerteUnterschrieben
+                          ? `Projekt ${getProjektName(projekt)} kann nach Unterschrift nicht bearbeitet werden`
+                          : `Projekt ${getProjektName(projekt)} bearbeiten`"
+                        :title="projekt.offerteUnterschrieben
+                          ? 'Nach Unterschrift gesperrt'
+                          : 'Projekt bearbeiten'"
+                        :disabled="projekt.offerteUnterschrieben"
                         @click="editProjekt(projekt)"
                       >
                         <i class="pi pi-pencil" aria-hidden="true"></i>
                       </button>
 
                       <button
-                        v-if="!projekt.offerteUnterschrieben"
                         type="button"
                         class="table-delete-button"
-                        aria-label="Projekt löschen"
-                        title="Projekt löschen"
+                        :aria-label="projekt.offerteUnterschrieben
+                          ? `Projekt ${getProjektName(projekt)} kann nach Unterschrift nicht gelöscht werden`
+                          : `Projekt ${getProjektName(projekt)} löschen`"
+                        :title="projekt.offerteUnterschrieben
+                          ? 'Nach Unterschrift gesperrt'
+                          : 'Projekt löschen'"
+                        :disabled="projekt.offerteUnterschrieben"
                         @click="askDeleteProjekt(projekt)"
                       >
                         <i class="pi pi-trash" aria-hidden="true"></i>
@@ -841,7 +816,7 @@ onBeforeUnmount(() => {
                 </tr>
 
                 <tr v-if="sortedProjekte.length === 0" class="empty-position-row">
-                  <td colspan="8">
+                  <td colspan="10">
                     <div class="project-empty-table-text">
                       {{ appliedProjectSearchQuery ? 'Keine Projekte gefunden.' : 'Noch keine Projekte vorhanden.' }}
                     </div>
@@ -849,7 +824,7 @@ onBeforeUnmount(() => {
                 </tr>
 
                 <tr class="project-add-table-row">
-                  <td colspan="8">
+                  <td colspan="10">
                     <div class="project-add-content">
                       <button
                         type="button"
@@ -954,50 +929,6 @@ onBeforeUnmount(() => {
           @saved="handleProjectSaved"
         />
       </main>
-    </div>
-
-    <div
-      v-if="rechnungToDelete"
-      class="confirmation-backdrop"
-      @click.self="cancelDeleteRechnung"
-    >
-      <div
-        class="confirmation-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Rechnung löschen?"
-      >
-        <div class="confirmation-content">
-          <h2 class="confirmation-title">
-            Rechnung löschen?
-          </h2>
-
-          <p class="confirmation-text">
-            Möchtest du die Rechnung für „{{ getProjektName(rechnungToDelete) }}“ wirklich löschen?
-            Die unterschriebene Offerte bleibt erhalten.
-          </p>
-        </div>
-
-        <div class="confirmation-actions">
-          <button
-            type="button"
-            class="confirmation-button confirmation-button-secondary"
-            :disabled="isDeletingRechnung"
-            @click="cancelDeleteRechnung"
-          >
-            Abbrechen
-          </button>
-
-          <button
-            type="button"
-            class="confirmation-button confirmation-button-danger"
-            :disabled="isDeletingRechnung"
-            @click="confirmDeleteRechnung"
-          >
-            {{ isDeletingRechnung ? 'Wird gelöscht…' : 'Rechnung löschen' }}
-          </button>
-        </div>
-      </div>
     </div>
 
     <div
@@ -1160,7 +1091,7 @@ onBeforeUnmount(() => {
 
 .projekte-table {
   width: 100%;
-  min-width: 84rem;
+  min-width: 88rem;
   margin-bottom: 0;
   border-style: hidden;
   table-layout: auto;
@@ -1206,20 +1137,28 @@ onBeforeUnmount(() => {
 
 .projekte-table th:nth-child(2),
 .projekte-table td:nth-child(2) {
-  min-width: 15rem;
+  min-width: 17.5rem;
   width: auto;
 }
 
 .projekte-table th:nth-child(3),
 .projekte-table td:nth-child(3) {
-  min-width: 11rem;
+  min-width: 11.5rem;
   width: auto;
 }
 
 .projekte-table th:nth-child(4),
 .projekte-table td:nth-child(4) {
-  min-width: 10rem;
+  min-width: 11.5rem;
   width: auto;
+}
+
+.projekte-table td:nth-child(2),
+.projekte-table td:nth-child(3),
+.projekte-table td:nth-child(4) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .projekte-table th:nth-child(5),
@@ -1231,24 +1170,40 @@ onBeforeUnmount(() => {
 
 .projekte-table th:nth-child(6),
 .projekte-table td:nth-child(6) {
-  width: 9.75rem;
-  min-width: 9.75rem;
-  max-width: 9.75rem;
+  width: 9.5rem;
+  min-width: 9.5rem;
+  max-width: 9.5rem;
 }
 
 .projekte-table th:nth-child(7),
 .projekte-table td:nth-child(7) {
-  width: 10.5rem;
-  min-width: 10.5rem;
-  max-width: 10.5rem;
+  width: 4.75rem;
+  min-width: 4.75rem;
+  max-width: 4.75rem;
   text-align: center;
 }
 
 .projekte-table th:nth-child(8),
 .projekte-table td:nth-child(8) {
-  width: 16.5rem;
-  min-width: 16.5rem;
-  max-width: 16.5rem;
+  width: 9.25rem;
+  min-width: 9.25rem;
+  max-width: 9.25rem;
+  text-align: center;
+}
+
+.projekte-table th:nth-child(9),
+.projekte-table td:nth-child(9) {
+  width: 9.5rem;
+  min-width: 9.5rem;
+  max-width: 9.5rem;
+  text-align: center;
+}
+
+.projekte-table th:nth-child(10),
+.projekte-table td:nth-child(10) {
+  width: 5.75rem;
+  min-width: 5.75rem;
+  max-width: 5.75rem;
   text-align: center;
   overflow: visible;
 }
@@ -1258,7 +1213,15 @@ onBeforeUnmount(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.project-signed-switch {
+.project-offer-cell,
+.project-signed-cell,
+.project-invoice-cell,
+.project-actions-cell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.project-state-switch {
   display: inline-flex;
   align-items: center;
   min-height: 0;
@@ -1267,12 +1230,7 @@ onBeforeUnmount(() => {
   vertical-align: middle;
 }
 
-.project-signed-cell {
-  text-align: center;
-  vertical-align: middle;
-}
-
-.project-signed-switch-input {
+.project-state-switch-input {
   float: none !important;
   width: 2.5rem !important;
   height: 1.3rem;
@@ -1283,102 +1241,97 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-.project-signed-switch-input:hover:not(:disabled) {
+.project-state-switch-input:hover:not(:disabled) {
   border-color: var(--kt-color-text-light);
 }
 
-.project-signed-switch-input:checked {
+.project-state-switch-input:checked {
   border-color: var(--kt-color-primary);
   background-color: var(--kt-color-primary);
 }
 
-.project-signed-switch-input:focus-visible {
+.project-state-switch-input:focus-visible {
   border-color: var(--kt-color-primary);
   box-shadow: 0 0 0 0.2rem var(--kt-color-primary-border-subtle);
 }
 
-.project-signed-switch-input:disabled {
+.project-state-switch-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.project-invoice-action-button,
+.project-invoice-pdf-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.32rem;
+  min-width: 6.6rem;
+  min-height: 1.75rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--kt-color-primary-border-subtle);
+  border-radius: var(--kt-border-radius-sm);
+  background: var(--kt-color-bg-white);
+  color: var(--kt-color-primary-dark);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    background-color var(--kt-transition-fast),
+    border-color var(--kt-transition-fast),
+    color var(--kt-transition-fast);
+}
+
+.project-invoice-action-button:hover:not(:disabled),
+.project-invoice-action-button:focus-visible:not(:disabled),
+.project-invoice-pdf-button:hover:not(:disabled),
+.project-invoice-pdf-button:focus-visible:not(:disabled) {
+  border-color: var(--kt-color-primary);
+  background: var(--kt-color-primary-bg-subtle);
+  color: var(--kt-color-primary-dark);
+}
+
+.project-invoice-action-button:focus-visible,
+.project-invoice-pdf-button:focus-visible {
+  outline: 2px solid var(--kt-color-primary-border-subtle);
+  outline-offset: 0.18rem;
+}
+
+.project-invoice-action-button:disabled,
+.project-invoice-pdf-button:disabled {
   cursor: wait;
   opacity: 0.6;
+}
+
+.project-invoice-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.75rem;
+  color: var(--kt-color-text-tertiary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.project-invoice-empty {
+  color: var(--kt-color-text-light);
 }
 
 .project-action-list {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.2rem;
+  gap: 0.18rem;
   width: 100%;
 }
 
-.project-create-invoice-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  min-height: 1.75rem;
-  padding: 0.2rem 0.5rem;
-  border: 1px solid var(--kt-color-primary-border-subtle);
-  border-radius: var(--kt-border-radius-sm);
-  background: var(--kt-color-bg-white);
-  color: var(--kt-color-primary-dark);
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
-  transition:
-    background-color var(--kt-transition-fast),
-    border-color var(--kt-transition-fast),
-    color var(--kt-transition-fast);
-}
-
-.project-create-invoice-button:hover,
-.project-create-invoice-button:focus-visible {
-  border-color: var(--kt-color-primary);
-  background: var(--kt-color-primary-bg-subtle);
-  color: var(--kt-color-primary-dark);
-}
-
-.project-create-invoice-button:focus-visible {
-  outline: 2px solid var(--kt-color-primary-border-subtle);
-  outline-offset: 0.18rem;
-}
-
-.project-view-invoice-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  min-height: 1.75rem;
-  padding: 0.2rem 0.5rem;
-  border: 1px solid var(--kt-color-primary-border-subtle);
-  border-radius: var(--kt-border-radius-sm);
-  background: var(--kt-color-bg-white);
-  color: var(--kt-color-primary-dark);
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
-  transition:
-    background-color var(--kt-transition-fast),
-    border-color var(--kt-transition-fast),
-    color var(--kt-transition-fast);
-}
-
-.project-view-invoice-button:hover,
-.project-view-invoice-button:focus-visible {
-  border-color: var(--kt-color-primary);
-  background: var(--kt-color-primary-bg-subtle);
-  color: var(--kt-color-primary-dark);
-}
-
-.project-view-invoice-button:focus-visible {
-  outline: 2px solid var(--kt-color-primary-border-subtle);
-  outline-offset: 0.18rem;
-}
-
-.project-view-invoice-button:disabled {
-  cursor: wait;
-  opacity: 0.6;
+.project-actions-cell .table-edit-button:disabled,
+.project-actions-cell .table-delete-button:disabled {
+  color: var(--kt-color-text-light);
+  opacity: 0.42;
 }
 
 .project-empty-table-text {
