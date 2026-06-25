@@ -18,6 +18,8 @@ const DEFAULT_SENDER_LINES = [
   'Musterstrasse 1',
   '8000 Zürich'
 ]
+const DEFAULT_INVOICE_IBAN = 'CH00 0000 0000 0000 0000 0'
+const DEFAULT_PAYMENT_TERMS = '30 Tage netto nach Rechnungsstellung'
 
 const winAnsiMap = new Map([
   [0x20ac, 0x80],
@@ -338,6 +340,26 @@ const wrapText = (value, maxWidth, fontSize = DEFAULT_FONT_SIZE, isBold = false)
   return lines.length > 0 ? lines : ['']
 }
 
+const fitTextToWidth = (value, maxWidth, fontSize, isBold = false) => {
+  const text = sanitizeText(value)
+
+  if (estimateTextWidth(text, fontSize, isBold) <= maxWidth) {
+    return text
+  }
+
+  const suffix = '...'
+  let fitted = text
+
+  while (
+    fitted.length > 0 &&
+    estimateTextWidth(`${fitted}${suffix}`, fontSize, isBold) > maxWidth
+  ) {
+    fitted = fitted.slice(0, -1).trimEnd()
+  }
+
+  return `${fitted}${suffix}`
+}
+
 const formatOfferDate = (generatedAt) =>
   new Intl.DateTimeFormat('de-CH', {
     day: 'numeric',
@@ -510,6 +532,8 @@ const TEMPLATE_TOTAL_ROW_HEIGHT = 21
 const TEMPLATE_DETAIL_TITLE_HEIGHT = 20
 const TEMPLATE_DETAIL_ROW_HEIGHT = 20
 const TEMPLATE_CONDITIONS_BASE_HEIGHT = TEMPLATE_BLANK_ROW_HEIGHT + 20 + 18 + 18
+const TEMPLATE_INVOICE_CONDITIONS_HEIGHT = TEMPLATE_CONDITIONS_BASE_HEIGHT + 18
+const TEMPLATE_INVOICE_CLOSING_HEIGHT = TEMPLATE_BLANK_ROW_HEIGHT + 18 + 18
 const TEMPLATE_ACCEPTANCE_HEIGHT = TEMPLATE_BLANK_ROW_HEIGHT + 20 + 24 + TEMPLATE_BLANK_ROW_HEIGHT
 
 const templateColumns = [
@@ -584,6 +608,32 @@ const drawTemplateFullRow = (layout, topY, height, text, options = {}) => {
     paddingX: options.paddingX ?? 4,
     maxLines: options.maxLines ?? 1
   })
+}
+
+const drawTemplateDocumentHeading = (layout, topY, documentTitle, projectTitle) => {
+  const height = 38
+  const x = TEMPLATE.x
+  const width = TEMPLATE.width
+  const fontSize = 12
+  const textY = topY - 25.5
+  const headingText = fitTextToWidth(
+    `${documentTitle}: ${projectTitle}`,
+    width - 8,
+    fontSize,
+    true
+  )
+
+  layout.drawRect(x, topY - height, width, height, {
+    strokeColor: TEMPLATE.border,
+    lineWidth: TEMPLATE.lineWidth
+  })
+  layout.drawText(headingText, x + 4, textY, {
+    size: fontSize,
+    bold: true,
+    color: COLORS.accentDark
+  })
+
+  return topY - height
 }
 
 const getTemplateSenderRows = (senderLines) => ({
@@ -870,11 +920,15 @@ const drawTemplateDetailSection = (layout, y, section, options = {}) => {
   return y
 }
 
-const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
+const addTemplateOfferContent = (layout, data, generatedAt, senderLines, options = {}) => {
+  const isInvoice = options.documentType === 'rechnung'
+  const invoiceIban = sanitizeText(options.iban) || DEFAULT_INVOICE_IBAN
+  const paymentTerms = sanitizeText(options.paymentTerms) || DEFAULT_PAYMENT_TERMS
   const sender = getTemplateSenderRows(senderLines)
   const recipient = getTemplateRecipientRows(data)
   const offerNumber = formatOfferNumber(data.projektId, generatedAt)
-  const validUntilDate = formatOfferValidUntilDate(generatedAt)
+  const documentNumber = offerNumber
+  const deadlineDate = formatOfferValidUntilDate(generatedAt)
   const totalAmount = formatTableAmount(getTotalAmount(data))
   const rows = getTemplateRows(data)
   const displayRows = rows
@@ -892,13 +946,13 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
 
   drawTemplateCell(layout, x, y, leftW, 46, {
     text: sender.name,
-    size: 14,
+    size: 12,
     bold: true,
     color: COLORS.accentDark,
     maxLines: 1
   })
   drawTemplateCell(layout, rightX, y, rightW, 15, {
-    text: 'Angebotsempfänger',
+    text: isInvoice ? 'Rechnungsempfänger' : 'Angebotsempfänger',
     size: 7.4,
     color: COLORS.softText
   })
@@ -954,25 +1008,25 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
   drawTemplateFullRow(layout, y, TEMPLATE_BLANK_ROW_HEIGHT, '')
   y -= TEMPLATE_BLANK_ROW_HEIGHT
 
-  drawTemplateFullRow(layout, y, 34, 'Offerte', {
-    size: 19,
-    bold: true,
-    color: COLORS.accentDark
-  })
-  y -= 34
+  y = drawTemplateDocumentHeading(
+    layout,
+    y,
+    isInvoice ? 'Rechnung' : 'Offerte',
+    data.title
+  )
 
-  const metaLabelW = 54
+  const metaLabelW = isInvoice ? 76 : 54
   const metaValueW = leftW - metaLabelW
   const metaRightLabelW = 68
   const metaRightValueW = rightW - metaRightLabelW
 
   drawTemplateCell(layout, x, y, metaLabelW, 18, {
-    text: 'Offert-Nr.:',
+    text: isInvoice ? 'Rechnungs-Nr.:' : 'Offert-Nr.:',
     size: 7.8,
     bold: true
   })
   drawTemplateCell(layout, x + metaLabelW, y, metaValueW, 18, {
-    text: offerNumber,
+    text: documentNumber,
     size: 8.2
   })
   drawTemplateCell(layout, rightX, y, metaRightLabelW, 18, {
@@ -989,12 +1043,12 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
 
   drawTemplateCell(layout, x, y, leftW, 18, {})
   drawTemplateCell(layout, rightX, y, metaRightLabelW, 18, {
-    text: 'Gültig bis:',
+    text: isInvoice ? 'Zahlbar bis:' : 'Gültig bis:',
     size: 8,
     bold: true
   })
   drawTemplateCell(layout, rightX + metaRightLabelW, y, metaRightValueW, 18, {
-    text: validUntilDate,
+    text: deadlineDate,
     size: 8.2,
     align: 'right'
   })
@@ -1002,9 +1056,17 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
 
   drawTemplateFullRow(layout, y, TEMPLATE_BLANK_ROW_HEIGHT, '')
   y -= TEMPLATE_BLANK_ROW_HEIGHT
-  drawTemplateFullRow(layout, y, 22, 'Gerne unterbreiten wir Ihnen folgendes Angebot:', {
+  drawTemplateFullRow(
+    layout,
+    y,
+    22,
+    isInvoice
+      ? 'Wir stellen Ihnen folgende Leistungen in Rechnung:'
+      : 'Gerne unterbreiten wir Ihnen folgendes Angebot:',
+    {
     size: 8.4
-  })
+    }
+  )
   y -= 22
 
   drawTemplateTableHeader(layout, y)
@@ -1067,7 +1129,12 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     shouldPreserveTotalBottomLine = false
   })
 
-  y = ensureTemplatePageSpace(layout, y, TEMPLATE_CONDITIONS_BASE_HEIGHT, { tableHeader: false })
+  y = ensureTemplatePageSpace(
+    layout,
+    y,
+    isInvoice ? TEMPLATE_INVOICE_CONDITIONS_HEIGHT : TEMPLATE_CONDITIONS_BASE_HEIGHT,
+    { tableHeader: false }
+  )
 
   y = drawTemplateSectionSpacer(layout, y, {
     skipTopBorder: shouldPreserveTotalBottomLine
@@ -1078,35 +1145,58 @@ const addTemplateOfferContent = (layout, data, generatedAt, senderLines) => {
     color: COLORS.ink
   })
   y -= 20
-  drawTemplateFullRow(layout, y, 18, 'Zahlungsbedingungen: 30 Tage netto nach Rechnungsstellung', {
+  drawTemplateFullRow(layout, y, 18, `Zahlungsbedingungen: ${paymentTerms}`, {
     size: 8.2
   })
   y -= 18
-  drawTemplateFullRow(layout, y, 18, 'Alle Preise in CHF, inkl. MWST; Preisänderungen nach Ablauf der Angebotsfrist vorbehalten.', {
+  if (isInvoice) {
+    drawTemplateFullRow(layout, y, 18, `IBAN: ${invoiceIban}`, {
+      size: 8.2
+    })
+    y -= 18
+  }
+  drawTemplateFullRow(layout, y, 18, isInvoice
+    ? 'Alle Preise in CHF, inkl. MWST.'
+    : 'Alle Preise in CHF, inkl. MWST; Preisänderungen nach Ablauf der Angebotsfrist vorbehalten.', {
     size: 8.2
   })
   y -= 18
 
-  y = ensureTemplatePageSpace(layout, y, TEMPLATE_ACCEPTANCE_HEIGHT, { tableHeader: false })
+  if (isInvoice) {
+    y = ensureTemplatePageSpace(layout, y, TEMPLATE_INVOICE_CLOSING_HEIGHT, {
+      tableHeader: false
+    })
 
-  y = drawTemplateSectionSpacer(layout, y)
-  drawTemplateFullRow(layout, y, 20, 'Annahme der Offerte', {
-    size: 10,
-    bold: true,
-    color: COLORS.ink
-  })
-  y -= 20
-  drawTemplateCell(layout, x, y, leftW, 24, {
-    text: 'Ort, Datum: ___________________________',
-    size: 8.2
-  })
-  drawTemplateCell(layout, rightX, y, rightW, 24, {
-    text: 'Unterschrift: ___________________________',
-    size: 8.2
-  })
-  y -= 24
+    y = drawTemplateSectionSpacer(layout, y)
+    drawTemplateFullRow(layout, y, 18, 'Freundliche Grüsse', {
+      size: 8.2
+    })
+    y -= 18
+    drawTemplateFullRow(layout, y, 18, sellerLine, {
+      size: 8.2
+    })
+    y -= 18
+  } else {
+    y = ensureTemplatePageSpace(layout, y, TEMPLATE_ACCEPTANCE_HEIGHT, { tableHeader: false })
 
-  drawTemplateFullRow(layout, y, TEMPLATE_BLANK_ROW_HEIGHT, '')
+    y = drawTemplateSectionSpacer(layout, y)
+    drawTemplateFullRow(layout, y, 20, 'Annahme der Offerte', {
+      size: 10,
+      bold: true,
+      color: COLORS.ink
+    })
+    y -= 20
+    drawTemplateCell(layout, x, y, leftW, 24, {
+      text: 'Ort, Datum: ___________________________',
+      size: 8.2
+    })
+    drawTemplateCell(layout, rightX, y, rightW, 24, {
+      text: 'Unterschrift: ___________________________',
+      size: 8.2
+    })
+    y -= 24
+    drawTemplateFullRow(layout, y, TEMPLATE_BLANK_ROW_HEIGHT, '')
+  }
 }
 
 export const buildOffertePdfBytes = (options) => {
@@ -1118,7 +1208,28 @@ export const buildOffertePdfBytes = (options) => {
   })
   const layout = new PdfLayout()
 
-  addTemplateOfferContent(layout, data, generatedAt, senderLines)
+  addTemplateOfferContent(layout, data, generatedAt, senderLines, {
+    paymentTerms: options.paymentTerms
+  })
+  addTemplatePageNumbers(layout)
+
+  return createPdfBytes(layout.pages)
+}
+
+export const buildRechnungPdfBytes = (options) => {
+  const generatedAt = options.generatedAt ?? new Date()
+  const senderLines = options.senderLines ?? DEFAULT_SENDER_LINES
+  const data = createOfferteDocumentData({
+    ...options,
+    generatedAt
+  })
+  const layout = new PdfLayout()
+
+  addTemplateOfferContent(layout, data, generatedAt, senderLines, {
+    documentType: 'rechnung',
+    iban: options.iban,
+    paymentTerms: options.paymentTerms
+  })
   addTemplatePageNumbers(layout)
 
   return createPdfBytes(layout.pages)
@@ -1133,4 +1244,15 @@ export const buildOffertePdfFilename = ({ projekt, generatedAt = new Date() }) =
   const offerNumber = formatOfferNumber(data.projektId, generatedAt)
 
   return `Offerte ${offerNumber} ${title}.pdf`
+}
+
+export const buildRechnungPdfFilename = ({ projekt, generatedAt = new Date() }) => {
+  const data = createOfferteDocumentData({
+    projekt,
+    generatedAt
+  })
+  const title = sanitizeFilenamePart(data.title) || 'Rechnung'
+  const invoiceNumber = formatOfferNumber(data.projektId, generatedAt)
+
+  return `Rechnung ${invoiceNumber} ${title}.pdf`
 }

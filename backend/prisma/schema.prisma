@@ -39,8 +39,11 @@ model Benutzer {
   rolle    BenutzerRolle @default(VERKAUF)
   aktiv    Boolean       @default(true)
 
-  offerten Offerte[] @relation("OfferteBenutzer")
-  kunden   Kunde[]   @relation("KundeVerkaeufer")
+  offerten                       Offerte[]                @relation("OfferteBenutzer")
+  kunden                         Kunde[]                  @relation("KundeVerkaeufer")
+  unterschriebeneKonfigurationen Konfiguration[]          @relation("KonfigurationUnterschriebenVon")
+  offerteVersionen               OfferteVersion[]
+  offerteStatusAenderungen       OfferteStatusAenderung[]
 
   erstelltAm     DateTime @default(now())
   aktualisiertAm DateTime @updatedAt
@@ -218,7 +221,7 @@ model LieferOption {
   value     String @unique
   label     String
   betrag    Int    @default(0)
-  sortierung Int   @default(0)
+  sortierung Int    @default(0)
 
   erstelltAm     DateTime @default(now())
   aktualisiertAm DateTime @updatedAt
@@ -323,11 +326,57 @@ model Konfiguration {
   snapshotJson String
   total        Int    @default(0)
 
+  offerteErstelltAm          DateTime?
+  offerteUnterschrieben      Boolean   @default(false)
+  offerteUnterschriebenAm    DateTime?
+  offerteUnterschriebenVonId Int?
+  offerteUnterschriebenVon   Benutzer? @relation("KonfigurationUnterschriebenVon", fields: [offerteUnterschriebenVonId], references: [id], onDelete: SetNull)
+  rechnungErstelltAm          DateTime?
+
+  offerteVersionen         OfferteVersion[]
+  offerteStatusAenderungen OfferteStatusAenderung[]
+
   erstelltAm     DateTime @default(now())
   aktualisiertAm DateTime @updatedAt
 
   @@unique([kundeId, name])
   @@index([druckermodellId])
+  @@index([offerteUnterschrieben])
+  @@index([offerteUnterschriebenVonId])
+}
+
+model OfferteVersion {
+  id                Int                      @id @default(autoincrement())
+  konfigurationId   Int
+  konfiguration     Konfiguration            @relation(fields: [konfigurationId], references: [id], onDelete: Cascade)
+  version           Int
+  pdfBytes          Bytes
+  rechnungPdfBytes  Bytes?
+  snapshotJson      String
+  erstelltVonId     Int?
+  erstelltVon       Benutzer?                @relation(fields: [erstelltVonId], references: [id], onDelete: SetNull)
+  statusAenderungen OfferteStatusAenderung[]
+  erstelltAm        DateTime                 @default(now())
+
+  @@unique([konfigurationId, version])
+  @@index([konfigurationId, erstelltAm])
+  @@index([erstelltVonId])
+}
+
+model OfferteStatusAenderung {
+  id               Int             @id @default(autoincrement())
+  konfigurationId  Int
+  konfiguration    Konfiguration   @relation(fields: [konfigurationId], references: [id], onDelete: Cascade)
+  unterschrieben   Boolean
+  offerteVersionId Int?
+  offerteVersion   OfferteVersion? @relation(fields: [offerteVersionId], references: [id], onDelete: SetNull)
+  benutzerId       Int?
+  benutzer         Benutzer?       @relation(fields: [benutzerId], references: [id], onDelete: SetNull)
+  erstelltAm       DateTime        @default(now())
+
+  @@index([konfigurationId, erstelltAm])
+  @@index([offerteVersionId])
+  @@index([benutzerId])
 }
 
 model OffertePosition {

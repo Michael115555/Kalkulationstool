@@ -1067,17 +1067,6 @@ onBeforeUnmount(() => {
   gap: 0.15rem;
 }
 
-.customers-table .table-edit-button,
-.customers-table .table-delete-button {
-  width: 1.75rem;
-  height: 1.75rem;
-}
-
-.customers-table .table-edit-button .pi,
-.customers-table .table-delete-button .pi {
-  font-size: 0.95rem;
-}
-
 .customer-empty-table-row td {
   padding: 0.8rem 1rem;
 }

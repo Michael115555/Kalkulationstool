@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import { buildOffertePdfBytes, buildOffertePdfFilename } from './offertePdf'
+import {
+  buildOffertePdfBytes,
+  buildOffertePdfFilename,
+  buildRechnungPdfBytes,
+  buildRechnungPdfFilename
+} from './offertePdf'
 
 const toPdfHex = (value) => Buffer.from(value, 'latin1').toString('hex')
 
@@ -72,6 +77,7 @@ describe('offertePdf', () => {
         ort: 'Aarau'
       },
       verkaeuferName: 'Demo Verkäufer',
+      iban: 'CH00 0000 0000 0000 0000 0',
       projekt: createProjektFixture()
     })
     const pdfText = new TextDecoder().decode(bytes)
@@ -80,6 +86,9 @@ describe('offertePdf', () => {
     expect(pdfText.startsWith('%PDF-1.4')).toBe(true)
     expect(pdfText).toContain('/Type /Page')
     expect(pdfText).toContain('/Helvetica-Bold')
+    expect(pdfText).toContain(toPdfHex('SpeedLizenz 40er'))
+    expect(pdfText).toContain(toPdfHex('Offert-Nr.:'))
+    expect(pdfText).toContain(toPdfHex('2026-17'))
     expect(pdfText).toContain(toPdfHex('Gesamtsumme'))
     expect(pdfText).toContain(toPdfHex('Demo Verkäufer'))
     expect(pdfText).toContain(toPdfHex('Alex Beispiel'))
@@ -93,7 +102,39 @@ describe('offertePdf', () => {
         generatedAt: '2026-06-08T10:00:00.000Z',
         projekt: createProjektFixture()
       })
-    ).toBe('Offerte 2026-17 Canon imageForce C5140.pdf')
+    ).toBe('Offerte 2026-17 SpeedLizenz 40er.pdf')
+  })
+
+  test('erstellt eine Rechnung ohne Annahmebereich aus demselben Projektsnapshot', () => {
+    const generatedAt = '2026-06-08T10:00:00.000Z'
+    const bytes = buildRechnungPdfBytes({
+      generatedAt,
+      kunde: {
+        firmenname: 'Demo Kunden AG',
+        strasse: 'Kundenstrasse 8',
+        plz: '5000',
+        ort: 'Aarau'
+      },
+      verkaeuferName: 'Demo Verkäufer',
+      projekt: createProjektFixture()
+    })
+    const pdfText = new TextDecoder().decode(bytes)
+
+    expect(pdfText).toContain(toPdfHex('SpeedLizenz 40er'))
+    expect(pdfText).toContain(toPdfHex('Rechnungsempfänger'))
+    expect(pdfText).toContain(toPdfHex('Rechnungs-Nr.:'))
+    expect(pdfText).toContain(toPdfHex('2026-17'))
+    expect(pdfText).toContain(toPdfHex('Zahlbar bis:'))
+    expect(pdfText).toContain(toPdfHex('IBAN: CH00 0000 0000 0000 0000 0'))
+    expect(pdfText).toContain(toPdfHex('Freundliche Grüsse'))
+    expect(pdfText).toContain(toPdfHex('Demo Verkäufer'))
+    expect(pdfText).not.toContain(toPdfHex('Annahme der Offerte'))
+    expect(
+      buildRechnungPdfFilename({
+        generatedAt,
+        projekt: createProjektFixture()
+      })
+    ).toBe('Rechnung 2026-17 SpeedLizenz 40er.pdf')
   })
 
   test('bricht lange Offerten auf mehrere Seiten um', () => {

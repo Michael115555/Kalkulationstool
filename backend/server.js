@@ -7,13 +7,15 @@ const {
   validateInteger,
   validateKundePayload,
   validateKonfigurationPayload,
+  validateOfferteUnterschriebenPayload,
+  validateRechnungErstellenPayload,
   ApiError
 } = require('./validators')
 const { getCatalogCache, setCatalogCache } = require('./catalogCache')
 
 const prisma = new PrismaClient()
 const port = Number(process.env.PORT || 3001)
-const MAX_JSON_BODY_BYTES = 1024 * 1024
+const MAX_JSON_BODY_BYTES = 3 * 1024 * 1024
 const DEMO_VERKAEUFER_EMAIL = 'demo.verkaeufer@local'
 const DEFAULT_PAGE_SIZE = 10
 const MAX_PAGE_SIZE = 100
@@ -78,6 +80,19 @@ const sendJson = (response, statusCode, payload) => {
     'Access-Control-Allow-Headers': 'Content-Type'
   })
   response.end(JSON.stringify(payload))
+}
+
+const sendPdf = (response, pdfBytes, filename) => {
+  response.writeHead(200, {
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': `inline; filename="${filename}"`,
+    'Content-Length': pdfBytes.length,
+    'Cache-Control': 'private, no-store',
+    'Access-Control-Allow-Origin': process.env.FRONTEND_ORIGIN || '*',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  })
+  response.end(pdfBytes)
 }
 
 const readJsonBody = (request) =>
@@ -453,6 +468,16 @@ const serializeKonfiguration = (konfiguration) => ({
     ...parseSnapshot(konfiguration),
     kundeId: konfiguration.kundeId ?? null
   },
+  offerteErstelltAm: konfiguration.offerteErstelltAm ?? null,
+  offerteUnterschrieben: Boolean(konfiguration.offerteUnterschrieben),
+  offerteUnterschriebenAm: konfiguration.offerteUnterschriebenAm ?? null,
+  offerteUnterschriebenVonId: konfiguration.offerteUnterschriebenVonId ?? null,
+  rechnungErstellt: Boolean(
+    konfiguration.offerteUnterschrieben && konfiguration.rechnungErstelltAm
+  ),
+  rechnungErstelltAm: konfiguration.offerteUnterschrieben
+    ? konfiguration.rechnungErstelltAm ?? null
+    : null,
   aktualisiertAm: konfiguration.aktualisiertAm
 })
 
@@ -486,6 +511,16 @@ const serializeProjektSummary = (konfiguration) => {
       kundeName: calculation.kundeName ?? null,
       verkaeuferId: calculation.verkaeuferId ?? null
     },
+    offerteErstelltAm: konfiguration.offerteErstelltAm ?? null,
+    offerteUnterschrieben: Boolean(konfiguration.offerteUnterschrieben),
+    offerteUnterschriebenAm: konfiguration.offerteUnterschriebenAm ?? null,
+    offerteUnterschriebenVonId: konfiguration.offerteUnterschriebenVonId ?? null,
+    rechnungErstellt: Boolean(
+      konfiguration.offerteUnterschrieben && konfiguration.rechnungErstelltAm
+    ),
+    rechnungErstelltAm: konfiguration.offerteUnterschrieben
+      ? konfiguration.rechnungErstelltAm ?? null
+      : null,
     aktualisiertAm: konfiguration.aktualisiertAm
   }
 }
@@ -674,11 +709,40 @@ const createKonfiguration = async (payload) => {
 const updateKonfiguration = async (id, payload) => {
   validateInteger(id, 'Konfiguration ID')
   const validated = validateKonfigurationPayload(payload)
+  const existing = await prisma.konfiguration.findUniqueOrThrow({
+    where: { id },
+    select: {
+      name: true,
+      kundeId: true,
+      druckermodellId: true,
+      druckerVarianteId: true,
+      total: true,
+      snapshotJson: true,
+      offerteErstelltAm: true,
+      offerteUnterschrieben: true
+    }
+  })
+
+  if (existing.offerteUnterschrieben) {
+    throw new ApiError(
+      'Unterschriebene Offerten können nicht bearbeitet werden. Entferne zuerst die Markierung.',
+      409
+    )
+  }
   
   const calculation = {
     ...validated.calculation,
     kundeId: validated.kundeId
   }
+  const total = amountToDb(validated.total)
+  const snapshotJson = JSON.stringify(calculation)
+  const hasOfferRelevantChanges =
+    existing.name !== validated.name ||
+    existing.kundeId !== validated.kundeId ||
+    existing.druckermodellId !== validated.druckermodellId ||
+    existing.druckerVarianteId !== validated.druckerVarianteId ||
+    existing.total !== total ||
+    existing.snapshotJson !== snapshotJson
   
   const konfiguration = await prisma.konfiguration.update({
     where: { id },
@@ -687,12 +751,247 @@ const updateKonfiguration = async (id, payload) => {
       kundeId: validated.kundeId,
       druckermodellId: validated.druckermodellId,
       druckerVarianteId: validated.druckerVarianteId,
-      total: amountToDb(validated.total),
-      snapshotJson: JSON.stringify(calculation)
+      total,
+      snapshotJson,
+      offerteErstelltAm:
+        hasOfferRelevantChanges && existing.offerteErstelltAm
+          ? new Date()
+          : existing.offerteErstelltAm
     }
   })
 
   return serializeKonfiguration(konfiguration)
+}
+
+const ensureOfferteErstelltAm = async (id) => {
+  validateInteger(id, 'Konfiguration ID')
+
+  await prisma.konfiguration.updateMany({
+    where: {
+      id,
+      offerteErstelltAm: null
+    },
+    data: {
+      offerteErstelltAm: new Date()
+    }
+  })
+
+  return getKonfiguration(id)
+}
+
+const setOfferteUnterschrieben = async (id, payload) => {
+  validateInteger(id, 'Konfiguration ID')
+  const validated = validateOfferteUnterschriebenPayload(payload)
+  const benutzerId = await getDemoVerkaeuferId()
+
+  await prisma.$transaction(async (transaction) => {
+    const konfiguration = await transaction.konfiguration.findUniqueOrThrow({
+      where: { id },
+      include: projectSummaryInclude
+    })
+
+    if (Boolean(konfiguration.offerteUnterschrieben) === validated.unterschrieben) {
+      return
+    }
+
+    if (!validated.unterschrieben) {
+      await transaction.konfiguration.update({
+        where: { id },
+        data: {
+          offerteUnterschrieben: false,
+          offerteUnterschriebenAm: null,
+          offerteUnterschriebenVonId: null,
+          rechnungErstelltAm: null
+        }
+      })
+      await transaction.offerteStatusAenderung.create({
+        data: {
+          konfigurationId: id,
+          unterschrieben: false,
+          benutzerId
+        }
+      })
+      return
+    }
+
+    const latestVersion = await transaction.offerteVersion.aggregate({
+      where: { konfigurationId: id },
+      _max: { version: true }
+    })
+    const version = await transaction.offerteVersion.create({
+      data: {
+        konfigurationId: id,
+        version: (latestVersion._max.version ?? 0) + 1,
+        pdfBytes: validated.pdfBytes,
+        snapshotJson: JSON.stringify(serializeKonfiguration(konfiguration)),
+        erstelltVonId: benutzerId
+      }
+    })
+
+    await transaction.konfiguration.update({
+      where: { id },
+      data: {
+        offerteUnterschrieben: true,
+        offerteUnterschriebenAm: new Date(),
+        offerteUnterschriebenVonId: benutzerId,
+        rechnungErstelltAm: null
+      }
+    })
+    await transaction.offerteStatusAenderung.create({
+      data: {
+        konfigurationId: id,
+        unterschrieben: true,
+        offerteVersionId: version.id,
+        benutzerId
+      }
+    })
+  })
+
+  return getKonfiguration(id)
+}
+
+const createRechnung = async (id, payload) => {
+  validateInteger(id, 'Konfiguration ID')
+  const validated = validateRechnungErstellenPayload(payload)
+  const erstelltAm = new Date()
+
+  await prisma.$transaction(async (transaction) => {
+    const konfiguration = await transaction.konfiguration.findUniqueOrThrow({
+      where: { id },
+      select: {
+        offerteUnterschrieben: true,
+        rechnungErstelltAm: true
+      }
+    })
+
+    if (!konfiguration.offerteUnterschrieben) {
+      throw new ApiError('Die Rechnung kann erst nach Unterzeichnung der Offerte erstellt werden.', 409)
+    }
+
+    if (konfiguration.rechnungErstelltAm) {
+      throw new ApiError('Für dieses Projekt wurde bereits eine Rechnung erstellt.', 409)
+    }
+
+    const version = await transaction.offerteVersion.findFirst({
+      where: { konfigurationId: id },
+      orderBy: [{ version: 'desc' }],
+      select: { id: true }
+    })
+
+    if (!version) {
+      throw new ApiError('Die archivierte Offerte wurde nicht gefunden.', 404)
+    }
+
+    await transaction.offerteVersion.update({
+      where: { id: version.id },
+      data: { rechnungPdfBytes: validated.pdfBytes }
+    })
+    await transaction.konfiguration.update({
+      where: { id },
+      data: { rechnungErstelltAm: erstelltAm }
+    })
+  })
+
+  return getKonfiguration(id)
+}
+
+const deleteRechnung = async (id) => {
+  validateInteger(id, 'Konfiguration ID')
+
+  await prisma.$transaction(async (transaction) => {
+    const konfiguration = await transaction.konfiguration.findUniqueOrThrow({
+      where: { id },
+      select: {
+        offerteUnterschrieben: true,
+        rechnungErstelltAm: true
+      }
+    })
+
+    if (!konfiguration.offerteUnterschrieben) {
+      throw new ApiError('Für dieses Projekt ist keine unterschriebene Offerte aktiv.', 409)
+    }
+
+    if (!konfiguration.rechnungErstelltAm) {
+      throw new ApiError('Für dieses Projekt wurde noch keine Rechnung erstellt.', 404)
+    }
+
+    const version = await transaction.offerteVersion.findFirst({
+      where: { konfigurationId: id },
+      orderBy: [{ version: 'desc' }],
+      select: { id: true }
+    })
+
+    if (!version) {
+      throw new ApiError('Die archivierte Offerte wurde nicht gefunden.', 404)
+    }
+
+    await transaction.offerteVersion.update({
+      where: { id: version.id },
+      data: { rechnungPdfBytes: null }
+    })
+    await transaction.konfiguration.update({
+      where: { id },
+      data: { rechnungErstelltAm: null }
+    })
+  })
+
+  return getKonfiguration(id)
+}
+
+const getArchivierteProjektPdf = async (id, type) => {
+  validateInteger(id, 'Konfiguration ID')
+  const konfiguration = await prisma.konfiguration.findUniqueOrThrow({
+    where: { id },
+    select: {
+      id: true,
+      offerteUnterschrieben: true,
+      rechnungErstelltAm: true
+    }
+  })
+
+  if (!konfiguration.offerteUnterschrieben) {
+    throw new ApiError('Für dieses Projekt ist keine unterschriebene Offerte aktiv', 404)
+  }
+
+  if (type === 'rechnung' && !konfiguration.rechnungErstelltAm) {
+    throw new ApiError('Für dieses Projekt wurde noch keine Rechnung erstellt', 404)
+  }
+
+  const version = await prisma.offerteVersion.findFirst({
+    where: { konfigurationId: id },
+    orderBy: [{ version: 'desc' }],
+    select: { pdfBytes: true, rechnungPdfBytes: true, version: true }
+  })
+
+  if (!version) {
+    throw new ApiError('Die archivierte Offerten-PDF wurde nicht gefunden', 404)
+  }
+
+  if (type === 'rechnung' && !version.rechnungPdfBytes) {
+    throw new ApiError('Die archivierte Rechnungs-PDF wurde nicht gefunden', 404)
+  }
+
+  return {
+    pdfBytes: type === 'rechnung' ? version.rechnungPdfBytes : version.pdfBytes,
+    version: version.version
+  }
+}
+
+const deleteKonfiguration = async (id) => {
+  validateInteger(id, 'Konfiguration ID')
+  const konfiguration = await prisma.konfiguration.findUniqueOrThrow({
+    where: { id },
+    select: { offerteUnterschrieben: true }
+  })
+
+  if (konfiguration.offerteUnterschrieben) {
+    throw new ApiError(
+      'Projekte mit unterschriebener Offerte können nicht gelöscht werden.',
+      409
+    )
+  }
+
+  await prisma.konfiguration.delete({ where: { id } })
 }
 
 const handleRequest = async (request, response) => {
@@ -779,6 +1078,84 @@ const handleRequest = async (request, response) => {
       return
     }
 
+    const offerteDatumMatch = url.pathname.match(
+      /^\/api\/konfigurationen\/(\d+)\/offerte-datum$/
+    )
+
+    if (offerteDatumMatch && request.method === 'PUT') {
+      sendJson(
+        response,
+        200,
+        await ensureOfferteErstelltAm(Number(offerteDatumMatch[1]))
+      )
+      return
+    }
+
+    const offerteUnterschriebenMatch = url.pathname.match(
+      /^\/api\/konfigurationen\/(\d+)\/offerte-unterschrieben$/
+    )
+
+    if (offerteUnterschriebenMatch && request.method === 'PUT') {
+      sendJson(
+        response,
+        200,
+        await setOfferteUnterschrieben(
+          Number(offerteUnterschriebenMatch[1]),
+          await readJsonBody(request)
+        )
+      )
+      return
+    }
+
+    const offertePdfMatch = url.pathname.match(
+      /^\/api\/konfigurationen\/(\d+)\/offerte-pdf$/
+    )
+
+    if (offertePdfMatch && request.method === 'GET') {
+      const version = await getArchivierteProjektPdf(Number(offertePdfMatch[1]), 'offerte')
+      sendPdf(
+        response,
+        version.pdfBytes,
+        `offerte-${offertePdfMatch[1]}-v${version.version}.pdf`
+      )
+      return
+    }
+
+    const rechnungErstellenMatch = url.pathname.match(
+      /^\/api\/konfigurationen\/(\d+)\/rechnung$/
+    )
+
+    if (rechnungErstellenMatch && request.method === 'POST') {
+      sendJson(
+        response,
+        201,
+        await createRechnung(
+          Number(rechnungErstellenMatch[1]),
+          await readJsonBody(request)
+        )
+      )
+      return
+    }
+
+    if (rechnungErstellenMatch && request.method === 'DELETE') {
+      sendJson(response, 200, await deleteRechnung(Number(rechnungErstellenMatch[1])))
+      return
+    }
+
+    const rechnungPdfMatch = url.pathname.match(
+      /^\/api\/konfigurationen\/(\d+)\/rechnung-pdf$/
+    )
+
+    if (rechnungPdfMatch && request.method === 'GET') {
+      const version = await getArchivierteProjektPdf(Number(rechnungPdfMatch[1]), 'rechnung')
+      sendPdf(
+        response,
+        version.pdfBytes,
+        `rechnung-${rechnungPdfMatch[1]}-v${version.version}.pdf`
+      )
+      return
+    }
+
     const konfigurationMatch = url.pathname.match(/^\/api\/konfigurationen\/(\d+)$/)
 
     if (konfigurationMatch && request.method === 'GET') {
@@ -796,9 +1173,7 @@ const handleRequest = async (request, response) => {
     }
 
     if (konfigurationMatch && request.method === 'DELETE') {
-      await prisma.konfiguration.delete({
-        where: { id: Number(konfigurationMatch[1]) }
-      })
+      await deleteKonfiguration(Number(konfigurationMatch[1]))
       sendJson(response, 200, { ok: true })
       return
     }

@@ -271,8 +271,10 @@ onMounted(async () => {
 }
 
 .nav-icon {
-  font-size: 1rem;
+  width: 1.1rem;
+  font-size: 1.05rem;
   line-height: 1;
+  text-align: center;
   color: var(--kt-color-text-tertiary);
 }
 

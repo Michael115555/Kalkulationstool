@@ -16,6 +16,7 @@ class ApiError extends Error {
 const MAX_CALCULATION_POSITIONS = 150
 const MAX_CALCULATION_KONDITIONEN = 50
 const MAX_DISPLAY_SNAPSHOT_BYTES = 200_000
+const MAX_OFFER_PDF_BYTES = 750_000
 
 const isPlainObject = (value) =>
   value !== null &&
@@ -455,9 +456,63 @@ const validateKonfigurationPayload = (payload = {}) => {
   }
 }
 
+const decodePdfPayload = (value, fieldName) => {
+  const pdfBase64 = String(value ?? '').trim()
+
+  if (
+    !pdfBase64 ||
+    pdfBase64.length % 4 !== 0 ||
+    !/^[A-Za-z0-9+/]+={0,2}$/.test(pdfBase64)
+  ) {
+    throw new ApiError(`${fieldName} ist keine gültige PDF`, 400)
+  }
+
+  const pdfBytes = Buffer.from(pdfBase64, 'base64')
+
+  if (pdfBytes.length === 0 || pdfBytes.length > MAX_OFFER_PDF_BYTES) {
+    throw new ApiError(`${fieldName} ist leer oder zu gross`, 400)
+  }
+
+  if (pdfBytes.subarray(0, 5).toString('ascii') !== '%PDF-') {
+    throw new ApiError(`${fieldName} ist keine PDF`, 400)
+  }
+
+  return pdfBytes
+}
+
+const validateOfferteUnterschriebenPayload = (payload = {}) => {
+  if (!isPlainObject(payload) || typeof payload.unterschrieben !== 'boolean') {
+    throw new ApiError('Unterschrieben muss ein Wahrheitswert sein', 400)
+  }
+
+  if (!payload.unterschrieben) {
+    return {
+      unterschrieben: false,
+      pdfBytes: null
+    }
+  }
+
+  return {
+    unterschrieben: true,
+    pdfBytes: decodePdfPayload(payload.pdfBase64, 'Die Offerten-PDF')
+  }
+}
+
+const validateRechnungErstellenPayload = (payload = {}) => {
+  if (!isPlainObject(payload)) {
+    throw new ApiError('Die Rechnungsdaten sind ungültig', 400)
+  }
+
+  return {
+    pdfBytes: decodePdfPayload(payload.pdfBase64, 'Die Rechnungs-PDF')
+  }
+}
+
 module.exports = {
   validateInteger,
   validateKundePayload,
   validateKonfigurationPayload,
+  validateOfferteUnterschriebenPayload,
+  validateRechnungErstellenPayload,
   ApiError
 }

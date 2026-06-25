@@ -130,22 +130,27 @@ body {
   height: 2rem;
   padding: 0;
   border: 0;
+  border-radius: 0.2rem;
   background: transparent;
-  color: var(--kt-color-error);
+  color: var(--kt-color-text-secondary);
   transition: color var(--kt-transition-fast);
 }
 
 .table-edit-button {
-  color: var(--kt-color-text-light);
+  color: var(--kt-color-text-tertiary);
 }
 
 .table-offer-button {
-  color: var(--kt-color-primary);
+  color: rgba(var(--bs-primary-rgb), 0.72);
+}
+
+.table-delete-button {
+  color: rgba(var(--bs-danger-rgb), 0.68);
 }
 
 .table-edit-button:hover:not(:disabled),
 .table-edit-button:focus-visible:not(:disabled) {
-  color: var(--kt-color-text-secondary);
+  color: var(--kt-color-text-primary);
 }
 
 .table-offer-button:hover:not(:disabled),
@@ -186,7 +191,8 @@ body {
 .table-edit-button .pi,
 .table-offer-button .pi,
 .table-delete-button .pi {
-  font-size: 1rem;
+  font-size: 1.1rem;
+  line-height: 1;
 }
 
 .projekte-view > .col-12 > .card,

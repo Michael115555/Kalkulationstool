@@ -115,6 +115,17 @@ export const createKalkulationApi = (
     return request
   }
 
+  const requestBytes = async (path) => {
+    const response = await fetch(`${baseUrl}${path}`)
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      throw new Error(payload.error ?? `API-Fehler ${response.status}`)
+    }
+
+    return new Uint8Array(await response.arrayBuffer())
+  }
+
   const prefetchPaths = (paths) =>
     Promise.allSettled(paths.map((path) => cachedRequestJson(path)))
 
@@ -148,6 +159,38 @@ export const createKalkulationApi = (
     getKonfigurationen: () => cachedRequestJson('/api/konfigurationen'),
     getKonfiguration: (id) => cachedRequestJson(`/api/konfigurationen/${id}`),
     getProjekte: (params) => cachedRequestJson(listPath('/api/projekte', params)),
+    getOffertePdf: (id) => requestBytes(`/api/konfigurationen/${id}/offerte-pdf`),
+    getRechnungPdf: (id) => requestBytes(`/api/konfigurationen/${id}/rechnung-pdf`),
+    ensureOfferteDatum: (id) =>
+      requestJson(`/api/konfigurationen/${id}/offerte-datum`, {
+        method: 'PUT'
+      }).then((konfiguration) => {
+        clearProjectCache()
+        return konfiguration
+      }),
+    setOfferteUnterschrieben: (id, payload) =>
+      requestJson(`/api/konfigurationen/${id}/offerte-unterschrieben`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      }).then((konfiguration) => {
+        clearProjectCache()
+        return konfiguration
+      }),
+    createRechnung: (id, payload) =>
+      requestJson(`/api/konfigurationen/${id}/rechnung`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }).then((konfiguration) => {
+        clearProjectCache()
+        return konfiguration
+      }),
+    deleteRechnung: (id) =>
+      requestJson(`/api/konfigurationen/${id}/rechnung`, {
+        method: 'DELETE'
+      }).then((konfiguration) => {
+        clearProjectCache()
+        return konfiguration
+      }),
     createKonfiguration: (payload) =>
       requestJson('/api/konfigurationen', {
         method: 'POST',

@@ -37,15 +37,13 @@ const getDisplayFieldRawValue = (displaySnapshot, sectionKey, fieldKey, fallback
 
 const getProjectTitle = (projekt, displaySnapshot) => {
   const calculation = projekt?.calculation ?? {}
-  const fallbackTitle = [
-    calculation.druckermodell,
-    calculation.variante
-  ].filter(isFilled).join(' ')
 
   return (
-    getDisplayFieldValue(displaySnapshot, 'project', 'projektname') ||
+    calculation.variante ||
+    getDisplayFieldValue(displaySnapshot, 'project', 'variante') ||
+    calculation.druckermodell ||
+    getDisplayFieldValue(displaySnapshot, 'project', 'druckermodell') ||
     projekt?.name ||
-    fallbackTitle ||
     'Offerte'
   )
 }

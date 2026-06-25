@@ -69,7 +69,7 @@ describe('offerteDocument', () => {
       projekt: createProjektFixture()
     })
 
-    expect(data.title).toBe('Canon imageForce C5140')
+    expect(data.title).toBe('SpeedLizenz 40er')
     expect(data.customer).toEqual({
       name: 'Demo Kunden AG',
       contact: 'Alex Beispiel',
