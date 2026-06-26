@@ -206,7 +206,7 @@ const projectSaveButtonTitle = computed(() =>
 )
 
 const askDeleteProjekt = (projekt) => {
-  if (!projekt || projekt.offerteUnterschrieben) {
+  if (!projekt) {
     return
   }
 
@@ -540,11 +540,6 @@ const confirmDeleteProjekt = async () => {
     return
   }
 
-  if (projektToDelete.value.offerteUnterschrieben) {
-    projektToDelete.value = null
-    return
-  }
-
   isDeletingProjekt.value = true
 
   try {
@@ -748,36 +743,35 @@ onBeforeUnmount(() => {
                       :disabled="isCreatingRechnungProjektId !== null"
                       @click="createRechnung(projekt)"
                     >
-                      <i
-                        :class="isCreatingRechnungProjektId === projekt.id
-                          ? 'pi pi-spin pi-spinner'
-                          : 'pi pi-receipt'"
-                        aria-hidden="true"
-                      ></i>
                       <span>{{ isCreatingRechnungProjektId === projekt.id
                         ? 'Wird erstellt…'
                         : 'Erstellen' }}</span>
                     </button>
 
                     <button
+                      v-else-if="!projekt.offerteUnterschrieben"
+                      type="button"
+                      class="project-invoice-readonly-button"
+                      :aria-label="`Rechnung für ${getProjektName(projekt)} kann erst nach unterschriebener Offerte erstellt werden`"
+                      title="Erst nach unterschriebener Offerte möglich"
+                      disabled
+                    >
+                      <span>Erstellen</span>
+                    </button>
+
+                    <button
                       v-else-if="projekt.rechnungErstellt"
                       type="button"
-                      class="project-invoice-pdf-button"
+                      class="project-invoice-document-button"
                       :aria-label="`Rechnung für ${getProjektName(projekt)} als PDF im neuen Tab anzeigen`"
                       title="Rechnung als PDF anzeigen"
                       :disabled="isOpeningRechnungProjektId === projekt.id"
                       @click="openRechnung(projekt)"
                     >
-                      <i
-                        :class="isOpeningRechnungProjektId === projekt.id
-                          ? 'pi pi-spin pi-spinner'
-                          : 'pi pi-file-pdf'"
-                        aria-hidden="true"
-                      ></i>
-                      <span>Rechnung</span>
+                      <span>{{ isOpeningRechnungProjektId === projekt.id
+                        ? 'Wird geöffnet…'
+                        : 'Rechnung' }}</span>
                     </button>
-
-                    <span v-else class="project-invoice-empty" aria-hidden="true">—</span>
                   </td>
 
                   <td class="project-actions-cell">
@@ -800,13 +794,8 @@ onBeforeUnmount(() => {
                       <button
                         type="button"
                         class="table-delete-button"
-                        :aria-label="projekt.offerteUnterschrieben
-                          ? `Projekt ${getProjektName(projekt)} kann nach Unterschrift nicht gelöscht werden`
-                          : `Projekt ${getProjektName(projekt)} löschen`"
-                        :title="projekt.offerteUnterschrieben
-                          ? 'Nach Unterschrift gesperrt'
-                          : 'Projekt löschen'"
-                        :disabled="projekt.offerteUnterschrieben"
+                        :aria-label="`Projekt ${getProjektName(projekt)} löschen`"
+                        title="Projekt löschen"
                         @click="askDeleteProjekt(projekt)"
                       >
                         <i class="pi pi-trash" aria-hidden="true"></i>
@@ -949,6 +938,13 @@ onBeforeUnmount(() => {
 
           <p class="confirmation-text">
             Möchtest du „{{ getProjektName(projektToDelete) }}“ wirklich löschen?
+          </p>
+
+          <p
+            v-if="projektToDelete.offerteUnterschrieben"
+            class="confirmation-text confirmation-text-warning"
+          >
+            Die unterschriebene Offerte und eine vorhandene Rechnung werden dabei ebenfalls entfernt.
           </p>
         </div>
 
@@ -1261,18 +1257,18 @@ onBeforeUnmount(() => {
 }
 
 .project-invoice-action-button,
-.project-invoice-pdf-button {
+.project-invoice-readonly-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.32rem;
-  min-width: 6.6rem;
-  min-height: 1.75rem;
+  width: 6.6rem;
+  height: 1.85rem;
   padding: 0.2rem 0.5rem;
   border: 1px solid var(--kt-color-primary-border-subtle);
   border-radius: var(--kt-border-radius-sm);
-  background: var(--kt-color-bg-white);
-  color: var(--kt-color-primary-dark);
+  background: transparent;
+  color: var(--kt-color-primary);
   font-size: 0.76rem;
   font-weight: 600;
   line-height: 1;
@@ -1283,41 +1279,64 @@ onBeforeUnmount(() => {
     color var(--kt-transition-fast);
 }
 
+.project-invoice-readonly-button {
+  border-color: var(--kt-color-border-light);
+  color: var(--kt-color-text-light);
+}
+
+.project-invoice-document-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 6.6rem;
+  height: 1.85rem;
+  padding: 0.2rem 0.5rem;
+  border: 0;
+  border-radius: 0.2rem;
+  background: transparent;
+  color: var(--kt-color-primary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: underline;
+  text-decoration-color: var(--kt-color-primary-border-subtle);
+  text-decoration-thickness: 0.055em;
+  text-underline-offset: 0.2rem;
+  white-space: nowrap;
+  transition:
+    color var(--kt-transition-fast),
+    text-decoration-color var(--kt-transition-fast);
+}
+
 .project-invoice-action-button:hover:not(:disabled),
-.project-invoice-action-button:focus-visible:not(:disabled),
-.project-invoice-pdf-button:hover:not(:disabled),
-.project-invoice-pdf-button:focus-visible:not(:disabled) {
+.project-invoice-action-button:focus-visible:not(:disabled) {
   border-color: var(--kt-color-primary);
   background: var(--kt-color-primary-bg-subtle);
   color: var(--kt-color-primary-dark);
 }
 
+.project-invoice-document-button:hover:not(:disabled),
+.project-invoice-document-button:focus-visible:not(:disabled) {
+  color: var(--kt-color-primary-dark);
+  text-decoration-color: currentColor;
+}
+
 .project-invoice-action-button:focus-visible,
-.project-invoice-pdf-button:focus-visible {
+.project-invoice-readonly-button:focus-visible,
+.project-invoice-document-button:focus-visible {
   outline: 2px solid var(--kt-color-primary-border-subtle);
   outline-offset: 0.18rem;
 }
 
 .project-invoice-action-button:disabled,
-.project-invoice-pdf-button:disabled {
+.project-invoice-document-button:disabled {
   cursor: wait;
   opacity: 0.6;
 }
 
-.project-invoice-empty {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 1.75rem;
-  color: var(--kt-color-text-tertiary);
-  font-size: 0.78rem;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.project-invoice-empty {
-  color: var(--kt-color-text-light);
+.project-invoice-readonly-button:disabled {
+  cursor: not-allowed;
+  opacity: 1;
 }
 
 .project-action-list {
@@ -1641,6 +1660,11 @@ onBeforeUnmount(() => {
   font-size: var(--kt-font-size-md);
   font-weight: 500;
   line-height: 1.4;
+}
+
+.confirmation-text-warning {
+  margin-top: 0.55rem;
+  color: var(--kt-color-error-dark);
 }
 
 .confirmation-actions {

@@ -979,18 +979,6 @@ const getArchivierteProjektPdf = async (id, type) => {
 
 const deleteKonfiguration = async (id) => {
   validateInteger(id, 'Konfiguration ID')
-  const konfiguration = await prisma.konfiguration.findUniqueOrThrow({
-    where: { id },
-    select: { offerteUnterschrieben: true }
-  })
-
-  if (konfiguration.offerteUnterschrieben) {
-    throw new ApiError(
-      'Projekte mit unterschriebener Offerte können nicht gelöscht werden.',
-      409
-    )
-  }
-
   await prisma.konfiguration.delete({ where: { id } })
 }
 
