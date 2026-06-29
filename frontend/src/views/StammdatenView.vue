@@ -60,11 +60,21 @@
                   @click="rememberCustomerForCalculation(customer)"
                   @focusin="rememberCustomerForCalculation(customer)"
                 >
-                  <td>{{ customer.name || 'Ohne Firma' }}</td>
-                  <td>{{ formatCustomerValue(customer.contactPerson) }}</td>
-                  <td>{{ formatCustomerValue(customer.street) }}</td>
-                  <td>{{ formatCustomerLocation(customer) }}</td>
-                  <td>{{ getCustomerSalespersonName(customer) }}</td>
+                  <td :title="customer.name || 'Ohne Firma'">
+                    {{ customer.name || 'Ohne Firma' }}
+                  </td>
+                  <td :title="formatCustomerValue(customer.contactPerson)">
+                    {{ formatCustomerValue(customer.contactPerson) }}
+                  </td>
+                  <td :title="formatCustomerValue(customer.street)">
+                    {{ formatCustomerValue(customer.street) }}
+                  </td>
+                  <td :title="formatCustomerLocation(customer)">
+                    {{ formatCustomerLocation(customer) }}
+                  </td>
+                  <td :title="getCustomerSalespersonName(customer)">
+                    {{ getCustomerSalespersonName(customer) }}
+                  </td>
                   <td class="text-center align-middle">
                     <div class="customer-action-buttons">
                       <button
@@ -1043,6 +1053,16 @@ onBeforeUnmount(() => {
   min-width: 5.1rem;
   max-width: 5.1rem;
   text-align: center;
+}
+
+.customers-table td:nth-child(1),
+.customers-table td:nth-child(2),
+.customers-table td:nth-child(3),
+.customers-table td:nth-child(4),
+.customers-table td:nth-child(5) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .control-field {

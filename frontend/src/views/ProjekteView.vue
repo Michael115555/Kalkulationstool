@@ -696,12 +696,8 @@ onBeforeUnmount(() => {
                     <button
                       type="button"
                       class="table-offer-button"
-                      :aria-label="projekt.offerteUnterschrieben
-                        ? `Unterschriebene Offerte für ${getProjektName(projekt)} als PDF im neuen Tab anzeigen`
-                        : `Offerte für ${getProjektName(projekt)} als PDF im neuen Tab anzeigen`"
-                      :title="projekt.offerteUnterschrieben
-                        ? 'Unterschriebene Offerte als PDF anzeigen'
-                        : 'Offerte als PDF anzeigen'"
+                      :aria-label="`Offerte für ${getProjektName(projekt)} als PDF im neuen Tab anzeigen`"
+                      title="Offerte als PDF anzeigen"
                       :disabled="isCreatingOfferteProjektId === projekt.id"
                       @click="createOfferte(projekt)"
                     >
@@ -1090,7 +1086,7 @@ onBeforeUnmount(() => {
   min-width: 88rem;
   margin-bottom: 0;
   border-style: hidden;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 .projekte-table thead th {
@@ -1133,20 +1129,20 @@ onBeforeUnmount(() => {
 
 .projekte-table th:nth-child(2),
 .projekte-table td:nth-child(2) {
+  width: 17.5rem;
   min-width: 17.5rem;
-  width: auto;
 }
 
 .projekte-table th:nth-child(3),
 .projekte-table td:nth-child(3) {
+  width: 11.5rem;
   min-width: 11.5rem;
-  width: auto;
 }
 
 .projekte-table th:nth-child(4),
 .projekte-table td:nth-child(4) {
+  width: 11.5rem;
   min-width: 11.5rem;
-  width: auto;
 }
 
 .projekte-table td:nth-child(2),
