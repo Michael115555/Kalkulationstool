@@ -66,11 +66,15 @@ const waitUntilAvailable = async (port, timeoutMs) => {
   const startedAt = Date.now()
 
   while (Date.now() - startedAt < timeoutMs) {
-    if (await canListen(port)) {
+    if (!getListeningPids(port).length && (await canListen(port))) {
       return true
     }
 
     await wait(150)
+  }
+
+  if (getListeningPids(port).length) {
+    return false
   }
 
   return canListen(port)
@@ -90,11 +94,11 @@ const stopProcesses = async (pids, signal) => {
 
 const ensurePortAvailable = async (port) => {
   try {
-    if (await canListen(port)) {
+    const pids = getListeningPids(port)
+
+    if (!pids.length && (await canListen(port))) {
       return
     }
-
-    const pids = getListeningPids(port)
 
     if (!pids.length) {
       console.error(`Port ${port} ist belegt, aber der belegende Prozess konnte nicht ermittelt werden.`)
