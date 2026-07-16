@@ -11,17 +11,8 @@ const navigationItems = [
 
 const api = createKalkulationApi()
 const route = useRoute()
-const isNavigationOpen = ref(false)
 const isContentReady = ref(false)
 const appDisplayName = appConfig.displayName
-
-const toggleNavigation = () => {
-  isNavigationOpen.value = !isNavigationOpen.value
-}
-
-const closeNavigation = () => {
-  isNavigationOpen.value = false
-}
 
 const getRouteDataName = () => route.name ?? 'projekte'
 
@@ -71,27 +62,14 @@ onMounted(async () => {
 
 <template>
   <div class="app-shell min-vh-100">
-    <nav class="topbar navbar navbar-expand-lg" aria-label="Hauptnavigation">
+    <nav class="topbar" aria-label="Hauptnavigation">
       <div class="container-fluid topbar-container px-3">
         <span class="navbar-brand app-brand mb-0">
           {{ appDisplayName }}
         </span>
 
-        <button
-          class="navbar-toggler border-0 shadow-none px-1"
-          type="button"
-          :aria-expanded="isNavigationOpen"
-          aria-label="Navigation einblenden"
-          @click="toggleNavigation"
-        >
-          <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div
-          class="collapse navbar-collapse topbar-collapse"
-          :class="{ show: isNavigationOpen }"
-        >
-          <ul class="nav app-nav mx-lg-auto mb-3 mb-lg-0">
+        <div class="topbar-collapse">
+          <ul class="nav app-nav">
             <li
               v-for="item in navigationItems"
               :key="item.to"
@@ -104,7 +82,6 @@ onMounted(async () => {
                 @focus="prefetchRouteData(item.name)"
                 @pointerenter="prefetchRouteData(item.name)"
                 @touchstart.passive="prefetchRouteData(item.name)"
-                @click="closeNavigation"
               >
                 <i :class="['nav-icon', item.icon]" aria-hidden="true"></i>
                 {{ item.label }}
@@ -158,7 +135,10 @@ onMounted(async () => {
 }
 
 .topbar-container {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) auto minmax(8rem, 1fr);
   align-items: center;
+  column-gap: 1rem;
   min-height: 4rem;
   padding-top: 0;
   padding-bottom: 0;
@@ -167,24 +147,29 @@ onMounted(async () => {
 .app-brand {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
+  overflow: hidden;
   color: var(--kt-color-text-primary);
   font-size: var(--kt-font-size-lg);
   font-weight: 600;
   letter-spacing: 0;
   line-height: var(--kt-line-height-tight);
-}
-
-.topbar-actions {
-  flex: 1 1 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .topbar-collapse {
-  height: 100%;
+  display: flex;
   align-items: stretch;
+  justify-content: center;
+  min-width: 0;
+  height: 100%;
 }
 
 .topbar-actions {
   align-items: center;
+  justify-content: flex-end !important;
+  min-width: 0;
 }
 
 .topbar-user-status {
@@ -226,8 +211,11 @@ onMounted(async () => {
 }
 
 .app-nav {
+  flex-wrap: nowrap;
   height: 100%;
-  gap: 1rem;
+  gap: 0.25rem;
+  justify-content: center;
+  min-width: 0;
 }
 
 .nav-item {
@@ -243,11 +231,12 @@ onMounted(async () => {
   gap: 0.5rem;
   height: 100%;
   min-height: 4rem;
-  padding: 0 1rem;
+  padding: 0 0.85rem;
   color: var(--kt-color-text-secondary);
   font-size: var(--kt-font-size-md);
   font-weight: 500;
   line-height: 1;
+  white-space: nowrap;
   transition: color 0.2s ease;
 }
 
@@ -282,41 +271,11 @@ onMounted(async () => {
   color: var(--kt-color-primary);
 }
 
-@media (min-width: 992px) {
-  .topbar.navbar > .topbar-container.container-fluid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  }
-
-  .app-brand {
-    grid-column: 1;
-    justify-self: start;
-  }
-
-  .topbar-collapse {
-    display: flex !important;
-    flex: 0 0 auto;
-    grid-column: 2;
-    justify-self: center;
-    min-width: 0;
-    width: max-content;
-  }
-
-  .app-nav {
-    margin-right: 0 !important;
-    margin-left: 0 !important;
-  }
-
-  .topbar-actions {
-    flex: 0 0 auto;
-    grid-column: 3;
-    justify-self: end;
-  }
-}
-
-@media (max-width: 991.98px) {
+@media (max-width: 767.98px) {
   .topbar-container {
-    min-height: 3.9rem;
+    grid-template-columns: minmax(7rem, auto) minmax(0, 1fr) auto;
+    column-gap: 0.65rem;
+    min-height: 3.75rem;
   }
 
   .app-brand {
@@ -324,38 +283,33 @@ onMounted(async () => {
   }
 
   .app-nav {
-    width: 100%;
-    height: auto;
-    justify-content: flex-start;
     gap: 0;
   }
 
-  .nav-item {
-    display: block;
-  }
-
   .app-nav-link {
-    width: 100%;
-    min-height: auto;
-    padding: 0.95rem 0;
-    border-left: 4px solid transparent;
+    gap: 0.35rem;
+    min-height: 3.75rem;
+    padding: 0 0.45rem;
+    font-size: var(--kt-font-size-sm);
   }
 
-  .app-nav-link.active {
-    border-left-color: var(--kt-color-primary-dark);
-  }
-
-  .app-nav-link.active::after {
-    display: none;
-  }
-
-  .topbar-actions {
-    margin-top: 0.75rem;
-    justify-content: flex-start !important;
+  .nav-icon {
+    width: 1rem;
+    font-size: 1rem;
   }
 
   .topbar-user-status {
-    justify-content: flex-start;
+    gap: 0.45rem;
+  }
+}
+
+@media (max-width: 439.98px) {
+  .topbar-user-name {
+    display: none;
+  }
+
+  .topbar-user-status {
+    gap: 0;
   }
 }
 </style>

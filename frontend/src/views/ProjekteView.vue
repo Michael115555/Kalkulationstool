@@ -973,12 +973,12 @@ onBeforeUnmount(() => {
 }
 
 .projekte-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
   min-height: 2.5rem;
-  margin: 1.75rem 0 1.35rem;
+  margin: 1.75rem 0 1rem;
 }
 
 .projekte-heading {
@@ -998,6 +998,8 @@ onBeforeUnmount(() => {
   flex: 0 1 18rem;
   align-items: center;
   justify-content: flex-end;
+  justify-self: end;
+  width: 100%;
   max-width: 100%;
   min-width: 0;
 }
@@ -1716,6 +1718,36 @@ onBeforeUnmount(() => {
   .projekte-page-card-body {
     padding-right: 1rem;
     padding-left: 1rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .projekte-page-card-body {
+    padding-right: 0.8rem;
+    padding-bottom: 1rem;
+    padding-left: 0.8rem;
+  }
+
+  .projekte-toolbar {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+    min-height: 0;
+    margin: 1.15rem 0 0.85rem;
+  }
+
+  .projekte-heading {
+    min-height: 2rem;
+    line-height: var(--kt-line-height-tight);
+  }
+
+  .project-search-form {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .project-search-input {
+    min-width: 0;
   }
 }
 </style>

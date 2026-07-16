@@ -1,4 +1,5 @@
 backend/prisma/kalkulation.db
+backend/prisma/backups/
 node_modules
 frontend/dist
 .DS_Store
